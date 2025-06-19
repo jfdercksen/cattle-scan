@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Users, CheckCircle, Globe } from "lucide-react";
 import { Link } from "react-router-dom";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -55,9 +56,12 @@ const Index = () => {
             </div>
             <span className="text-xl font-bold text-slate-800">Cattle Scan</span>
           </div>
-          <Link to="/auth">
-            <Button variant="outline">Sign In</Button>
-          </Link>
+          <div className="flex items-center space-x-2">
+            <ThemeToggle />
+            <Link to="/auth">
+              <Button variant="outline">Sign In</Button>
+            </Link>
+          </div>
         </div>
       </header>
 
