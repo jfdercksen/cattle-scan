@@ -29,13 +29,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
+        // Only log auth events in development
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Auth state changed:', event, session?.user?.id);
+        }
         
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile
+          // Fetch user profile with proper error handling
           setTimeout(async () => {
             try {
               const { data: profileData, error } = await supabase
@@ -45,13 +48,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .single();
               
               if (error) {
-                console.error('Error fetching profile:', error);
+                if (process.env.NODE_ENV === 'development') {
+                  console.error('Error fetching profile:', error);
+                }
               } else {
-                console.log('Profile loaded:', profileData);
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('Profile loaded successfully');
+                }
                 setProfile(profileData);
               }
             } catch (error) {
-              console.error('Profile fetch error:', error);
+              if (process.env.NODE_ENV === 'development') {
+                console.error('Profile fetch error:', error);
+              }
             }
           }, 0);
         } else {
@@ -64,7 +73,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session:', session?.user?.id);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Initial session check:', session?.user?.id ? 'Found session' : 'No session');
+      }
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -78,13 +89,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               .single();
             
             if (error) {
-              console.error('Error fetching initial profile:', error);
+              if (process.env.NODE_ENV === 'development') {
+                console.error('Error fetching initial profile:', error);
+              }
             } else {
-              console.log('Initial profile loaded:', profileData);
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Initial profile loaded successfully');
+              }
               setProfile(profileData);
             }
           } catch (error) {
-            console.error('Initial profile fetch error:', error);
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Initial profile fetch error:', error);
+            }
           }
           setLoading(false);
         }, 0);
@@ -97,20 +114,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signUp = async (email: string, password: string, metadata: any) => {
+    // Input validation
+    if (!email || !password) {
+      return { error: new Error('Email and password are required') };
+    }
+    
+    if (password.length < 6) {
+      return { error: new Error('Password must be at least 6 characters long') };
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return { error: new Error('Please enter a valid email address') };
+    }
+
     const redirectUrl = `${window.location.origin}/`;
+    
+    // Fix the buyer signup role assignment - use 'super_admin' instead of 'admin'
+    const roleToAssign = metadata.role === 'admin' ? 'super_admin' : metadata.role;
     
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectUrl,
-        data: metadata
+        data: {
+          ...metadata,
+          role: roleToAssign
+        }
       }
     });
     return { error };
   };
 
   const signIn = async (email: string, password: string) => {
+    // Input validation
+    if (!email || !password) {
+      return { error: new Error('Email and password are required') };
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password

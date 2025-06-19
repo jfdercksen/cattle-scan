@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -40,6 +39,18 @@ const Auth = () => {
       navigate('/');
     }
   }, [user, navigate]);
+
+  // Enhanced input validation
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePhone = (phone: string) => {
+    if (!phone) return true; // Phone is optional
+    const phoneRegex = /^[+]?[\d\s\-()]{10,}$/;
+    return phoneRegex.test(phone);
+  };
 
   const content = {
     en: {
@@ -100,6 +111,17 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Client-side validation
+    if (!validateEmail(email)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
     
     try {
@@ -127,6 +149,25 @@ const Auth = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Enhanced client-side validation
+    if (!validateEmail(email)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (password !== confirmPassword) {
       toast({
         title: "Error",
@@ -136,16 +177,34 @@ const Auth = () => {
       return;
     }
 
+    if (!validatePhone(phone)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid phone number",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!firstName.trim() || !lastName.trim()) {
+      toast({
+        title: "Error",
+        description: "First name and last name are required",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
     
     try {
       const { error } = await signUp(email, password, {
-        first_name: firstName,
-        last_name: lastName,
-        role: isBuyerSignup ? 'admin' : role,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        role: isBuyerSignup ? 'admin' : role, // This will be converted to 'super_admin' in useAuth
         language: language,
-        phone: phone,
-        company_name: companyName
+        phone: phone.trim() || null,
+        company_name: companyName.trim() || null
       });
 
       if (error) {
@@ -227,6 +286,7 @@ const Auth = () => {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     required
+                    maxLength={50}
                   />
                 </div>
                 <div>
@@ -237,6 +297,7 @@ const Auth = () => {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     required
+                    maxLength={50}
                   />
                 </div>
               </div>
@@ -249,6 +310,7 @@ const Auth = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  maxLength={100}
                 />
               </div>
               
@@ -259,6 +321,7 @@ const Auth = () => {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  maxLength={20}
                 />
               </div>
               
@@ -269,6 +332,7 @@ const Auth = () => {
                   type="text"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
+                  maxLength={100}
                 />
               </div>
               
@@ -280,6 +344,7 @@ const Auth = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  minLength={6}
                 />
               </div>
               
@@ -291,6 +356,7 @@ const Auth = () => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
+                  minLength={6}
                 />
               </div>
               
@@ -315,6 +381,7 @@ const Auth = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      maxLength={100}
                     />
                   </div>
                   
@@ -346,6 +413,7 @@ const Auth = () => {
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         required
+                        maxLength={50}
                       />
                     </div>
                     <div>
@@ -356,6 +424,7 @@ const Auth = () => {
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         required
+                        maxLength={50}
                       />
                     </div>
                   </div>
@@ -368,6 +437,7 @@ const Auth = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      maxLength={100}
                     />
                   </div>
                   
@@ -393,6 +463,7 @@ const Auth = () => {
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
+                      maxLength={20}
                     />
                   </div>
                   
@@ -403,6 +474,7 @@ const Auth = () => {
                       type="text"
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
+                      maxLength={100}
                     />
                   </div>
                   
@@ -414,6 +486,7 @@ const Auth = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      minLength={6}
                     />
                   </div>
                   
@@ -425,6 +498,7 @@ const Auth = () => {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
+                      minLength={6}
                     />
                   </div>
                   

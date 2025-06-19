@@ -161,7 +161,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
+      get_current_user_status: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_status"]
+      }
     }
     Enums: {
       language_preference: "en" | "af"
