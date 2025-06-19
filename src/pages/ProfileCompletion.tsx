@@ -19,11 +19,6 @@ const ProfileCompletion = () => {
   
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    // Common fields
-    fullName: '',
-    email: '',
-    phone: '',
-    
     // File uploads
     idDocument: null as File | null,
     
@@ -74,7 +69,6 @@ const ProfileCompletion = () => {
     try {
       // Update profile with collected information and mark as completed
       const updates = {
-        phone: formData.phone,
         profile_completed: true,
         profile_completed_at: new Date().toISOString(),
         // Add other fields as needed based on role
@@ -310,40 +304,12 @@ const ProfileCompletion = () => {
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Common fields */}
-            <div>
-              <Label htmlFor="fullName">Name and Surname *</Label>
-              <Input
-                id="fullName"
-                value={formData.fullName}
-                onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                placeholder={`${profile.first_name || ''} ${profile.last_name || ''}`.trim()}
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="email">E-mail Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder={profile.email}
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="phone">Cell Phone Number *</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                placeholder={profile.phone || ''}
-                required
-              />
+            {/* User info display - read-only */}
+            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <h3 className="font-semibold text-gray-700">Your Information</h3>
+              <p className="text-sm text-gray-600">Name: {profile.first_name} {profile.last_name}</p>
+              <p className="text-sm text-gray-600">Email: {profile.email}</p>
+              {profile.phone && <p className="text-sm text-gray-600">Phone: {profile.phone}</p>}
             </div>
 
             {/* Role-specific fields */}
