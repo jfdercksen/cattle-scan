@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Shield, Users, FileCheck, Truck, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface RoleContent {
   title: string;
@@ -177,11 +178,11 @@ const Index = () => {
 
   if (user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
         <div className="container mx-auto px-4 py-16">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-slate-800 mb-4">Welcome back!</h1>
-            <p className="text-xl text-slate-600 mb-8">You're already signed in to Cattle Scan.</p>
+            <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-200 mb-4">Welcome back!</h1>
+            <p className="text-xl text-slate-600 dark:text-slate-400 mb-8">You're already signed in to Cattle Scan.</p>
             <Link to="/dashboard">
               <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700">
                 Go to Dashboard
@@ -195,16 +196,16 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-br from-emerald-600 to-blue-600 rounded-lg flex items-center justify-center">
                 <Shield className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-slate-800">Cattle Scan</span>
+              <span className="text-xl font-bold text-slate-800 dark:text-slate-200">Cattle Scan</span>
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
@@ -223,6 +224,7 @@ const Index = () => {
                   AF
                 </Button>
               </div>
+              <ThemeToggle />
             </div>
           </div>
         </div>
@@ -231,16 +233,16 @@ const Index = () => {
       {/* Hero Section */}
       <section className="py-20">
         <div className="container mx-auto px-4 text-center">
-          <Badge variant="secondary" className="mb-6 bg-emerald-100 text-emerald-800">
+          <Badge variant="secondary" className="mb-6 bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200">
             Advanced Livestock Management
           </Badge>
-          <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-6 bg-gradient-to-r from-slate-900 via-blue-800 to-emerald-800 bg-clip-text text-transparent">
+          <h1 className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-slate-100 mb-6 bg-gradient-to-r from-slate-900 via-blue-800 to-emerald-800 dark:from-slate-100 dark:via-blue-200 dark:to-emerald-200 bg-clip-text text-transparent">
             {t.hero.title}
           </h1>
-          <h2 className="text-2xl md:text-3xl font-semibold text-slate-700 mb-6">
+          <h2 className="text-2xl md:text-3xl font-semibold text-slate-700 dark:text-slate-300 mb-6">
             {t.hero.subtitle}
           </h2>
-          <p className="text-xl text-slate-600 max-w-3xl mx-auto mb-10 leading-relaxed">
+          <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto mb-10 leading-relaxed">
             {t.hero.description}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -255,36 +257,36 @@ const Index = () => {
       </section>
 
       {/* Role Selection */}
-      <section className="py-20 bg-white/50">
+      <section className="py-20 bg-white/50 dark:bg-slate-800/50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">{t.roles.title}</h2>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">{t.roles.subtitle}</p>
+            <h2 className="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">{t.roles.title}</h2>
+            <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">{t.roles.subtitle}</p>
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {(['seller', 'vet', 'agent', 'driver'] as const).map((roleKey) => {
               const role = t.roles[roleKey];
               return (
-                <Card key={roleKey} className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:scale-105">
+                <Card key={roleKey} className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm hover:scale-105">
                   <CardHeader className="text-center pb-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-xl mx-auto mb-4 flex items-center justify-center group-hover:scale-110 transition-transform">
                       <Shield className="w-6 h-6 text-white" />
                     </div>
-                    <CardTitle className="text-xl font-bold text-slate-800">{role.title}</CardTitle>
-                    <CardDescription className="text-slate-600">{role.description}</CardDescription>
+                    <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-200">{role.title}</CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-400">{role.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2 mb-6">
                       {role.features.map((feature: string, idx: number) => (
-                        <li key={idx} className="flex items-center text-sm text-slate-600">
+                        <li key={idx} className="flex items-center text-sm text-slate-600 dark:text-slate-400">
                           <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-3" />
                           {feature}
                         </li>
                       ))}
                     </ul>
                     <Link to={`/auth?role=${roleKey}`}>
-                      <Button className="w-full bg-slate-800 hover:bg-slate-900 text-white">
+                      <Button className="w-full bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white">
                         {language === 'en' ? 'Register' : 'Registreer'}
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
@@ -301,7 +303,7 @@ const Index = () => {
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">{t.features.title}</h2>
+            <h2 className="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-4">{t.features.title}</h2>
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -310,8 +312,8 @@ const Index = () => {
                 <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-2xl mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <feature.icon className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-800 mb-3">{feature.title}</h3>
-                <p className="text-slate-600 leading-relaxed">{feature.description}</p>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3">{feature.title}</h3>
+                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -319,7 +321,7 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-white py-12">
+      <footer className="bg-slate-900 dark:bg-slate-950 text-white py-12">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
