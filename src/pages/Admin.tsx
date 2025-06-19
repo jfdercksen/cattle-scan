@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -75,6 +76,8 @@ const Admin = () => {
     setActionLoading(true);
     
     try {
+      console.log(`${action} user:`, profileId);
+      
       // Update profile status
       const { error: updateError } = await supabase
         .from('profiles')
@@ -85,7 +88,10 @@ const Admin = () => {
         })
         .eq('id', profileId);
       
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Update error:', updateError);
+        throw updateError;
+      }
       
       // Log the action
       const { error: logError } = await supabase
@@ -97,7 +103,10 @@ const Admin = () => {
           reason: reason || null
         });
       
-      if (logError) throw logError;
+      if (logError) {
+        console.error('Log error:', logError);
+        throw logError;
+      }
       
       toast({
         title: "Success",
@@ -408,99 +417,6 @@ const Admin = () => {
       </div>
     </div>
   );
-
-  const handleAction = async (profileId: string, action: 'approved' | 'rejected') => {
-    if (!user || !selectedProfile) return;
-    
-    setActionLoading(true);
-    
-    try {
-      console.log(`${action} user:`, profileId);
-      
-      // Update profile status
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          status: action,
-          approved_by: action === 'approved' ? user.id : null,
-          approved_at: action === 'approved' ? new Date().toISOString() : null
-        })
-        .eq('id', profileId);
-      
-      if (updateError) {
-        console.error('Update error:', updateError);
-        throw updateError;
-      }
-      
-      // Log the action
-      const { error: logError } = await supabase
-        .from('approval_actions')
-        .insert({
-          profile_id: profileId,
-          action_by: user.id,
-          action: action,
-          reason: reason || null
-        });
-      
-      if (logError) {
-        console.error('Log error:', logError);
-        throw logError;
-      }
-      
-      toast({
-        title: "Success",
-        description: `User ${action === 'approved' ? 'approved' : 'rejected'} successfully`,
-        variant: "default"
-      });
-      
-      // Refresh profiles
-      await fetchProfiles();
-      setSelectedProfile(null);
-      setReason('');
-      
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update user status",
-        variant: "destructive"
-      });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
-      case 'approved':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
-      case 'rejected':
-        return <Badge variant="secondary" className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
-      case 'suspended':
-        return <Badge variant="secondary" className="bg-orange-100 text-orange-800"><XCircle className="w-3 h-3 mr-1" />Suspended</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
-  const getRoleBadge = (role: string) => {
-    const colors = {
-      super_admin: 'bg-purple-100 text-purple-800',
-      admin: 'bg-blue-100 text-blue-800',
-      seller: 'bg-green-100 text-green-800',
-      vet: 'bg-teal-100 text-teal-800',
-      agent: 'bg-orange-100 text-orange-800',
-      driver: 'bg-gray-100 text-gray-800'
-    };
-    
-    return (
-      <Badge variant="secondary" className={colors[role as keyof typeof colors] || 'bg-gray-100 text-gray-800'}>
-        {role.replace('_', ' ').toUpperCase()}
-      </Badge>
-    );
-  };
 };
 
 export default Admin;
