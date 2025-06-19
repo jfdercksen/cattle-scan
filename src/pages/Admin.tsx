@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -45,12 +44,18 @@ const Admin = () => {
 
   const fetchProfiles = async () => {
     try {
+      console.log('Fetching profiles...');
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching profiles:', error);
+        throw error;
+      }
+      
+      console.log('Fetched profiles:', data);
       setProfiles(data || []);
     } catch (error) {
       console.error('Error fetching profiles:', error);
@@ -161,6 +166,13 @@ const Admin = () => {
   const approvedProfiles = profiles.filter(p => p.status === 'approved');
   const rejectedProfiles = profiles.filter(p => p.status === 'rejected');
 
+  console.log('Profile counts:', {
+    total: profiles.length,
+    pending: pendingProfiles.length,
+    approved: approvedProfiles.length,
+    rejected: rejectedProfiles.length
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
       <div className="container mx-auto px-4 py-8">
@@ -182,6 +194,18 @@ const Admin = () => {
             </div>
           </div>
         </div>
+
+        {/* Debug Info */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Debug Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>Total profiles found: {profiles.length}</p>
+            <p>Current user role: {profile?.role}</p>
+            <p>Current user status: {profile?.status}</p>
+          </CardContent>
+        </Card>
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
@@ -384,6 +408,99 @@ const Admin = () => {
       </div>
     </div>
   );
+
+  const handleAction = async (profileId: string, action: 'approved' | 'rejected') => {
+    if (!user || !selectedProfile) return;
+    
+    setActionLoading(true);
+    
+    try {
+      console.log(`${action} user:`, profileId);
+      
+      // Update profile status
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          status: action,
+          approved_by: action === 'approved' ? user.id : null,
+          approved_at: action === 'approved' ? new Date().toISOString() : null
+        })
+        .eq('id', profileId);
+      
+      if (updateError) {
+        console.error('Update error:', updateError);
+        throw updateError;
+      }
+      
+      // Log the action
+      const { error: logError } = await supabase
+        .from('approval_actions')
+        .insert({
+          profile_id: profileId,
+          action_by: user.id,
+          action: action,
+          reason: reason || null
+        });
+      
+      if (logError) {
+        console.error('Log error:', logError);
+        throw logError;
+      }
+      
+      toast({
+        title: "Success",
+        description: `User ${action === 'approved' ? 'approved' : 'rejected'} successfully`,
+        variant: "default"
+      });
+      
+      // Refresh profiles
+      await fetchProfiles();
+      setSelectedProfile(null);
+      setReason('');
+      
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update user status",
+        variant: "destructive"
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+      case 'approved':
+        return <Badge variant="secondary" className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
+      case 'rejected':
+        return <Badge variant="secondary" className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
+      case 'suspended':
+        return <Badge variant="secondary" className="bg-orange-100 text-orange-800"><XCircle className="w-3 h-3 mr-1" />Suspended</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  const getRoleBadge = (role: string) => {
+    const colors = {
+      super_admin: 'bg-purple-100 text-purple-800',
+      admin: 'bg-blue-100 text-blue-800',
+      seller: 'bg-green-100 text-green-800',
+      vet: 'bg-teal-100 text-teal-800',
+      agent: 'bg-orange-100 text-orange-800',
+      driver: 'bg-gray-100 text-gray-800'
+    };
+    
+    return (
+      <Badge variant="secondary" className={colors[role as keyof typeof colors] || 'bg-gray-100 text-gray-800'}>
+        {role.replace('_', ' ').toUpperCase()}
+      </Badge>
+    );
+  };
 };
 
 export default Admin;
