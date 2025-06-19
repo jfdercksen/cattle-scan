@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ProfileCompletion from "./pages/ProfileCompletion";
 import Admin from "./pages/Admin";
+import AdminDashboard from "./pages/AdminDashboard";
 import SellerDashboard from "./pages/SellerDashboard";
 import AgentDashboard from "./pages/AgentDashboard";
 import VetDashboard from "./pages/VetDashboard";
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/profile-completion" element={<ProfileCompletion />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/admin-dashboard" element={<AdminDashboard />} />
               <Route path="/seller-dashboard" element={<SellerDashboard />} />
               <Route path="/agent-dashboard" element={<AgentDashboard />} />
               <Route path="/vet-dashboard" element={<VetDashboard />} />

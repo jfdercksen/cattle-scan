@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -194,7 +193,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     switch (profile.role) {
       case 'super_admin':
       case 'admin':
-        return '/admin';
+        return '/admin-dashboard';
       case 'seller':
         return '/seller-dashboard';
       case 'agent':
