@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Cow, LogOut } from "lucide-react";
+import { Beef, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const SellerDashboard = () => {
@@ -62,7 +62,7 @@ const SellerDashboard = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Cow className="w-5 h-5 mr-2" />
+                <Beef className="w-5 h-5 mr-2" />
                 My Livestock
               </CardTitle>
               <CardDescription>
