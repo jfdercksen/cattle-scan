@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,11 +6,47 @@ import { ArrowRight, Shield, Users, FileCheck, Truck, ChevronRight } from "lucid
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
+interface RoleContent {
+  title: string;
+  description: string;
+  features: string[];
+}
+
+interface ContentStructure {
+  hero: {
+    title: string;
+    subtitle: string;
+    description: string;
+    cta: string;
+  };
+  roles: {
+    title: string;
+    subtitle: string;
+    seller: RoleContent;
+    vet: RoleContent;
+    agent: RoleContent;
+    driver: RoleContent;
+  };
+  features: {
+    title: string;
+    items: Array<{
+      icon: any;
+      title: string;
+      description: string;
+    }>;
+  };
+  footer: {
+    company: string;
+    privacy: string;
+    terms: string;
+  };
+}
+
 const Index = () => {
   const [language, setLanguage] = useState<'en' | 'af'>('en');
   const { user } = useAuth();
 
-  const content = {
+  const content: Record<'en' | 'af', ContentStructure> = {
     en: {
       hero: {
         title: "Cattle Scan",
@@ -228,33 +263,36 @@ const Index = () => {
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {Object.entries(t.roles).filter(([key]) => !['title', 'subtitle'].includes(key)).map(([key, role]) => (
-              <Card key={key} className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:scale-105">
-                <CardHeader className="text-center pb-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-xl mx-auto mb-4 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Shield className="w-6 h-6 text-white" />
-                  </div>
-                  <CardTitle className="text-xl font-bold text-slate-800">{role.title}</CardTitle>
-                  <CardDescription className="text-slate-600">{role.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2 mb-6">
-                    {role.features.map((feature: string, idx: number) => (
-                      <li key={idx} className="flex items-center text-sm text-slate-600">
-                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-3" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link to={`/auth?role=${key}`}>
-                    <Button className="w-full bg-slate-800 hover:bg-slate-900 text-white">
-                      {language === 'en' ? 'Register' : 'Registreer'}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
+            {(['seller', 'vet', 'agent', 'driver'] as const).map((roleKey) => {
+              const role = t.roles[roleKey];
+              return (
+                <Card key={roleKey} className="group hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:scale-105">
+                  <CardHeader className="text-center pb-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-xl mx-auto mb-4 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Shield className="w-6 h-6 text-white" />
+                    </div>
+                    <CardTitle className="text-xl font-bold text-slate-800">{role.title}</CardTitle>
+                    <CardDescription className="text-slate-600">{role.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2 mb-6">
+                      {role.features.map((feature: string, idx: number) => (
+                        <li key={idx} className="flex items-center text-sm text-slate-600">
+                          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-3" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <Link to={`/auth?role=${roleKey}`}>
+                      <Button className="w-full bg-slate-800 hover:bg-slate-900 text-white">
+                        {language === 'en' ? 'Register' : 'Registreer'}
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
