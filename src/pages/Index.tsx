@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
 
   useEffect(() => {
     if (!loading && user && profile) {
@@ -35,7 +34,6 @@ const Index = () => {
   };
 
   const handleSignOut = async () => {
-    const { signOut } = useAuth();
     await signOut();
   };
 
