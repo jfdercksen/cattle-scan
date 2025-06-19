@@ -130,7 +130,7 @@ export type Database = {
           postal_code?: string | null
           province?: string | null
           registration_number?: string | null
-          role: Database["public"]["Enums"]["user_role"]
+          role?: Database["public"]["Enums"]["user_role"]
           status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string
         }
@@ -161,14 +161,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: Database["public"]["Enums"]["user_role"]
-      }
-      get_current_user_status: {
-        Args: Record<PropertyKey, never>
-        Returns: Database["public"]["Enums"]["user_status"]
-      }
+      [_ in never]: never
     }
     Enums: {
       language_preference: "en" | "af"
