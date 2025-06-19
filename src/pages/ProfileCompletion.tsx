@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const ProfileCompletion = () => {
   const navigate = useNavigate();
-  const { profile, user, loading } = useAuth();
+  const { profile, user, loading, getRoleRedirectPath } = useAuth();
   const { toast } = useToast();
   
   const [submitting, setSubmitting] = useState(false);
@@ -52,13 +51,13 @@ const ProfileCompletion = () => {
         return;
       }
       
-      // If profile is complete or not pending, redirect to home
-      if (profile && (profile.status !== 'pending' || profile.phone)) {
-        navigate('/');
+      // If profile is complete, redirect to role-specific page
+      if (profile && profile.phone && profile.status !== 'pending') {
+        navigate(getRoleRedirectPath());
         return;
       }
     }
-  }, [user, profile, loading, navigate]);
+  }, [user, profile, loading, navigate, getRoleRedirectPath]);
 
   const handleFileChange = (field: string, file: File | null) => {
     setFormData(prev => ({ ...prev, [field]: file }));
@@ -91,7 +90,8 @@ const ProfileCompletion = () => {
         variant: "default"
       });
       
-      navigate('/');
+      // Redirect to role-specific page
+      navigate(getRoleRedirectPath());
       
     } catch (error) {
       console.error('Profile completion error:', error);

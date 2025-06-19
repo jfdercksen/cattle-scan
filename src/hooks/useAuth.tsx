@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +14,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
+  needsProfileCompletion: () => boolean;
+  getRoleRedirectPath: () => string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -175,6 +176,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return { error };
   };
 
+  const needsProfileCompletion = () => {
+    if (!profile || !user) return false;
+    
+    // Super admins don't need profile completion
+    if (profile.role === 'super_admin') return false;
+    
+    // Check if basic profile info is missing (indicating incomplete profile)
+    return !profile.phone || profile.status === 'pending';
+  };
+
+  const getRoleRedirectPath = () => {
+    if (!profile) return '/';
+    
+    switch (profile.role) {
+      case 'super_admin':
+      case 'admin':
+        return '/admin';
+      case 'seller':
+        return '/seller-dashboard';
+      case 'agent':
+        return '/agent-dashboard';
+      case 'vet':
+        return '/vet-dashboard';
+      case 'driver':
+        return '/driver-dashboard';
+      default:
+        return '/';
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -184,7 +215,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       signUp,
       signIn,
       signOut,
-      updateProfile
+      updateProfile,
+      needsProfileCompletion,
+      getRoleRedirectPath
     }}>
       {children}
     </AuthContext.Provider>
