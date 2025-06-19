@@ -29,10 +29,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // Only log auth events in development
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Auth state changed:', event, session?.user?.id);
-        }
+        console.log('Auth state changed:', event, session?.user?.id || 'no user');
         
         setSession(session);
         setUser(session?.user ?? null);
@@ -41,6 +38,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // Fetch user profile with proper error handling
           setTimeout(async () => {
             try {
+              console.log('Fetching profile for user:', session.user.id);
               const { data: profileData, error } = await supabase
                 .from('profiles')
                 .select('*')
@@ -48,21 +46,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .single();
               
               if (error) {
-                if (process.env.NODE_ENV === 'development') {
-                  console.error('Error fetching profile:', error);
+                console.error('Error fetching profile:', error.message);
+                // If no profile exists yet, that might be okay during signup
+                if (error.code !== 'PGRST116') { // Not "no rows returned"
+                  console.error('Unexpected profile fetch error:', error);
                 }
               } else {
-                if (process.env.NODE_ENV === 'development') {
-                  console.log('Profile loaded successfully');
-                }
+                console.log('Profile loaded successfully:', profileData.role);
                 setProfile(profileData);
               }
             } catch (error) {
-              if (process.env.NODE_ENV === 'development') {
-                console.error('Profile fetch error:', error);
-              }
+              console.error('Profile fetch error:', error);
             }
-          }, 0);
+          }, 100); // Small delay to ensure database trigger has run
         } else {
           setProfile(null);
         }
@@ -73,15 +69,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Initial session check:', session?.user?.id ? 'Found session' : 'No session');
-      }
+      console.log('Initial session check:', session?.user?.id ? 'Found session' : 'No session');
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
         setTimeout(async () => {
           try {
+            console.log('Initial profile fetch for user:', session.user.id);
             const { data: profileData, error } = await supabase
               .from('profiles')
               .select('*')
@@ -89,22 +84,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               .single();
             
             if (error) {
-              if (process.env.NODE_ENV === 'development') {
-                console.error('Error fetching initial profile:', error);
-              }
+              console.error('Error fetching initial profile:', error.message);
             } else {
-              if (process.env.NODE_ENV === 'development') {
-                console.log('Initial profile loaded successfully');
-              }
+              console.log('Initial profile loaded successfully:', profileData.role);
               setProfile(profileData);
             }
           } catch (error) {
-            if (process.env.NODE_ENV === 'development') {
-              console.error('Initial profile fetch error:', error);
-            }
+            console.error('Initial profile fetch error:', error);
           }
           setLoading(false);
-        }, 0);
+        }, 100);
       } else {
         setLoading(false);
       }
@@ -114,6 +103,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signUp = async (email: string, password: string, metadata: any) => {
+    console.log('Starting signup process for:', email);
+    console.log('Signup metadata:', metadata);
+    
     // Input validation
     if (!email || !password) {
       return { error: new Error('Email and password are required') };
@@ -128,17 +120,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return { error: new Error('Please enter a valid email address') };
     }
 
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: metadata
-      }
-    });
-    return { error };
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      console.log('Signup redirect URL:', redirectUrl);
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: metadata
+        }
+      });
+      
+      console.log('Signup response data:', data);
+      console.log('Signup response error:', error);
+      
+      return { error };
+    } catch (error) {
+      console.error('Signup catch error:', error);
+      return { error };
+    }
   };
 
   const signIn = async (email: string, password: string) => {
