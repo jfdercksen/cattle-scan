@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -178,22 +177,7 @@ const Index = () => {
   const t = content[language];
 
   if (user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="container mx-auto px-4 py-16">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-slate-800 mb-4">Welcome back!</h1>
-            <p className="text-xl text-slate-600 mb-8">You're already signed in to Cattle Scan.</p>
-            <Link to="/dashboard">
-              <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700">
-                Go to Dashboard
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
+    return null; // Will be redirected by Auth component
   }
 
   return (

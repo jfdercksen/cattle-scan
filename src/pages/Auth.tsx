@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { signUp, signIn, user } = useAuth();
+  const { signUp, signIn, user, profile, needsProfileCompletion, getRoleRedirectPath } = useAuth();
   const { toast } = useToast();
   
   const [language, setLanguage] = useState<'en' | 'af'>('en');
@@ -35,10 +36,14 @@ const Auth = () => {
   const isBuyerSignup = searchParams.get('buyer') === 'true';
 
   useEffect(() => {
-    if (user) {
-      navigate('/');
+    if (user && profile) {
+      if (needsProfileCompletion()) {
+        navigate('/profile-completion');
+      } else {
+        navigate(getRoleRedirectPath());
+      }
     }
-  }, [user, navigate]);
+  }, [user, profile, navigate, needsProfileCompletion, getRoleRedirectPath]);
 
   // Enhanced input validation
   const validateEmail = (email: string) => {
@@ -132,9 +137,8 @@ const Auth = () => {
           description: error.message,
           variant: "destructive"
         });
-      } else {
-        navigate('/');
       }
+      // Navigation will be handled by useEffect when user/profile state updates
     } catch (error) {
       toast({
         title: "Error",
@@ -221,7 +225,7 @@ const Auth = () => {
             : "Account created successfully! Please wait for approval.",
           variant: "default"
         });
-        navigate('/');
+        // Navigation will be handled by useEffect when user/profile state updates
       }
     } catch (error) {
       toast({
