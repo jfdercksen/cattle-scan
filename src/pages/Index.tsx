@@ -233,6 +233,11 @@ const Index = () => {
                   AF
                 </Button>
               </div>
+              <Link to="/auth">
+                <Button variant="outline" size="sm">
+                  {language === 'en' ? 'Sign In' : 'Teken In'}
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
