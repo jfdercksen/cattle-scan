@@ -201,7 +201,7 @@ const Auth = () => {
       const { error } = await signUp(email, password, {
         first_name: firstName.trim(),
         last_name: lastName.trim(),
-        role: isBuyerSignup ? 'admin' : role, // This will be converted to 'super_admin' in useAuth
+        role: isBuyerSignup ? 'super_admin' : role,
         language: language,
         phone: phone.trim() || null,
         company_name: companyName.trim() || null

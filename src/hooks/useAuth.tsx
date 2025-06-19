@@ -130,18 +130,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const redirectUrl = `${window.location.origin}/`;
     
-    // Fix the buyer signup role assignment - use 'super_admin' instead of 'admin'
-    const roleToAssign = metadata.role === 'admin' ? 'super_admin' : metadata.role;
-    
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectUrl,
-        data: {
-          ...metadata,
-          role: roleToAssign
-        }
+        data: metadata
       }
     });
     return { error };
