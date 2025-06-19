@@ -182,8 +182,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Super admins don't need profile completion
     if (profile.role === 'super_admin') return false;
     
-    // Check if basic profile info is missing (indicating incomplete profile)
-    return !profile.phone || profile.status === 'pending';
+    // Check the profile_completed flag
+    return !profile.profile_completed;
   };
 
   const getRoleRedirectPath = () => {

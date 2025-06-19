@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -51,8 +52,8 @@ const ProfileCompletion = () => {
         return;
       }
       
-      // If profile is complete, redirect to role-specific page
-      if (profile && profile.phone && profile.status !== 'pending') {
+      // If profile is already completed, redirect to role-specific page
+      if (profile && profile.profile_completed) {
         navigate(getRoleRedirectPath());
         return;
       }
@@ -71,9 +72,11 @@ const ProfileCompletion = () => {
     setSubmitting(true);
     
     try {
-      // Update profile with collected information
+      // Update profile with collected information and mark as completed
       const updates = {
         phone: formData.phone,
+        profile_completed: true,
+        profile_completed_at: new Date().toISOString(),
         // Add other fields as needed based on role
       };
       
@@ -338,6 +341,7 @@ const ProfileCompletion = () => {
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder={profile.phone || ''}
                 required
               />
             </div>
