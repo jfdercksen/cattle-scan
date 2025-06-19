@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -184,38 +183,6 @@ const ProfileCompletion = () => {
               <SelectItem value="herd_manager">Herd Manager</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-
-        <div>
-          <Label htmlFor="responsiblePersonName">Name and surname of person offering the livestock *</Label>
-          <Input
-            id="responsiblePersonName"
-            value={formData.responsiblePersonName}
-            onChange={(e) => setFormData(prev => ({ ...prev, responsiblePersonName: e.target.value }))}
-            required
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="responsiblePersonEmail">E-mail address of person offering livestock *</Label>
-          <Input
-            id="responsiblePersonEmail"
-            type="email"
-            value={formData.responsiblePersonEmail}
-            onChange={(e) => setFormData(prev => ({ ...prev, responsiblePersonEmail: e.target.value }))}
-            required
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="responsiblePersonPhone">Cell phone number of person offering livestock *</Label>
-          <Input
-            id="responsiblePersonPhone"
-            type="tel"
-            value={formData.responsiblePersonPhone}
-            onChange={(e) => setFormData(prev => ({ ...prev, responsiblePersonPhone: e.target.value }))}
-            required
-          />
         </div>
 
         {renderFileUpload("Photo of I.D. or drivers licence of person offering livestock", "idDocument", true)}
