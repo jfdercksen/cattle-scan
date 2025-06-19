@@ -1,9 +1,8 @@
-
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Shield, Users, FileCheck, Truck, ChevronRight } from "lucide-react";
+import { ArrowRight, Shield, Users, FileCheck, Truck, ChevronRight, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -45,7 +44,7 @@ interface ContentStructure {
 
 const Index = () => {
   const [language, setLanguage] = useState<'en' | 'af'>('en');
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
 
   const content: Record<'en' | 'af', ContentStructure> = {
     en: {
@@ -185,7 +184,17 @@ const Index = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="container mx-auto px-4 py-16">
           <div className="text-center">
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-between mb-4">
+              <div className="flex items-center space-x-4">
+                {profile && ['super_admin', 'admin'].includes(profile.role) && profile.status === 'approved' && (
+                  <Link to="/admin">
+                    <Button variant="outline" className="flex items-center space-x-2">
+                      <Settings className="w-4 h-4" />
+                      <span>Admin Panel</span>
+                    </Button>
+                  </Link>
+                )}
+              </div>
               <Button variant="outline" onClick={handleSignOut}>
                 Sign Out
               </Button>

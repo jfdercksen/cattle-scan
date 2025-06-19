@@ -9,6 +9,41 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      approval_actions: {
+        Row: {
+          action: Database["public"]["Enums"]["user_status"]
+          action_by: string
+          created_at: string
+          id: string
+          profile_id: string
+          reason: string | null
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["user_status"]
+          action_by: string
+          created_at?: string
+          id?: string
+          profile_id: string
+          reason?: string | null
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["user_status"]
+          action_by?: string
+          created_at?: string
+          id?: string
+          profile_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_actions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -161,7 +196,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
+      get_current_user_status: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_status"]
+      }
     }
     Enums: {
       language_preference: "en" | "af"
