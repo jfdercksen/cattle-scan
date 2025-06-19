@@ -9,7 +9,153 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          ip_address: unknown | null
+          new_values: Json | null
+          old_values: Json | null
+          record_id: string | null
+          table_name: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          record_id?: string | null
+          table_name: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          record_id?: string | null
+          table_name?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      farms: {
+        Row: {
+          address: string
+          biosecurity_status: Json | null
+          city: string
+          coordinates: unknown | null
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          postal_code: string | null
+          province: string
+          registration_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          biosecurity_status?: Json | null
+          city: string
+          coordinates?: unknown | null
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          postal_code?: string | null
+          province: string
+          registration_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          biosecurity_status?: Json | null
+          city?: string
+          coordinates?: unknown | null
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          postal_code?: string | null
+          province?: string
+          registration_number?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          address: string | null
+          approved_at: string | null
+          approved_by: string | null
+          city: string | null
+          company_name: string | null
+          created_at: string
+          email: string
+          first_name: string | null
+          id: string
+          language_preference: Database["public"]["Enums"]["language_preference"]
+          last_name: string | null
+          phone: string | null
+          postal_code: string | null
+          province: string | null
+          registration_number: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          status: Database["public"]["Enums"]["user_status"]
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          city?: string | null
+          company_name?: string | null
+          created_at?: string
+          email: string
+          first_name?: string | null
+          id: string
+          language_preference?: Database["public"]["Enums"]["language_preference"]
+          last_name?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          province?: string | null
+          registration_number?: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          status?: Database["public"]["Enums"]["user_status"]
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          city?: string | null
+          company_name?: string | null
+          created_at?: string
+          email?: string
+          first_name?: string | null
+          id?: string
+          language_preference?: Database["public"]["Enums"]["language_preference"]
+          last_name?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          province?: string | null
+          registration_number?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          status?: Database["public"]["Enums"]["user_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +164,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      language_preference: "en" | "af"
+      user_role: "super_admin" | "admin" | "seller" | "vet" | "agent" | "driver"
+      user_status: "pending" | "approved" | "rejected" | "suspended"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +281,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      language_preference: ["en", "af"],
+      user_role: ["super_admin", "admin", "seller", "vet", "agent", "driver"],
+      user_status: ["pending", "approved", "rejected", "suspended"],
+    },
   },
 } as const
