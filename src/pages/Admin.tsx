@@ -6,9 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Shield, UserCheck, UserX, ArrowLeft, Users, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Shield, UserCheck, UserX, ArrowLeft, Users, Clock, CheckCircle, XCircle, Ban, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -70,7 +71,7 @@ const Admin = () => {
     }
   };
 
-  const handleAction = async (profileId: string, action: 'approved' | 'rejected') => {
+  const handleAction = async (profileId: string, action: 'approved' | 'rejected' | 'suspended') => {
     if (!user || !selectedProfile) return;
     
     setActionLoading(true);
@@ -108,9 +109,10 @@ const Admin = () => {
         throw logError;
       }
       
+      const actionText = action === 'approved' ? 'approved' : action === 'rejected' ? 'rejected' : 'suspended';
       toast({
         title: "Success",
-        description: `User ${action === 'approved' ? 'approved' : 'rejected'} successfully`,
+        description: `User ${actionText} successfully`,
         variant: "default"
       });
       
@@ -131,6 +133,46 @@ const Admin = () => {
     }
   };
 
+  const handleDeleteUser = async (profileId: string) => {
+    if (!user) return;
+    
+    setActionLoading(true);
+    
+    try {
+      console.log('Deleting user:', profileId);
+      
+      // Delete the profile (this will cascade and delete the auth user due to foreign key)
+      const { error: deleteError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', profileId);
+      
+      if (deleteError) {
+        console.error('Delete error:', deleteError);
+        throw deleteError;
+      }
+      
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+        variant: "default"
+      });
+      
+      // Refresh profiles
+      await fetchProfiles();
+      
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete user",
+        variant: "destructive"
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -140,7 +182,7 @@ const Admin = () => {
       case 'rejected':
         return <Badge variant="secondary" className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
       case 'suspended':
-        return <Badge variant="secondary" className="bg-orange-100 text-orange-800"><XCircle className="w-3 h-3 mr-1" />Suspended</Badge>;
+        return <Badge variant="secondary" className="bg-orange-100 text-orange-800"><Ban className="w-3 h-3 mr-1" />Suspended</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -174,13 +216,7 @@ const Admin = () => {
   const pendingProfiles = profiles.filter(p => p.status === 'pending');
   const approvedProfiles = profiles.filter(p => p.status === 'approved');
   const rejectedProfiles = profiles.filter(p => p.status === 'rejected');
-
-  console.log('Profile counts:', {
-    total: profiles.length,
-    pending: pendingProfiles.length,
-    approved: approvedProfiles.length,
-    rejected: rejectedProfiles.length
-  });
+  const suspendedProfiles = profiles.filter(p => p.status === 'suspended');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
@@ -204,20 +240,8 @@ const Admin = () => {
           </div>
         </div>
 
-        {/* Debug Info */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Debug Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>Total profiles found: {profiles.length}</p>
-            <p>Current user role: {profile?.role}</p>
-            <p>Current user status: {profile?.status}</p>
-          </CardContent>
-        </Card>
-
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
+        <div className="grid md:grid-cols-5 gap-6 mb-8">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-slate-600">Pending Approval</CardTitle>
@@ -250,6 +274,18 @@ const Admin = () => {
               <div className="flex items-center space-x-2">
                 <XCircle className="w-5 h-5 text-red-600" />
                 <span className="text-2xl font-bold text-slate-800">{rejectedProfiles.length}</span>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-slate-600">Suspended Users</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2">
+                <Ban className="w-5 h-5 text-orange-600" />
+                <span className="text-2xl font-bold text-slate-800">{suspendedProfiles.length}</span>
               </div>
             </CardContent>
           </Card>
@@ -401,9 +437,136 @@ const Admin = () => {
                             </Dialog>
                           </>
                         )}
-                        {profile.status !== 'pending' && (
+                        
+                        {profile.status === 'approved' && profile.role !== 'super_admin' && (
+                          <>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="border-orange-300 text-orange-600 hover:bg-orange-50"
+                                  onClick={() => setSelectedProfile(profile)}
+                                >
+                                  <Ban className="w-3 h-3 mr-1" />
+                                  Suspend
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Suspend User</DialogTitle>
+                                  <DialogDescription>
+                                    Suspend {profile.first_name} {profile.last_name} ({profile.email})? This will block their access to the platform.
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label htmlFor="suspend-reason">Suspension Reason</Label>
+                                    <Textarea
+                                      id="suspend-reason"
+                                      placeholder="Please provide a reason for suspension..."
+                                      value={reason}
+                                      onChange={(e) => setReason(e.target.value)}
+                                      required
+                                    />
+                                  </div>
+                                </div>
+                                <DialogFooter>
+                                  <Button variant="outline" onClick={() => setSelectedProfile(null)}>
+                                    Cancel
+                                  </Button>
+                                  <Button 
+                                    className="bg-orange-600 hover:bg-orange-700"
+                                    onClick={() => handleAction(profile.id, 'suspended')}
+                                    disabled={actionLoading || !reason.trim()}
+                                  >
+                                    {actionLoading ? 'Processing...' : 'Suspend User'}
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                >
+                                  <Trash2 className="w-3 h-3 mr-1" />
+                                  Delete
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to permanently delete {profile.first_name} {profile.last_name} ({profile.email})? This action cannot be undone and will remove all their data from the system.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleDeleteUser(profile.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                    disabled={actionLoading}
+                                  >
+                                    {actionLoading ? 'Deleting...' : 'Delete User'}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </>
+                        )}
+
+                        {profile.status === 'suspended' && (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                size="sm" 
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={() => setSelectedProfile(profile)}
+                              >
+                                <UserCheck className="w-3 h-3 mr-1" />
+                                Reactivate
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Reactivate User</DialogTitle>
+                                <DialogDescription>
+                                  Reactivate {profile.first_name} {profile.last_name} ({profile.email})? This will restore their access to the platform.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <div>
+                                  <Label htmlFor="reactivate-reason">Reactivation Notes (Optional)</Label>
+                                  <Textarea
+                                    id="reactivate-reason"
+                                    placeholder="Add any notes about this reactivation..."
+                                    value={reason}
+                                    onChange={(e) => setReason(e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                              <DialogFooter>
+                                <Button variant="outline" onClick={() => setSelectedProfile(null)}>
+                                  Cancel
+                                </Button>
+                                <Button 
+                                  className="bg-green-600 hover:bg-green-700"
+                                  onClick={() => handleAction(profile.id, 'approved')}
+                                  disabled={actionLoading}
+                                >
+                                  {actionLoading ? 'Processing...' : 'Reactivate User'}
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                        
+                        {(profile.status === 'rejected' || (profile.status === 'approved' && profile.role === 'super_admin')) && (
                           <Badge variant="outline" className="text-xs">
-                            {profile.status === 'approved' ? 'Approved' : 'Rejected'}
+                            {profile.status === 'approved' ? 'Super Admin' : 'Rejected'}
                           </Badge>
                         )}
                       </div>
