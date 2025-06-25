@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -94,12 +93,10 @@ export const LivestockListingForm = ({ onClose, onSuccess }: LivestockListingFor
     try {
       const { error } = await supabase
         .from('livestock_listings')
-        .insert([
-          {
-            ...data,
-            seller_id: user.id,
-          }
-        ]);
+        .insert({
+          ...data,
+          seller_id: user.id,
+        });
 
       if (error) throw error;
 
@@ -223,7 +220,7 @@ export const LivestockListingForm = ({ onClose, onSuccess }: LivestockListingFor
                             <Input
                               type="number"
                               min="0"
-                              {...field}
+                              value={field.value as number}
                               onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                             />
                           </FormControl>
@@ -241,7 +238,7 @@ export const LivestockListingForm = ({ onClose, onSuccess }: LivestockListingFor
                             <Input
                               type="number"
                               min="0"
-                              {...field}
+                              value={field.value as number}
                               onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                             />
                           </FormControl>
@@ -266,7 +263,7 @@ export const LivestockListingForm = ({ onClose, onSuccess }: LivestockListingFor
                       <Input
                         type="number"
                         min="1"
-                        {...field}
+                        value={field.value}
                         onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                       />
                     </FormControl>
@@ -285,7 +282,7 @@ export const LivestockListingForm = ({ onClose, onSuccess }: LivestockListingFor
                       <Input
                         type="number"
                         min="0"
-                        {...field}
+                        value={field.value}
                         onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                       />
                     </FormControl>
@@ -320,8 +317,8 @@ export const LivestockListingForm = ({ onClose, onSuccess }: LivestockListingFor
                       <Input
                         type="number"
                         min="0"
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        value={field.value || ''}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
                       />
                     </FormControl>
                     <FormMessage />
