@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
 type LivestockListing = Tables<'livestock_listings'>;
@@ -59,10 +60,30 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
     setIsSubmitting(true);
 
     try {
-      // Here you would typically save the offer to the database
-      // For now, we'll just show a success message
-      console.log('Offer data:', data);
-      console.log('For listing:', listing.id);
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        throw new Error('Not authenticated');
+      }
+
+      const { error } = await supabase
+        .from('livestock_offers')
+        .insert({
+          listing_id: listing.id,
+          created_by: user.user.id,
+          chalmar_beef_offer: data.chalmar_beef_offer,
+          to_weight: data.to_weight,
+          then_penilazation_of: data.then_penilazation_of,
+          and_from: data.and_from,
+          penilazation_of: data.penilazation_of,
+          percent_heifers_allowed: data.percent_heifers_allowed,
+          penilazation_for_additional_heifers: data.penilazation_for_additional_heifers,
+          offer_valid_until_date: data.offer_valid_until_date,
+          offer_valid_until_time: data.offer_valid_until_time,
+          additional_r25_per_calf: data.additional_r25_per_calf,
+          affidavit_required: data.affidavit_required,
+        });
+
+      if (error) throw error;
 
       toast({
         title: "Success",
@@ -70,7 +91,6 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
       });
       
       onSuccess();
-      onClose();
     } catch (error) {
       console.error('Error submitting offer:', error);
       toast({

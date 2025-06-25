@@ -1,15 +1,25 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Beef, LogOut } from "lucide-react";
+import { Beef, LogOut, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { LivestockListingDialog } from "@/components/LivestockListingDialog";
+import { SellerOffersTable } from "@/components/SellerOffersTable";
+import { OfferDetailsDialog } from "@/components/OfferDetailsDialog";
+import type { Tables } from '@/integrations/supabase/types';
+
+type LivestockOffer = Tables<'livestock_offers'> & {
+  livestock_listings: Tables<'livestock_listings'>;
+};
 
 const SellerDashboard = () => {
   const navigate = useNavigate();
   const { user, profile, loading, signOut, needsProfileCompletion } = useAuth();
+  const [selectedOffer, setSelectedOffer] = useState<LivestockOffer | null>(null);
+  const [offerDialogOpen, setOfferDialogOpen] = useState(false);
+  const [refreshOffers, setRefreshOffers] = useState(0);
 
   useEffect(() => {
     if (!loading) {
@@ -33,6 +43,15 @@ const SellerDashboard = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
+  };
+
+  const handleViewOffer = (offer: LivestockOffer) => {
+    setSelectedOffer(offer);
+    setOfferDialogOpen(true);
+  };
+
+  const handleOfferUpdated = () => {
+    setRefreshOffers(prev => prev + 1);
   };
 
   if (loading) {
@@ -59,7 +78,7 @@ const SellerDashboard = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -106,6 +125,20 @@ const SellerDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        <div className="space-y-6">
+          <SellerOffersTable 
+            key={refreshOffers}
+            onViewOffer={handleViewOffer} 
+          />
+        </div>
+
+        <OfferDetailsDialog
+          offer={selectedOffer}
+          open={offerDialogOpen}
+          onOpenChange={setOfferDialogOpen}
+          onOfferUpdated={handleOfferUpdated}
+        />
       </div>
     </div>
   );

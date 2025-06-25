@@ -224,6 +224,80 @@ export type Database = {
         }
         Relationships: []
       }
+      livestock_offers: {
+        Row: {
+          additional_r25_per_calf: boolean | null
+          affidavit_required: boolean | null
+          and_from: number
+          chalmar_beef_offer: number
+          created_at: string
+          created_by: string
+          id: string
+          listing_id: string
+          offer_valid_until_date: string
+          offer_valid_until_time: string
+          penilazation_for_additional_heifers: number
+          penilazation_of: number
+          percent_heifers_allowed: number
+          seller_notes: string | null
+          seller_response_date: string | null
+          status: string
+          then_penilazation_of: number
+          to_weight: number
+          updated_at: string
+        }
+        Insert: {
+          additional_r25_per_calf?: boolean | null
+          affidavit_required?: boolean | null
+          and_from: number
+          chalmar_beef_offer: number
+          created_at?: string
+          created_by: string
+          id?: string
+          listing_id: string
+          offer_valid_until_date: string
+          offer_valid_until_time: string
+          penilazation_for_additional_heifers: number
+          penilazation_of: number
+          percent_heifers_allowed: number
+          seller_notes?: string | null
+          seller_response_date?: string | null
+          status?: string
+          then_penilazation_of: number
+          to_weight: number
+          updated_at?: string
+        }
+        Update: {
+          additional_r25_per_calf?: boolean | null
+          affidavit_required?: boolean | null
+          and_from?: number
+          chalmar_beef_offer?: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          listing_id?: string
+          offer_valid_until_date?: string
+          offer_valid_until_time?: string
+          penilazation_for_additional_heifers?: number
+          penilazation_of?: number
+          percent_heifers_allowed?: number
+          seller_notes?: string | null
+          seller_response_date?: string | null
+          status?: string
+          then_penilazation_of?: number
+          to_weight?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "livestock_offers_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           address: string | null
