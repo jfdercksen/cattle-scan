@@ -5,15 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Users, Clock, CheckCircle, XCircle, Ban, Settings, Bell, Activity, BarChart3, ArrowRight, LogOut } from "lucide-react";
+import { Shield, Users, Clock, CheckCircle, XCircle, Ban, Settings, Bell, Activity, BarChart3, ArrowRight, LogOut, Beef } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { Link } from "react-router-dom";
 import ProfileSection from "@/components/ProfileSection";
+import { LivestockListingsTable } from "@/components/LivestockListingsTable";
+import { LivestockListingDetailsDialog } from "@/components/LivestockListingDetailsDialog";
 
 type Profile = Tables<'profiles'>;
+type LivestockListing = Tables<'livestock_listings'>;
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -22,6 +25,8 @@ const AdminDashboard = () => {
   
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
+  const [selectedListing, setSelectedListing] = useState<LivestockListing | null>(null);
+  const [listingDialogOpen, setListingDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!loading) {
@@ -63,6 +68,11 @@ const AdminDashboard = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
+  };
+
+  const handleViewListing = (listing: LivestockListing) => {
+    setSelectedListing(listing);
+    setListingDialogOpen(true);
   };
 
   if (loading || loadingProfiles) {
@@ -123,9 +133,10 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="users">User Management</TabsTrigger>
+            <TabsTrigger value="livestock">Livestock</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
@@ -285,6 +296,10 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="livestock">
+            <LivestockListingsTable onViewListing={handleViewListing} />
+          </TabsContent>
+
           <TabsContent value="activity">
             <Card>
               <CardHeader>
@@ -326,6 +341,12 @@ const AdminDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <LivestockListingDetailsDialog
+        listing={selectedListing}
+        open={listingDialogOpen}
+        onOpenChange={setListingDialogOpen}
+      />
     </div>
   );
 };

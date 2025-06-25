@@ -91,12 +91,38 @@ export const LivestockListingForm = ({ onClose, onSuccess }: LivestockListingFor
     setIsSubmitting(true);
 
     try {
+      // Prepare data for insertion, ensuring all required fields are present
+      const insertData = {
+        seller_id: user.id,
+        owner_name: data.owner_name,
+        bred_or_bought: data.bred_or_bought,
+        location: data.location,
+        weighing_location: data.weighing_location,
+        loading_points_1: data.loading_points_1,
+        loading_points_2: data.loading_points_2,
+        loading_points_3: data.loading_points_3,
+        loading_points_4: data.loading_points_4,
+        loading_points_5: data.loading_points_5,
+        livestock_at_loading_point_1: data.livestock_at_loading_point_1,
+        livestock_at_loading_point_2: data.livestock_at_loading_point_2,
+        livestock_at_loading_point_3: data.livestock_at_loading_point_3,
+        livestock_at_loading_point_4: data.livestock_at_loading_point_4,
+        livestock_at_loading_point_5: data.livestock_at_loading_point_5,
+        total_livestock_offered: data.total_livestock_offered,
+        number_of_heifers: data.number_of_heifers,
+        males_castrated: data.males_castrated,
+        mothers_status: data.mothers_status || null,
+        weaned_duration: data.weaned_duration || null,
+        grazing_green_feed: data.grazing_green_feed,
+        growth_implant: data.growth_implant,
+        growth_implant_type: data.growth_implant_type || null,
+        estimated_average_weight: data.estimated_average_weight || null,
+        breed: data.breed,
+      };
+
       const { error } = await supabase
         .from('livestock_listings')
-        .insert({
-          ...data,
-          seller_id: user.id,
-        });
+        .insert(insertData);
 
       if (error) throw error;
 
