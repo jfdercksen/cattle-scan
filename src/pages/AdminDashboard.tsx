@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,8 @@ import { Link } from "react-router-dom";
 import ProfileSection from "@/components/ProfileSection";
 import { LivestockListingsTable } from "@/components/LivestockListingsTable";
 import { LivestockListingDetailsDialog } from "@/components/LivestockListingDetailsDialog";
+import { AdminOffersTable } from "@/components/AdminOffersTable";
+import { AdminOfferDetailsDialog } from "@/components/AdminOfferDetailsDialog";
 
 type Profile = Tables<'profiles'>;
 type LivestockListing = Tables<'livestock_listings'>;
@@ -27,6 +28,8 @@ const AdminDashboard = () => {
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [selectedListing, setSelectedListing] = useState<LivestockListing | null>(null);
   const [listingDialogOpen, setListingDialogOpen] = useState(false);
+  const [selectedOffer, setSelectedOffer] = useState<any>(null);
+  const [offerDialogOpen, setOfferDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!loading) {
@@ -73,6 +76,11 @@ const AdminDashboard = () => {
   const handleViewListing = (listing: LivestockListing) => {
     setSelectedListing(listing);
     setListingDialogOpen(true);
+  };
+
+  const handleViewOffer = (offer: any) => {
+    setSelectedOffer(offer);
+    setOfferDialogOpen(true);
   };
 
   if (loading || loadingProfiles) {
@@ -133,10 +141,11 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="livestock">Livestock</TabsTrigger>
+            <TabsTrigger value="offers">Offers</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
@@ -300,6 +309,10 @@ const AdminDashboard = () => {
             <LivestockListingsTable onViewListing={handleViewListing} />
           </TabsContent>
 
+          <TabsContent value="offers">
+            <AdminOffersTable onViewOffer={handleViewOffer} />
+          </TabsContent>
+
           <TabsContent value="activity">
             <Card>
               <CardHeader>
@@ -346,6 +359,12 @@ const AdminDashboard = () => {
         listing={selectedListing}
         open={listingDialogOpen}
         onOpenChange={setListingDialogOpen}
+      />
+
+      <AdminOfferDetailsDialog
+        offer={selectedOffer}
+        open={offerDialogOpen}
+        onOpenChange={setOfferDialogOpen}
       />
     </div>
   );
