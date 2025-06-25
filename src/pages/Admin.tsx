@@ -224,9 +224,9 @@ const Admin = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" onClick={() => navigate('/')}>
+            <Button variant="ghost" onClick={() => navigate('/admin-dashboard')}>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
+              Back to Dashboard
             </Button>
             <div className="flex items-center space-x-2">
               <div className="w-10 h-10 bg-gradient-to-br from-emerald-600 to-blue-600 rounded-lg flex items-center justify-center">
