@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, ArrowLeft } from "lucide-react";
+import { Shield, ArrowLeft, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -21,6 +22,7 @@ const Auth = () => {
   const [language, setLanguage] = useState<'en' | 'af'>('en');
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('signin');
+  const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
   
   // Form state
   const [email, setEmail] = useState('');
@@ -77,6 +79,12 @@ const Auth = () => {
       signUpDescription: 'Join the Cattle Scan platform',
       buyerSignUpTitle: 'Buyer Registration',
       buyerSignUpDescription: 'Register as a buyer to access the platform',
+      forgotPassword: 'Forgot Password?',
+      resetPassword: 'Reset Password',
+      resetPasswordTitle: 'Reset Your Password',
+      resetPasswordDescription: 'Enter your email address and we\'ll send you a link to reset your password',
+      sendResetLink: 'Send Reset Link',
+      backToSignIn: 'Back to Sign In',
       roles: {
         seller: 'Seller',
         vet: 'Veterinarian',
@@ -103,6 +111,12 @@ const Auth = () => {
       signUpDescription: 'Sluit aan by die Cattle Scan platform',
       buyerSignUpTitle: 'Koper Registrasie',
       buyerSignUpDescription: 'Registreer as \'n koper om toegang tot die platform te kry',
+      forgotPassword: 'Wagwoord Vergeet?',
+      resetPassword: 'Herstel Wagwoord',
+      resetPasswordTitle: 'Herstel Jou Wagwoord',
+      resetPasswordDescription: 'Voer jou e-pos adres in en ons sal jou \'n skakel stuur om jou wagwoord te herstel',
+      sendResetLink: 'Stuur Herstel Skakel',
+      backToSignIn: 'Terug na Teken In',
       roles: {
         seller: 'Verkoper',
         vet: 'Veearts',
@@ -139,6 +153,50 @@ const Auth = () => {
         });
       }
       // Navigation will be handled by useEffect when user/profile state updates
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateEmail(email)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth?reset=true`,
+      });
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Password reset link sent! Check your email.",
+          variant: "default"
+        });
+        setForgotPasswordMode(false);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -267,19 +325,50 @@ const Auth = () => {
           
           <div className="text-center">
             <div className="w-12 h-12 bg-gradient-to-br from-emerald-600 to-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-6 h-6 text-white" />
+              {forgotPasswordMode ? <Mail className="w-6 h-6 text-white" /> : <Shield className="w-6 h-6 text-white" />}
             </div>
             <CardTitle className="text-2xl font-bold">
-              {isBuyerSignup ? t.buyerSignUpTitle : (activeTab === 'signin' ? t.signInTitle : t.signUpTitle)}
+              {forgotPasswordMode ? t.resetPasswordTitle : 
+               isBuyerSignup ? t.buyerSignUpTitle : 
+               (activeTab === 'signin' ? t.signInTitle : t.signUpTitle)}
             </CardTitle>
             <CardDescription>
-              {isBuyerSignup ? t.buyerSignUpDescription : (activeTab === 'signin' ? t.signInDescription : t.signUpDescription)}
+              {forgotPasswordMode ? t.resetPasswordDescription :
+               isBuyerSignup ? t.buyerSignUpDescription : 
+               (activeTab === 'signin' ? t.signInDescription : t.signUpDescription)}
             </CardDescription>
           </div>
         </CardHeader>
 
         <CardContent>
-          {isBuyerSignup ? (
+          {forgotPasswordMode ? (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div>
+                <Label htmlFor="reset-email">{t.email}</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  maxLength={100}
+                />
+              </div>
+              
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Sending...' : t.sendResetLink}
+              </Button>
+              
+              <Button 
+                type="button" 
+                variant="ghost" 
+                className="w-full" 
+                onClick={() => setForgotPasswordMode(false)}
+              >
+                {t.backToSignIn}
+              </Button>
+            </form>
+          ) : isBuyerSignup ? (
             <form onSubmit={handleSignUp} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -403,6 +492,17 @@ const Auth = () => {
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? 'Signing In...' : t.signIn}
                   </Button>
+                  
+                  <div className="text-center">
+                    <Button 
+                      type="button" 
+                      variant="link" 
+                      className="text-sm text-slate-600 hover:text-slate-800"
+                      onClick={() => setForgotPasswordMode(true)}
+                    >
+                      {t.forgotPassword}
+                    </Button>
+                  </div>
                 </form>
               </TabsContent>
               
