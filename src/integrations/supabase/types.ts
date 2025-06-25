@@ -132,17 +132,31 @@ export type Database = {
         Row: {
           bred_or_bought: string
           breed: string
+          breeder_name: string | null
           created_at: string
+          declaration_livestock_kept_away: boolean | null
+          declaration_livestock_south_africa: boolean | null
+          declaration_no_animal_origin_feed: boolean | null
+          declaration_no_cloven_hooved_animals: boolean | null
+          declaration_no_foot_mouth_disease: boolean | null
+          declaration_no_foot_mouth_disease_farm: boolean | null
+          declaration_no_gene_editing: boolean | null
+          declaration_veterinary_products_registered: boolean | null
           estimated_average_weight: number | null
+          farm_birth_address: string | null
+          farm_loading_address: string | null
           grazing_green_feed: boolean | null
           growth_implant: boolean | null
           growth_implant_type: string | null
           id: string
+          is_breeder_seller: boolean | null
           livestock_at_loading_point_1: number | null
           livestock_at_loading_point_2: number | null
           livestock_at_loading_point_3: number | null
           livestock_at_loading_point_4: number | null
           livestock_at_loading_point_5: number | null
+          livestock_moved_location: string | null
+          livestock_moved_out_of_boundaries: boolean | null
           loading_points_1: number | null
           loading_points_2: number | null
           loading_points_3: number | null
@@ -151,11 +165,19 @@ export type Database = {
           location: string
           males_castrated: boolean | null
           mothers_status: string | null
+          number_cattle_loaded: number | null
           number_of_heifers: number | null
+          number_sheep_loaded: number | null
           owner_name: string
+          responsible_person_designation: string | null
+          responsible_person_name: string | null
           seller_id: string
+          signature_data: string | null
+          signature_date: string | null
+          signed_location: string | null
           status: string
           total_livestock_offered: number
+          truck_registration_number: string | null
           updated_at: string
           weaned_duration: string | null
           weighing_location: string
@@ -163,17 +185,31 @@ export type Database = {
         Insert: {
           bred_or_bought: string
           breed: string
+          breeder_name?: string | null
           created_at?: string
+          declaration_livestock_kept_away?: boolean | null
+          declaration_livestock_south_africa?: boolean | null
+          declaration_no_animal_origin_feed?: boolean | null
+          declaration_no_cloven_hooved_animals?: boolean | null
+          declaration_no_foot_mouth_disease?: boolean | null
+          declaration_no_foot_mouth_disease_farm?: boolean | null
+          declaration_no_gene_editing?: boolean | null
+          declaration_veterinary_products_registered?: boolean | null
           estimated_average_weight?: number | null
+          farm_birth_address?: string | null
+          farm_loading_address?: string | null
           grazing_green_feed?: boolean | null
           growth_implant?: boolean | null
           growth_implant_type?: string | null
           id?: string
+          is_breeder_seller?: boolean | null
           livestock_at_loading_point_1?: number | null
           livestock_at_loading_point_2?: number | null
           livestock_at_loading_point_3?: number | null
           livestock_at_loading_point_4?: number | null
           livestock_at_loading_point_5?: number | null
+          livestock_moved_location?: string | null
+          livestock_moved_out_of_boundaries?: boolean | null
           loading_points_1?: number | null
           loading_points_2?: number | null
           loading_points_3?: number | null
@@ -182,11 +218,19 @@ export type Database = {
           location: string
           males_castrated?: boolean | null
           mothers_status?: string | null
+          number_cattle_loaded?: number | null
           number_of_heifers?: number | null
+          number_sheep_loaded?: number | null
           owner_name: string
+          responsible_person_designation?: string | null
+          responsible_person_name?: string | null
           seller_id: string
+          signature_data?: string | null
+          signature_date?: string | null
+          signed_location?: string | null
           status?: string
           total_livestock_offered: number
+          truck_registration_number?: string | null
           updated_at?: string
           weaned_duration?: string | null
           weighing_location: string
@@ -194,17 +238,31 @@ export type Database = {
         Update: {
           bred_or_bought?: string
           breed?: string
+          breeder_name?: string | null
           created_at?: string
+          declaration_livestock_kept_away?: boolean | null
+          declaration_livestock_south_africa?: boolean | null
+          declaration_no_animal_origin_feed?: boolean | null
+          declaration_no_cloven_hooved_animals?: boolean | null
+          declaration_no_foot_mouth_disease?: boolean | null
+          declaration_no_foot_mouth_disease_farm?: boolean | null
+          declaration_no_gene_editing?: boolean | null
+          declaration_veterinary_products_registered?: boolean | null
           estimated_average_weight?: number | null
+          farm_birth_address?: string | null
+          farm_loading_address?: string | null
           grazing_green_feed?: boolean | null
           growth_implant?: boolean | null
           growth_implant_type?: string | null
           id?: string
+          is_breeder_seller?: boolean | null
           livestock_at_loading_point_1?: number | null
           livestock_at_loading_point_2?: number | null
           livestock_at_loading_point_3?: number | null
           livestock_at_loading_point_4?: number | null
           livestock_at_loading_point_5?: number | null
+          livestock_moved_location?: string | null
+          livestock_moved_out_of_boundaries?: boolean | null
           loading_points_1?: number | null
           loading_points_2?: number | null
           loading_points_3?: number | null
@@ -213,11 +271,19 @@ export type Database = {
           location?: string
           males_castrated?: boolean | null
           mothers_status?: string | null
+          number_cattle_loaded?: number | null
           number_of_heifers?: number | null
+          number_sheep_loaded?: number | null
           owner_name?: string
+          responsible_person_designation?: string | null
+          responsible_person_name?: string | null
           seller_id?: string
+          signature_data?: string | null
+          signature_date?: string | null
+          signed_location?: string | null
           status?: string
           total_livestock_offered?: number
+          truck_registration_number?: string | null
           updated_at?: string
           weaned_duration?: string | null
           weighing_location?: string
