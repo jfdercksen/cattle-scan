@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { LivestockOfferForm } from './LivestockOfferForm';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -57,7 +58,7 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             Livestock Listing Details
@@ -71,6 +72,27 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Responsible Person Information */}
+          {(listing.responsible_person_name || listing.responsible_person_designation) && (
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Responsible Person Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                {listing.responsible_person_name && (
+                  <div>
+                    <span className="font-medium">Name:</span> {listing.responsible_person_name}
+                  </div>
+                )}
+                {listing.responsible_person_designation && (
+                  <div>
+                    <span className="font-medium">Designation:</span> {listing.responsible_person_designation}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <Separator />
+
           {/* Basic Information */}
           <div>
             <h3 className="text-lg font-semibold mb-3">Basic Information</h3>
@@ -96,6 +118,46 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
             </div>
           </div>
 
+          {/* Supplier Identity & Location */}
+          {(listing.breeder_name || listing.farm_birth_address || listing.farm_loading_address) && (
+            <>
+              <Separator />
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Supplier Identity & Location</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {listing.breeder_name && (
+                    <div>
+                      <span className="font-medium">Breeder Name:</span> {listing.breeder_name}
+                    </div>
+                  )}
+                  <div>
+                    <span className="font-medium">Is Breeder the Seller:</span> {listing.is_breeder_seller ? 'Yes' : 'No'}
+                  </div>
+                  {listing.farm_birth_address && (
+                    <div>
+                      <span className="font-medium">Farm Birth Address:</span> {listing.farm_birth_address}
+                    </div>
+                  )}
+                  {listing.farm_loading_address && (
+                    <div>
+                      <span className="font-medium">Farm Loading Address:</span> {listing.farm_loading_address}
+                    </div>
+                  )}
+                  <div>
+                    <span className="font-medium">Livestock Moved Out of Boundaries:</span> {listing.livestock_moved_out_of_boundaries ? 'Yes' : 'No'}
+                  </div>
+                  {listing.livestock_moved_location && (
+                    <div>
+                      <span className="font-medium">Location Where Moved:</span> {listing.livestock_moved_location}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          <Separator />
+
           {/* Loading Points */}
           <div>
             <h3 className="text-lg font-semibold mb-3">Loading Points</h3>
@@ -118,6 +180,8 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
               })}
             </div>
           </div>
+
+          <Separator />
 
           {/* Livestock Details */}
           <div>
@@ -157,6 +221,102 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
               )}
             </div>
           </div>
+
+          {/* Biosecurity Declarations */}
+          <Separator />
+          <div>
+            <h3 className="text-lg font-semibold mb-3">Biosecurity Declarations</h3>
+            <div className="grid grid-cols-1 gap-3">
+              <div className="flex items-center space-x-2">
+                <div className={`w-4 h-4 rounded-full ${listing.declaration_no_cloven_hooved_animals ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-sm">No cloven-hooved animals other than cattle on property (12 months)</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className={`w-4 h-4 rounded-full ${listing.declaration_livestock_kept_away ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-sm">Livestock kept away from others (21 days)</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className={`w-4 h-4 rounded-full ${listing.declaration_no_animal_origin_feed ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-sm">No feed of animal origin used</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className={`w-4 h-4 rounded-full ${listing.declaration_veterinary_products_registered ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-sm">Only registered veterinary products used (Act 36 of 1947)</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className={`w-4 h-4 rounded-full ${listing.declaration_no_foot_mouth_disease ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-sm">No foot-and-mouth disease on property (12 months)</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className={`w-4 h-4 rounded-full ${listing.declaration_no_foot_mouth_disease_farm ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-sm">Farm outside foot-and-mouth disease control area</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className={`w-4 h-4 rounded-full ${listing.declaration_livestock_south_africa ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-sm">Livestock born and raised in South Africa</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className={`w-4 h-4 rounded-full ${listing.declaration_no_gene_editing ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-sm">No gene editing or genetic modification performed</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Livestock Loading Details */}
+          {(listing.number_cattle_loaded || listing.number_sheep_loaded || listing.truck_registration_number) && (
+            <>
+              <Separator />
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Livestock Loading Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <span className="font-medium">Number of Cattle Loaded:</span> {listing.number_cattle_loaded || 0}
+                  </div>
+                  <div>
+                    <span className="font-medium">Number of Sheep Loaded:</span> {listing.number_sheep_loaded || 0}
+                  </div>
+                  {listing.truck_registration_number && (
+                    <div>
+                      <span className="font-medium">Truck Registration:</span> {listing.truck_registration_number}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Digital Signature */}
+          {listing.signature_data && (
+            <>
+              <Separator />
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Digital Signature</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <img 
+                      src={listing.signature_data} 
+                      alt="Digital Signature" 
+                      className="border rounded-lg max-h-32 bg-white p-2"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    {listing.signature_date && (
+                      <div>
+                        <span className="font-medium">Signed Date:</span> {new Date(listing.signature_date).toLocaleString()}
+                      </div>
+                    )}
+                    {listing.signed_location && (
+                      <div>
+                        <span className="font-medium">Signed Location:</span> {listing.signed_location}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          <Separator />
 
           {/* Timestamps */}
           <div>
