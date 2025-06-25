@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Beef, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { LivestockListingDialog } from "@/components/LivestockListingDialog";
 
 const SellerDashboard = () => {
   const navigate = useNavigate();
@@ -71,6 +72,21 @@ const SellerDashboard = () => {
             </CardHeader>
             <CardContent>
               <Button className="w-full">View Livestock</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Beef className="w-5 h-5 mr-2" />
+                Add Livestock Listing
+              </CardTitle>
+              <CardDescription>
+                Submit livestock details to sell to Chelmar
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LivestockListingDialog />
             </CardContent>
           </Card>
 

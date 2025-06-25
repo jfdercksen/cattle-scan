@@ -128,6 +128,102 @@ export type Database = {
         }
         Relationships: []
       }
+      livestock_listings: {
+        Row: {
+          bred_or_bought: string
+          breed: string
+          created_at: string
+          estimated_average_weight: number | null
+          grazing_green_feed: boolean | null
+          growth_implant: boolean | null
+          growth_implant_type: string | null
+          id: string
+          livestock_at_loading_point_1: number | null
+          livestock_at_loading_point_2: number | null
+          livestock_at_loading_point_3: number | null
+          livestock_at_loading_point_4: number | null
+          livestock_at_loading_point_5: number | null
+          loading_points_1: number | null
+          loading_points_2: number | null
+          loading_points_3: number | null
+          loading_points_4: number | null
+          loading_points_5: number | null
+          location: string
+          males_castrated: boolean | null
+          mothers_status: string | null
+          number_of_heifers: number | null
+          owner_name: string
+          seller_id: string
+          status: string
+          total_livestock_offered: number
+          updated_at: string
+          weaned_duration: string | null
+          weighing_location: string
+        }
+        Insert: {
+          bred_or_bought: string
+          breed: string
+          created_at?: string
+          estimated_average_weight?: number | null
+          grazing_green_feed?: boolean | null
+          growth_implant?: boolean | null
+          growth_implant_type?: string | null
+          id?: string
+          livestock_at_loading_point_1?: number | null
+          livestock_at_loading_point_2?: number | null
+          livestock_at_loading_point_3?: number | null
+          livestock_at_loading_point_4?: number | null
+          livestock_at_loading_point_5?: number | null
+          loading_points_1?: number | null
+          loading_points_2?: number | null
+          loading_points_3?: number | null
+          loading_points_4?: number | null
+          loading_points_5?: number | null
+          location: string
+          males_castrated?: boolean | null
+          mothers_status?: string | null
+          number_of_heifers?: number | null
+          owner_name: string
+          seller_id: string
+          status?: string
+          total_livestock_offered: number
+          updated_at?: string
+          weaned_duration?: string | null
+          weighing_location: string
+        }
+        Update: {
+          bred_or_bought?: string
+          breed?: string
+          created_at?: string
+          estimated_average_weight?: number | null
+          grazing_green_feed?: boolean | null
+          growth_implant?: boolean | null
+          growth_implant_type?: string | null
+          id?: string
+          livestock_at_loading_point_1?: number | null
+          livestock_at_loading_point_2?: number | null
+          livestock_at_loading_point_3?: number | null
+          livestock_at_loading_point_4?: number | null
+          livestock_at_loading_point_5?: number | null
+          loading_points_1?: number | null
+          loading_points_2?: number | null
+          loading_points_3?: number | null
+          loading_points_4?: number | null
+          loading_points_5?: number | null
+          location?: string
+          males_castrated?: boolean | null
+          mothers_status?: string | null
+          number_of_heifers?: number | null
+          owner_name?: string
+          seller_id?: string
+          status?: string
+          total_livestock_offered?: number
+          updated_at?: string
+          weaned_duration?: string | null
+          weighing_location?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
