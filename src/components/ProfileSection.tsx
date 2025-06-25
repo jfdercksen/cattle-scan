@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +26,7 @@ const ProfileSection = () => {
   const [city, setCity] = useState(profile?.city || '');
   const [province, setProvince] = useState(profile?.province || '');
   const [postalCode, setPostalCode] = useState(profile?.postal_code || '');
-  const [language, setLanguage] = useState(profile?.language_preference || 'en');
+  const [language, setLanguage] = useState<'en' | 'af'>(profile?.language_preference || 'en');
   
   // Password form state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -138,6 +137,10 @@ const ProfileSection = () => {
     } finally {
       setPasswordLoading(false);
     }
+  };
+
+  const handleLanguageChange = (value: string) => {
+    setLanguage(value as 'en' | 'af');
   };
 
   return (
@@ -254,7 +257,7 @@ const ProfileSection = () => {
             
             <div>
               <Label htmlFor="language">Language Preference</Label>
-              <Select value={language} onValueChange={setLanguage}>
+              <Select value={language} onValueChange={handleLanguageChange}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
