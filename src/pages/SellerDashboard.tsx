@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { LivestockListingDialog } from "@/components/LivestockListingDialog";
 import { SellerOffersTable } from "@/components/SellerOffersTable";
 import { OfferDetailsDialog } from "@/components/OfferDetailsDialog";
+import { SellerLivestockDialog } from "@/components/SellerLivestockDialog";
 import type { Tables } from '@/integrations/supabase/types';
 
 type LivestockOffer = Tables<'livestock_offers'> & {
@@ -19,6 +19,7 @@ const SellerDashboard = () => {
   const { user, profile, loading, signOut, needsProfileCompletion } = useAuth();
   const [selectedOffer, setSelectedOffer] = useState<LivestockOffer | null>(null);
   const [offerDialogOpen, setOfferDialogOpen] = useState(false);
+  const [livestockDialogOpen, setLivestockDialogOpen] = useState(false);
   const [refreshOffers, setRefreshOffers] = useState(0);
 
   useEffect(() => {
@@ -90,7 +91,9 @@ const SellerDashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button className="w-full">View Livestock</Button>
+              <Button className="w-full" onClick={() => setLivestockDialogOpen(true)}>
+                View Livestock
+              </Button>
             </CardContent>
           </Card>
 
@@ -138,6 +141,11 @@ const SellerDashboard = () => {
           open={offerDialogOpen}
           onOpenChange={setOfferDialogOpen}
           onOfferUpdated={handleOfferUpdated}
+        />
+
+        <SellerLivestockDialog
+          open={livestockDialogOpen}
+          onOpenChange={setLivestockDialogOpen}
         />
       </div>
     </div>
