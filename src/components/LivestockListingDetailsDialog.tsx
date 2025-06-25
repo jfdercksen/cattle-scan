@@ -228,36 +228,52 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
             <h3 className="text-lg font-semibold mb-3">Biosecurity Declarations</h3>
             <div className="grid grid-cols-1 gap-3">
               <div className="flex items-center space-x-2">
-                <div className={`w-4 h-4 rounded-full ${listing.declaration_no_cloven_hooved_animals ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-sm">No cloven-hooved animals other than cattle on property (12 months)</span>
+                <div className={`w-4 h-4 rounded-full ${listing.declaration_no_cloven_hooved_animals ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <span className={`text-sm ${listing.declaration_no_cloven_hooved_animals ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
+                  No cloven-hooved animals other than cattle on property (12 months)
+                </span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className={`w-4 h-4 rounded-full ${listing.declaration_livestock_kept_away ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-sm">Livestock kept away from others (21 days)</span>
+                <div className={`w-4 h-4 rounded-full ${listing.declaration_livestock_kept_away ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <span className={`text-sm ${listing.declaration_livestock_kept_away ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
+                  Livestock kept away from others (21 days)
+                </span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className={`w-4 h-4 rounded-full ${listing.declaration_no_animal_origin_feed ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-sm">No feed of animal origin used</span>
+                <div className={`w-4 h-4 rounded-full ${listing.declaration_no_animal_origin_feed ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <span className={`text-sm ${listing.declaration_no_animal_origin_feed ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
+                  No feed of animal origin used
+                </span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className={`w-4 h-4 rounded-full ${listing.declaration_veterinary_products_registered ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-sm">Only registered veterinary products used (Act 36 of 1947)</span>
+                <div className={`w-4 h-4 rounded-full ${listing.declaration_veterinary_products_registered ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <span className={`text-sm ${listing.declaration_veterinary_products_registered ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
+                  Only registered veterinary products used (Act 36 of 1947)
+                </span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className={`w-4 h-4 rounded-full ${listing.declaration_no_foot_mouth_disease ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-sm">No foot-and-mouth disease on property (12 months)</span>
+                <div className={`w-4 h-4 rounded-full ${listing.declaration_no_foot_mouth_disease ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <span className={`text-sm ${listing.declaration_no_foot_mouth_disease ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
+                  No foot-and-mouth disease on property (12 months)
+                </span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className={`w-4 h-4 rounded-full ${listing.declaration_no_foot_mouth_disease_farm ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-sm">Farm outside foot-and-mouth disease control area</span>
+                <div className={`w-4 h-4 rounded-full ${listing.declaration_no_foot_mouth_disease_farm ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <span className={`text-sm ${listing.declaration_no_foot_mouth_disease_farm ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
+                  Farm outside foot-and-mouth disease control area
+                </span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className={`w-4 h-4 rounded-full ${listing.declaration_livestock_south_africa ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-sm">Livestock born and raised in South Africa</span>
+                <div className={`w-4 h-4 rounded-full ${listing.declaration_livestock_south_africa ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <span className={`text-sm ${listing.declaration_livestock_south_africa ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
+                  Livestock born and raised in South Africa
+                </span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className={`w-4 h-4 rounded-full ${listing.declaration_no_gene_editing ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-sm">No gene editing or genetic modification performed</span>
+                <div className={`w-4 h-4 rounded-full ${listing.declaration_no_gene_editing ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <span className={`text-sm ${listing.declaration_no_gene_editing ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
+                  No gene editing or genetic modification performed
+                </span>
               </div>
             </div>
           </div>
@@ -293,11 +309,13 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
                 <h3 className="text-lg font-semibold mb-3">Digital Signature</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <img 
-                      src={listing.signature_data} 
-                      alt="Digital Signature" 
-                      className="border rounded-lg max-h-32 bg-white p-2"
-                    />
+                    <div className="p-4 border rounded-lg bg-white">
+                      <img 
+                        src={listing.signature_data} 
+                        alt="Digital Signature" 
+                        className="max-w-full max-h-32 object-contain"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     {listing.signature_date && (
