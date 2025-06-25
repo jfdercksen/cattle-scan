@@ -14,6 +14,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { SignaturePad } from './SignaturePad';
+import type { Tables } from '@/integrations/supabase/types';
+
+type LivestockListing = Tables<'livestock_listings'>;
 
 const livestockListingSchema = z.object({
   owner_name: z.string().min(1, 'Owner name is required'),
@@ -72,66 +75,72 @@ const livestockListingSchema = z.object({
 type LivestockListingFormData = z.infer<typeof livestockListingSchema>;
 
 interface LivestockListingFormProps {
+  listing?: LivestockListing | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export const LivestockListingForm = ({ onClose, onSuccess }: LivestockListingFormProps) => {
+export const LivestockListingForm = ({ listing, onClose, onSuccess }: LivestockListingFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [signature, setSignature] = useState<string | null>(null);
+  const [signature, setSignature] = useState<string | null>(listing?.signature_data || null);
   const { user, profile } = useAuth();
   const { toast } = useToast();
+  const isEditing = !!listing;
 
   const form = useForm<LivestockListingFormData>({
     resolver: zodResolver(livestockListingSchema),
     defaultValues: {
-      owner_name: '',
-      bred_or_bought: 'BRED',
-      location: '',
-      weighing_location: '',
-      loading_points_1: 0,
-      loading_points_2: 0,
-      loading_points_3: 0,
-      loading_points_4: 0,
-      loading_points_5: 0,
-      livestock_at_loading_point_1: 0,
-      livestock_at_loading_point_2: 0,
-      livestock_at_loading_point_3: 0,
-      livestock_at_loading_point_4: 0,
-      livestock_at_loading_point_5: 0,
-      total_livestock_offered: 0,
-      number_of_heifers: 0,
-      males_castrated: false,
-      grazing_green_feed: false,
-      growth_implant: false,
-      breed: '',
+      owner_name: listing?.owner_name || '',
+      bred_or_bought: (listing?.bred_or_bought as 'BRED' | 'BOUGHT IN') || 'BRED',
+      location: listing?.location || '',
+      weighing_location: listing?.weighing_location || '',
+      loading_points_1: listing?.loading_points_1 || 0,
+      loading_points_2: listing?.loading_points_2 || 0,
+      loading_points_3: listing?.loading_points_3 || 0,
+      loading_points_4: listing?.loading_points_4 || 0,
+      loading_points_5: listing?.loading_points_5 || 0,
+      livestock_at_loading_point_1: listing?.livestock_at_loading_point_1 || 0,
+      livestock_at_loading_point_2: listing?.livestock_at_loading_point_2 || 0,
+      livestock_at_loading_point_3: listing?.livestock_at_loading_point_3 || 0,
+      livestock_at_loading_point_4: listing?.livestock_at_loading_point_4 || 0,
+      livestock_at_loading_point_5: listing?.livestock_at_loading_point_5 || 0,
+      total_livestock_offered: listing?.total_livestock_offered || 0,
+      number_of_heifers: listing?.number_of_heifers || 0,
+      males_castrated: listing?.males_castrated || false,
+      mothers_status: (listing?.mothers_status as 'WITH MOTHERS' | 'ALREADY WEANED') || undefined,
+      weaned_duration: listing?.weaned_duration || '',
+      grazing_green_feed: listing?.grazing_green_feed || false,
+      growth_implant: listing?.growth_implant || false,
+      growth_implant_type: listing?.growth_implant_type || '',
+      estimated_average_weight: listing?.estimated_average_weight || undefined,
+      breed: listing?.breed || '',
       
       // New biosecurity fields
-      breeder_name: '',
-      is_breeder_seller: false,
-      farm_birth_address: '',
-      farm_loading_address: '',
-      livestock_moved_out_of_boundaries: false,
-      livestock_moved_location: '',
+      breeder_name: listing?.breeder_name || '',
+      is_breeder_seller: listing?.is_breeder_seller || false,
+      farm_birth_address: listing?.farm_birth_address || '',
+      farm_loading_address: listing?.farm_loading_address || '',
+      livestock_moved_out_of_boundaries: listing?.livestock_moved_out_of_boundaries || false,
+      livestock_moved_location: listing?.livestock_moved_location || '',
       
       // Declarations
-      declaration_no_cloven_hooved_animals: false,
-      declaration_livestock_kept_away: false,
-      declaration_no_animal_origin_feed: false,
-      declaration_veterinary_products_registered: false,
-      declaration_no_foot_mouth_disease: false,
-      declaration_no_foot_mouth_disease_farm: false,
-      declaration_livestock_south_africa: false,
-      declaration_no_gene_editing: false,
+      declaration_no_cloven_hooved_animals: listing?.declaration_no_cloven_hooved_animals || false,
+      declaration_livestock_kept_away: listing?.declaration_livestock_kept_away || false,
+      declaration_no_animal_origin_feed: listing?.declaration_no_animal_origin_feed || false,
+      declaration_veterinary_products_registered: listing?.declaration_veterinary_products_registered || false,
+      declaration_no_foot_mouth_disease: listing?.declaration_no_foot_mouth_disease || false,
+      declaration_no_foot_mouth_disease_farm: listing?.declaration_no_foot_mouth_disease_farm || false,
+      declaration_livestock_south_africa: listing?.declaration_livestock_south_africa || false,
+      declaration_no_gene_editing: listing?.declaration_no_gene_editing || false,
       
       // Loading details
-      number_cattle_loaded: 0,
-      number_sheep_loaded: 0,
-      truck_registration_number: '',
+      number_cattle_loaded: listing?.number_cattle_loaded || 0,
+      number_sheep_loaded: listing?.number_sheep_loaded || 0,
+      truck_registration_number: listing?.truck_registration_number || '',
       
       // Signature
-      signature_data: '',
-      signed_location: '',
+      signature_data: listing?.signature_data || '',
+      signed_location: listing?.signed_location || '',
     },
   });
 
@@ -157,8 +166,8 @@ export const LivestockListingForm = ({ onClose, onSuccess }: LivestockListingFor
     setIsSubmitting(true);
 
     try {
-      // Prepare data for insertion with new biosecurity fields
-      const insertData = {
+      // Prepare data for insertion/update with new biosecurity fields
+      const submitData = {
         seller_id: user.id,
         owner_name: data.owner_name,
         bred_or_bought: data.bred_or_bought,
@@ -212,28 +221,38 @@ export const LivestockListingForm = ({ onClose, onSuccess }: LivestockListingFor
         
         // Signature
         signature_data: signature,
-        signature_date: new Date().toISOString(),
+        signature_date: isEditing ? listing.signature_date : new Date().toISOString(),
         signed_location: data.signed_location,
       };
 
-      const { error } = await supabase
-        .from('livestock_listings')
-        .insert(insertData);
+      let error;
+      if (isEditing) {
+        // Update existing listing
+        ({ error } = await supabase
+          .from('livestock_listings')
+          .update(submitData)
+          .eq('id', listing.id));
+      } else {
+        // Create new listing
+        ({ error } = await supabase
+          .from('livestock_listings')
+          .insert(submitData));
+      }
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Livestock listing submitted successfully!",
+        description: `Livestock listing ${isEditing ? 'updated' : 'submitted'} successfully!`,
       });
       
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error submitting livestock listing:', error);
+      console.error(`Error ${isEditing ? 'updating' : 'submitting'} livestock listing:`, error);
       toast({
         title: "Error",
-        description: "Failed to submit livestock listing. Please try again.",
+        description: `Failed to ${isEditing ? 'update' : 'submit'} livestock listing. Please try again.`,
         variant: "destructive",
       });
     } finally {
@@ -244,9 +263,9 @@ export const LivestockListingForm = ({ onClose, onSuccess }: LivestockListingFor
   return (
     <Card className="w-full max-w-6xl mx-auto">
       <CardHeader>
-        <CardTitle>Create Livestock Listing</CardTitle>
+        <CardTitle>{isEditing ? 'Edit' : 'Create'} Livestock Listing</CardTitle>
         <CardDescription>
-          Submit your livestock details and biosecurity attestation to sell to Chelmar
+          {isEditing ? 'Update your livestock details and biosecurity attestation' : 'Submit your livestock details and biosecurity attestation to sell to Chelmar'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -994,7 +1013,7 @@ export const LivestockListingForm = ({ onClose, onSuccess }: LivestockListingFor
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting || !signature}>
-                {isSubmitting ? 'Submitting...' : 'Submit Listing'}
+                {isSubmitting ? (isEditing ? 'Updating...' : 'Submitting...') : (isEditing ? 'Update Listing' : 'Submit Listing')}
               </Button>
             </div>
           </form>
