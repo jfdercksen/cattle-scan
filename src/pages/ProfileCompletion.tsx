@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Shield, Upload } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { SignaturePad } from "@/components/SignaturePad";
 
 const ProfileCompletion = () => {
   const navigate = useNavigate();
@@ -17,6 +19,8 @@ const ProfileCompletion = () => {
   const { toast } = useToast();
   
   const [submitting, setSubmitting] = useState(false);
+  const [signature, setSignature] = useState<string | null>(null);
+  const [signedLocation, setSignedLocation] = useState('');
   const [formData, setFormData] = useState({
     // File uploads
     idDocument: null as File | null,
@@ -29,6 +33,16 @@ const ProfileCompletion = () => {
     responsiblePersonEmail: '',
     responsiblePersonPhone: '',
     brandMark: null as File | null,
+    
+    // Biosecurity declarations
+    declarationNoCloven: false,
+    declarationLivestockKeptAway: false,
+    declarationNoAnimalOriginFeed: false,
+    declarationVeterinaryProductsRegistered: false,
+    declarationNoFootMouthDisease: false,
+    declarationNoFootMouthDiseaseFarm: false,
+    declarationLivestockSouthAfrica: false,
+    declarationNoGeneEditing: false,
     
     // Agent specific
     agencyRepresented: '',
@@ -63,6 +77,16 @@ const ProfileCompletion = () => {
     
     if (!user || !profile) return;
     
+    // Validate signature for sellers
+    if (profile.role === 'seller' && !signature) {
+      toast({
+        title: "Error",
+        description: "Digital signature is required to complete your profile.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setSubmitting(true);
     
     try {
@@ -70,7 +94,22 @@ const ProfileCompletion = () => {
       const updates = {
         profile_completed: true,
         profile_completed_at: new Date().toISOString(),
-        // Add other fields as needed based on role
+        // Add biosecurity fields for sellers
+        ...(profile.role === 'seller' && {
+          responsible_person_name: formData.responsiblePersonName,
+          responsible_person_designation: formData.responsiblePersonTitle,
+          declaration_no_cloven_hooved_animals: formData.declarationNoCloven,
+          declaration_livestock_kept_away: formData.declarationLivestockKeptAway,
+          declaration_no_animal_origin_feed: formData.declarationNoAnimalOriginFeed,
+          declaration_veterinary_products_registered: formData.declarationVeterinaryProductsRegistered,
+          declaration_no_foot_mouth_disease: formData.declarationNoFootMouthDisease,
+          declaration_no_foot_mouth_disease_farm: formData.declarationNoFootMouthDiseaseFarm,
+          declaration_livestock_south_africa: formData.declarationLivestockSouthAfrica,
+          declaration_no_gene_editing: formData.declarationNoGeneEditing,
+          signature_data: signature,
+          signature_date: new Date().toISOString(),
+          signed_location: signedLocation
+        })
       };
       
       const { error } = await supabase
@@ -124,6 +163,145 @@ const ProfileCompletion = () => {
           required={required}
         />
         <Upload className="w-4 h-4 text-gray-400" />
+      </div>
+    </div>
+  );
+
+  const renderBiosecurityDeclarations = () => (
+    <div className="space-y-4 border-t pt-4">
+      <h3 className="text-lg font-semibold">Responsible Person Declaration</h3>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="responsiblePersonName">Responsible Person Name *</Label>
+          <Input
+            id="responsiblePersonName"
+            value={formData.responsiblePersonName}
+            onChange={(e) => setFormData(prev => ({ ...prev, responsiblePersonName: e.target.value }))}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="responsiblePersonDesignation">Designation *</Label>
+          <Input
+            id="responsiblePersonDesignation"
+            value={formData.responsiblePersonTitle}
+            onChange={(e) => setFormData(prev => ({ ...prev, responsiblePersonTitle: e.target.value }))}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <h4 className="font-medium">I hereby declare that:</h4>
+        
+        <div className="space-y-2">
+          <div className="flex items-start space-x-2">
+            <Checkbox 
+              id="declarationNoCloven"
+              checked={formData.declarationNoCloven}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, declarationNoCloven: !!checked }))}
+            />
+            <Label htmlFor="declarationNoCloven" className="text-sm leading-5">
+              No cloven hooved animals (cattle, sheep, goats, pigs) other than those offered for sale have been on the farm for the past 21 days
+            </Label>
+          </div>
+
+          <div className="flex items-start space-x-2">
+            <Checkbox 
+              id="declarationLivestockKeptAway"
+              checked={formData.declarationLivestockKeptAway}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, declarationLivestockKeptAway: !!checked }))}
+            />
+            <Label htmlFor="declarationLivestockKeptAway" className="text-sm leading-5">
+              The livestock offered for sale have been kept away from all other livestock for the past 21 days
+            </Label>
+          </div>
+
+          <div className="flex items-start space-x-2">
+            <Checkbox 
+              id="declarationNoAnimalOriginFeed"
+              checked={formData.declarationNoAnimalOriginFeed}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, declarationNoAnimalOriginFeed: !!checked }))}
+            />
+            <Label htmlFor="declarationNoAnimalOriginFeed" className="text-sm leading-5">
+              No feed of animal origin has been fed to the livestock offered for sale
+            </Label>
+          </div>
+
+          <div className="flex items-start space-x-2">
+            <Checkbox 
+              id="declarationVeterinaryProductsRegistered"
+              checked={formData.declarationVeterinaryProductsRegistered}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, declarationVeterinaryProductsRegistered: !!checked }))}
+            />
+            <Label htmlFor="declarationVeterinaryProductsRegistered" className="text-sm leading-5">
+              All veterinary products used on the livestock offered for sale are registered
+            </Label>
+          </div>
+
+          <div className="flex items-start space-x-2">
+            <Checkbox 
+              id="declarationNoFootMouthDisease"
+              checked={formData.declarationNoFootMouthDisease}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, declarationNoFootMouthDisease: !!checked }))}
+            />
+            <Label htmlFor="declarationNoFootMouthDisease" className="text-sm leading-5">
+              No foot and mouth disease has occurred on the farm for the past 12 months
+            </Label>
+          </div>
+
+          <div className="flex items-start space-x-2">
+            <Checkbox 
+              id="declarationNoFootMouthDiseaseFarm"
+              checked={formData.declarationNoFootMouthDiseaseFarm}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, declarationNoFootMouthDiseaseFarm: !!checked }))}
+            />
+            <Label htmlFor="declarationNoFootMouthDiseaseFarm" className="text-sm leading-5">
+              No foot and mouth disease has occurred on neighbouring farms for the past 3 months
+            </Label>
+          </div>
+
+          <div className="flex items-start space-x-2">
+            <Checkbox 
+              id="declarationLivestockSouthAfrica"
+              checked={formData.declarationLivestockSouthAfrica}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, declarationLivestockSouthAfrica: !!checked }))}
+            />
+            <Label htmlFor="declarationLivestockSouthAfrica" className="text-sm leading-5">
+              The livestock offered for sale have been in South Africa for at least 21 days
+            </Label>
+          </div>
+
+          <div className="flex items-start space-x-2">
+            <Checkbox 
+              id="declarationNoGeneEditing"
+              checked={formData.declarationNoGeneEditing}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, declarationNoGeneEditing: !!checked }))}
+            />
+            <Label htmlFor="declarationNoGeneEditing" className="text-sm leading-5">
+              No gene editing technology has been used on the livestock offered for sale
+            </Label>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="signedLocation">Location where signed *</Label>
+          <Input
+            id="signedLocation"
+            value={signedLocation}
+            onChange={(e) => setSignedLocation(e.target.value)}
+            placeholder="Enter location"
+            required
+          />
+        </div>
+
+        <SignaturePad 
+          onSignatureChange={setSignature}
+          signature={signature}
+        />
       </div>
     </div>
   );
@@ -188,6 +366,8 @@ const ProfileCompletion = () => {
         {renderFileUpload("Photo of I.D. or drivers licence of person offering livestock", "idDocument", true)}
         {renderFileUpload("Photo of brand mark of livestock owner", "brandMark", true)}
       </div>
+      
+      {renderBiosecurityDeclarations()}
     </>
   );
 

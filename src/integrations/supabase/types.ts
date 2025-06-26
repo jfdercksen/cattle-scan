@@ -372,6 +372,14 @@ export type Database = {
           city: string | null
           company_name: string | null
           created_at: string
+          declaration_livestock_kept_away: boolean | null
+          declaration_livestock_south_africa: boolean | null
+          declaration_no_animal_origin_feed: boolean | null
+          declaration_no_cloven_hooved_animals: boolean | null
+          declaration_no_foot_mouth_disease: boolean | null
+          declaration_no_foot_mouth_disease_farm: boolean | null
+          declaration_no_gene_editing: boolean | null
+          declaration_veterinary_products_registered: boolean | null
           email: string
           first_name: string | null
           id: string
@@ -383,7 +391,12 @@ export type Database = {
           profile_completed_at: string | null
           province: string | null
           registration_number: string | null
+          responsible_person_designation: string | null
+          responsible_person_name: string | null
           role: Database["public"]["Enums"]["user_role"]
+          signature_data: string | null
+          signature_date: string | null
+          signed_location: string | null
           status: Database["public"]["Enums"]["user_status"]
           updated_at: string
         }
@@ -394,6 +407,14 @@ export type Database = {
           city?: string | null
           company_name?: string | null
           created_at?: string
+          declaration_livestock_kept_away?: boolean | null
+          declaration_livestock_south_africa?: boolean | null
+          declaration_no_animal_origin_feed?: boolean | null
+          declaration_no_cloven_hooved_animals?: boolean | null
+          declaration_no_foot_mouth_disease?: boolean | null
+          declaration_no_foot_mouth_disease_farm?: boolean | null
+          declaration_no_gene_editing?: boolean | null
+          declaration_veterinary_products_registered?: boolean | null
           email: string
           first_name?: string | null
           id: string
@@ -405,7 +426,12 @@ export type Database = {
           profile_completed_at?: string | null
           province?: string | null
           registration_number?: string | null
+          responsible_person_designation?: string | null
+          responsible_person_name?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          signature_data?: string | null
+          signature_date?: string | null
+          signed_location?: string | null
           status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string
         }
@@ -416,6 +442,14 @@ export type Database = {
           city?: string | null
           company_name?: string | null
           created_at?: string
+          declaration_livestock_kept_away?: boolean | null
+          declaration_livestock_south_africa?: boolean | null
+          declaration_no_animal_origin_feed?: boolean | null
+          declaration_no_cloven_hooved_animals?: boolean | null
+          declaration_no_foot_mouth_disease?: boolean | null
+          declaration_no_foot_mouth_disease_farm?: boolean | null
+          declaration_no_gene_editing?: boolean | null
+          declaration_veterinary_products_registered?: boolean | null
           email?: string
           first_name?: string | null
           id?: string
@@ -427,7 +461,12 @@ export type Database = {
           profile_completed_at?: string | null
           province?: string | null
           registration_number?: string | null
+          responsible_person_designation?: string | null
+          responsible_person_name?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          signature_data?: string | null
+          signature_date?: string | null
+          signed_location?: string | null
           status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string
         }
