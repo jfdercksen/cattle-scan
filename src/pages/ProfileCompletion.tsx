@@ -35,6 +35,7 @@ const ProfileCompletion = () => {
     brandMark: null as File | null,
     
     // Biosecurity declarations
+    declarationResponsiblePersonDefinition: false,
     declarationNoCloven: false,
     declarationLivestockKeptAway: false,
     declarationNoAnimalOriginFeed: false,
@@ -96,8 +97,7 @@ const ProfileCompletion = () => {
         profile_completed_at: new Date().toISOString(),
         // Add biosecurity fields for sellers
         ...(profile.role === 'seller' && {
-          responsible_person_name: formData.responsiblePersonName,
-          responsible_person_designation: formData.responsiblePersonTitle,
+          declaration_responsible_person_definition: formData.declarationResponsiblePersonDefinition,
           declaration_no_cloven_hooved_animals: formData.declarationNoCloven,
           declaration_livestock_kept_away: formData.declarationLivestockKeptAway,
           declaration_no_animal_origin_feed: formData.declarationNoAnimalOriginFeed,
@@ -171,28 +171,18 @@ const ProfileCompletion = () => {
     <div className="space-y-4 border-t pt-4">
       <h3 className="text-lg font-semibold">Responsible Person Declaration</h3>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="responsiblePersonName">Responsible Person Name *</Label>
-          <Input
-            id="responsiblePersonName"
-            value={formData.responsiblePersonName}
-            onChange={(e) => setFormData(prev => ({ ...prev, responsiblePersonName: e.target.value }))}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="responsiblePersonDesignation">Designation *</Label>
-          <Input
-            id="responsiblePersonDesignation"
-            value={formData.responsiblePersonTitle}
-            onChange={(e) => setFormData(prev => ({ ...prev, responsiblePersonTitle: e.target.value }))}
-            required
-          />
-        </div>
-      </div>
-
       <div className="space-y-3">
+        <div className="flex items-start space-x-2">
+          <Checkbox 
+            id="declarationResponsiblePersonDefinition"
+            checked={formData.declarationResponsiblePersonDefinition}
+            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, declarationResponsiblePersonDefinition: !!checked }))}
+          />
+          <Label htmlFor="declarationResponsiblePersonDefinition" className="text-sm leading-5">
+            The responsible person is a person who is directly part of the management of daily operations of the farming enterprise and whom can attest to information as required. The responsible person must be 18 years and older.
+          </Label>
+        </div>
+        
         <h4 className="font-medium">I hereby declare that:</h4>
         
         <div className="space-y-2">

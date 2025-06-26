@@ -379,6 +379,7 @@ export type Database = {
           declaration_no_foot_mouth_disease: boolean | null
           declaration_no_foot_mouth_disease_farm: boolean | null
           declaration_no_gene_editing: boolean | null
+          declaration_responsible_person_definition: boolean | null
           declaration_veterinary_products_registered: boolean | null
           email: string
           first_name: string | null
@@ -414,6 +415,7 @@ export type Database = {
           declaration_no_foot_mouth_disease?: boolean | null
           declaration_no_foot_mouth_disease_farm?: boolean | null
           declaration_no_gene_editing?: boolean | null
+          declaration_responsible_person_definition?: boolean | null
           declaration_veterinary_products_registered?: boolean | null
           email: string
           first_name?: string | null
@@ -449,6 +451,7 @@ export type Database = {
           declaration_no_foot_mouth_disease?: boolean | null
           declaration_no_foot_mouth_disease_farm?: boolean | null
           declaration_no_gene_editing?: boolean | null
+          declaration_responsible_person_definition?: boolean | null
           declaration_veterinary_products_registered?: boolean | null
           email?: string
           first_name?: string | null
