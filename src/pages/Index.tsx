@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Shield, Users, FileCheck, Truck, ChevronRight } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { Link, Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/auth";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 interface RoleContent {
@@ -31,7 +31,7 @@ interface ContentStructure {
   features: {
     title: string;
     items: Array<{
-      icon: any;
+      icon: React.ElementType;
       title: string;
       description: string;
     }>;
@@ -53,7 +53,7 @@ const Index = () => {
         title: "Cattle Scan",
         subtitle: "Advanced Biosecurity & Traceability Platform",
         description: "Streamline cattle transactions with digital attestation, veterinary inspections, and complete supply chain visibility. Built for the modern livestock industry.",
-        cta: "Get Started Today"
+        cta: "Register"
       },
       roles: {
         title: "Choose Your Role",
@@ -177,46 +177,11 @@ const Index = () => {
   const t = content[language];
 
   if (user) {
-    return null; // Will be redirected by Auth component
+    return <Navigate to="/auth" replace />;
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-emerald-600 to-blue-600 rounded-lg flex items-center justify-center">
-                <Shield className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-slate-800">Cattle Scan</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant={language === 'en' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setLanguage('en')}
-                >
-                  EN
-                </Button>
-                <Button
-                  variant={language === 'af' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setLanguage('af')}
-                >
-                  AF
-                </Button>
-              </div>
-              <ThemeToggle />
-              <Link to="/auth">
-                <Button variant="outline">Sign In</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
 
       {/* Hero Section */}
       <section className="py-20">
@@ -245,7 +210,7 @@ const Index = () => {
       </section>
 
       {/* Role Selection */}
-      <section className="py-20 bg-white/50">
+      {/* <section className="py-20 bg-white/50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-slate-900 mb-4">{t.roles.title}</h2>
@@ -285,7 +250,7 @@ const Index = () => {
             })}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Features */}
       <section className="py-20">

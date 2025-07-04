@@ -11,7 +11,11 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
-type LivestockListing = Tables<'livestock_listings'>;
+type LivestockListing = Tables<'livestock_listings'> & {
+  listing_invitations: {
+    reference_id: string;
+  } | null;
+};
 
 const offerFormSchema = z.object({
   chalmar_beef_offer: z.number().min(0, 'Offer amount must be positive'),
@@ -131,7 +135,17 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <FormItem>
+              <FormLabel>Reference ID</FormLabel>
+              <FormControl>
+                <Input
+                  value={listing.listing_invitations?.reference_id || 'N/A'}
+                  readOnly
+                  className="font-mono bg-gray-100"
+                />
+              </FormControl>
+            </FormItem>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}

@@ -128,8 +128,56 @@ export type Database = {
         }
         Relationships: []
       }
+      listing_invitations: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          listing_id: string | null
+          reference_id: string
+          seller_email: string | null
+          seller_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          listing_id?: string | null
+          reference_id: string
+          seller_email?: string | null
+          seller_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          listing_id?: string | null
+          reference_id?: string
+          seller_email?: string | null
+          seller_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_invitations_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       livestock_listings: {
         Row: {
+          additional_r25_per_calf: boolean | null
+          affidavit_file_path: string | null
+          affidavit_required: boolean | null
+          assigned_vet_id: string | null
           bred_or_bought: string
           breed: string
           breeder_name: string | null
@@ -149,6 +197,7 @@ export type Database = {
           growth_implant: boolean | null
           growth_implant_type: string | null
           id: string
+          invitation_id: string | null
           is_breeder_seller: boolean | null
           livestock_at_loading_point_1: number | null
           livestock_at_loading_point_2: number | null
@@ -169,6 +218,8 @@ export type Database = {
           number_of_heifers: number | null
           number_sheep_loaded: number | null
           owner_name: string
+          profile_id: string | null
+          reference_id: string | null
           responsible_person_designation: string | null
           responsible_person_name: string | null
           seller_id: string
@@ -183,6 +234,10 @@ export type Database = {
           weighing_location: string
         }
         Insert: {
+          additional_r25_per_calf?: boolean | null
+          affidavit_file_path?: string | null
+          affidavit_required?: boolean | null
+          assigned_vet_id?: string | null
           bred_or_bought: string
           breed: string
           breeder_name?: string | null
@@ -202,6 +257,7 @@ export type Database = {
           growth_implant?: boolean | null
           growth_implant_type?: string | null
           id?: string
+          invitation_id?: string | null
           is_breeder_seller?: boolean | null
           livestock_at_loading_point_1?: number | null
           livestock_at_loading_point_2?: number | null
@@ -222,6 +278,8 @@ export type Database = {
           number_of_heifers?: number | null
           number_sheep_loaded?: number | null
           owner_name: string
+          profile_id?: string | null
+          reference_id?: string | null
           responsible_person_designation?: string | null
           responsible_person_name?: string | null
           seller_id: string
@@ -236,6 +294,10 @@ export type Database = {
           weighing_location: string
         }
         Update: {
+          additional_r25_per_calf?: boolean | null
+          affidavit_file_path?: string | null
+          affidavit_required?: boolean | null
+          assigned_vet_id?: string | null
           bred_or_bought?: string
           breed?: string
           breeder_name?: string | null
@@ -255,6 +317,7 @@ export type Database = {
           growth_implant?: boolean | null
           growth_implant_type?: string | null
           id?: string
+          invitation_id?: string | null
           is_breeder_seller?: boolean | null
           livestock_at_loading_point_1?: number | null
           livestock_at_loading_point_2?: number | null
@@ -275,6 +338,8 @@ export type Database = {
           number_of_heifers?: number | null
           number_sheep_loaded?: number | null
           owner_name?: string
+          profile_id?: string | null
+          reference_id?: string | null
           responsible_person_designation?: string | null
           responsible_person_name?: string | null
           seller_id?: string
@@ -288,7 +353,36 @@ export type Database = {
           weaned_duration?: string | null
           weighing_location?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "livestock_listings_assigned_vet_id_fkey"
+            columns: ["assigned_vet_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "livestock_listings_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "detailed_listing_invitations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "livestock_listings_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "listing_invitations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "livestock_listings_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       livestock_offers: {
         Row: {
@@ -367,8 +461,12 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          agent_agency_represented: string | null
+          apac_registration_url: string | null
+          appointment_letter_url: string | null
           approved_at: string | null
           approved_by: string | null
+          brand_mark_url: string | null
           city: string | null
           company_name: string | null
           created_at: string
@@ -384,10 +482,12 @@ export type Database = {
           email: string
           first_name: string | null
           id: string
+          id_document_url: string | null
           language_preference: Database["public"]["Enums"]["language_preference"]
           last_name: string | null
           phone: string | null
           postal_code: string | null
+          practice_letter_head_url: string | null
           profile_completed: boolean
           profile_completed_at: string | null
           province: string | null
@@ -395,16 +495,25 @@ export type Database = {
           responsible_person_designation: string | null
           responsible_person_name: string | null
           role: Database["public"]["Enums"]["user_role"]
+          seller_entity_name: string | null
+          seller_ownership_type: string | null
+          seller_responsible_person_title: string | null
           signature_data: string | null
           signature_date: string | null
+          signature_url: string | null
+          signed_at: string | null
           signed_location: string | null
           status: Database["public"]["Enums"]["user_status"]
           updated_at: string
         }
         Insert: {
           address?: string | null
+          agent_agency_represented?: string | null
+          apac_registration_url?: string | null
+          appointment_letter_url?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          brand_mark_url?: string | null
           city?: string | null
           company_name?: string | null
           created_at?: string
@@ -420,10 +529,12 @@ export type Database = {
           email: string
           first_name?: string | null
           id: string
+          id_document_url?: string | null
           language_preference?: Database["public"]["Enums"]["language_preference"]
           last_name?: string | null
           phone?: string | null
           postal_code?: string | null
+          practice_letter_head_url?: string | null
           profile_completed?: boolean
           profile_completed_at?: string | null
           province?: string | null
@@ -431,16 +542,25 @@ export type Database = {
           responsible_person_designation?: string | null
           responsible_person_name?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          seller_entity_name?: string | null
+          seller_ownership_type?: string | null
+          seller_responsible_person_title?: string | null
           signature_data?: string | null
           signature_date?: string | null
+          signature_url?: string | null
+          signed_at?: string | null
           signed_location?: string | null
           status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string
         }
         Update: {
           address?: string | null
+          agent_agency_represented?: string | null
+          apac_registration_url?: string | null
+          appointment_letter_url?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          brand_mark_url?: string | null
           city?: string | null
           company_name?: string | null
           created_at?: string
@@ -456,10 +576,12 @@ export type Database = {
           email?: string
           first_name?: string | null
           id?: string
+          id_document_url?: string | null
           language_preference?: Database["public"]["Enums"]["language_preference"]
           last_name?: string | null
           phone?: string | null
           postal_code?: string | null
+          practice_letter_head_url?: string | null
           profile_completed?: boolean
           profile_completed_at?: string | null
           province?: string | null
@@ -467,8 +589,13 @@ export type Database = {
           responsible_person_designation?: string | null
           responsible_person_name?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          seller_entity_name?: string | null
+          seller_ownership_type?: string | null
+          seller_responsible_person_title?: string | null
           signature_data?: string | null
           signature_date?: string | null
+          signature_url?: string | null
+          signed_at?: string | null
           signed_location?: string | null
           status?: Database["public"]["Enums"]["user_status"]
           updated_at?: string
@@ -477,7 +604,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      detailed_listing_invitations: {
+        Row: {
+          company_name: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string | null
+          listing_id: string | null
+          reference_id: string | null
+          seller_email: string | null
+          seller_id: string | null
+          seller_profile_email: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_invitations_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "livestock_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_current_user_role: {

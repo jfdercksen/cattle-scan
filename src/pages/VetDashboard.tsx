@@ -4,37 +4,28 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Stethoscope, LogOut } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/auth";
+import ProfileCompletion from '@/components/ProfileCompletionForm';
 
 const VetDashboard = () => {
   const navigate = useNavigate();
   const { user, profile, loading, signOut, needsProfileCompletion } = useAuth();
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        navigate('/auth');
-        return;
-      }
-      
-      if (needsProfileCompletion()) {
-        navigate('/profile-completion');
-        return;
-      }
-      
-      if (profile && profile.role !== 'vet') {
-        navigate('/');
-        return;
-      }
+    if (loading) return;
+    if (!user) {
+      navigate('/auth');
+    } else if (profile && profile.role !== 'vet') {
+      navigate('/');
     }
-  }, [user, profile, loading, navigate, needsProfileCompletion]);
+  }, [user, profile, loading, navigate]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
   };
 
-  if (loading) {
+  if (loading || !profile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 flex items-center justify-center">
         <div className="text-center">Loading...</div>
@@ -42,7 +33,9 @@ const VetDashboard = () => {
     );
   }
 
-  if (!profile) return null;
+  if (needsProfileCompletion()) {
+    return <ProfileCompletion />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">

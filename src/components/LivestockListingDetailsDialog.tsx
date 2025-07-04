@@ -7,7 +7,11 @@ import { Separator } from '@/components/ui/separator';
 import { LivestockOfferForm } from './LivestockOfferForm';
 import type { Tables } from '@/integrations/supabase/types';
 
-type LivestockListing = Tables<'livestock_listings'>;
+type LivestockListing = Tables<'livestock_listings'> & {
+  listing_invitations: {
+    reference_id: string;
+  } | null;
+};
 
 interface LivestockListingDetailsDialogProps {
   listing: LivestockListing | null;

@@ -1,0 +1,447 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { YesNoSwitch } from "@/components/ui/YesNoSwitch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Shield, Upload } from "lucide-react";
+import { useAuth } from "@/contexts/auth";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { SignaturePad } from "@/components/SignaturePad";
+
+const uploadFile = async (file: File | null, path: string) => {
+  if (!file) return null;
+  const { data, error } = await supabase.storage
+    .from('documents')
+    .upload(path, file, {
+      cacheControl: '3600',
+      upsert: true,
+    });
+  if (error) {
+    console.error('File upload error:', error);
+    throw error;
+  }
+  return data.path;
+};
+
+interface FormData {
+  id_document: File | null;
+  ownership_type: string;
+  entity_name: string;
+  responsible_person_title: string;
+  brand_mark: File | null;
+  declaration_responsible_person_definition: boolean;
+  declaration_no_cloven_hooved_animals: boolean;
+  declaration_livestock_kept_away: boolean;
+  declaration_no_animal_origin_feed: boolean;
+  declaration_veterinary_products_registered: boolean;
+  declaration_no_foot_mouth_disease: boolean;
+  declaration_no_foot_mouth_disease_farm: boolean;
+  declaration_livestock_south_africa: boolean;
+  declaration_no_gene_editing: boolean;
+  agency_represented: string;
+  appointment_letter: File | null;
+  apac_registration: File | null;
+  practice_letter_head: File | null;
+}
+
+const ProfileCompletion = () => {
+  const navigate = useNavigate();
+  const { profile, user, loading, getRoleRedirectPath, refreshProfile } = useAuth();
+  const { toast } = useToast();
+  
+  const [submitting, setSubmitting] = useState(false);
+  const [signature, setSignature] = useState<string | null>(null);
+  const [signedLocation, setSignedLocation] = useState('');
+  const [formData, setFormData] = useState<FormData>({
+    id_document: null,
+    ownership_type: '',
+    entity_name: '',
+    responsible_person_title: '',
+    brand_mark: null,
+    declaration_responsible_person_definition: false,
+    declaration_no_cloven_hooved_animals: false,
+    declaration_livestock_kept_away: false,
+    declaration_no_animal_origin_feed: false,
+    declaration_veterinary_products_registered: false,
+    declaration_no_foot_mouth_disease: false,
+    declaration_no_foot_mouth_disease_farm: false,
+    declaration_livestock_south_africa: false,
+    declaration_no_gene_editing: false,
+    agency_represented: '',
+    appointment_letter: null,
+    apac_registration: null,
+    practice_letter_head: null,
+  });
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        navigate('/auth');
+        return;
+      }
+      
+      // If profile is already completed, redirect to role-specific page
+      if (profile && profile.profile_completed) {
+        navigate(getRoleRedirectPath());
+        return;
+      }
+    }
+  }, [user, profile, loading, navigate, getRoleRedirectPath]);
+
+  const handleFileChange = (field: keyof FormData, file: File | null) => {
+    setFormData(prev => ({ ...prev, [field]: file }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user || !profile) return;
+    
+    // Validate signature for sellers
+    if (profile.role === 'seller' && !signature) {
+      toast({
+        title: "Error",
+        description: "Digital signature is required to complete your profile.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setSubmitting(true);
+    
+    try {
+      // 1. Upload files
+      const fileUploadPromises = [
+        uploadFile(formData.id_document, `id_document_${user.id}`),
+        ...(profile.role === 'seller' ? [uploadFile(formData.brand_mark, `brand_mark_${user.id}`)] : []),
+        ...(profile.role === 'agent' ? [
+          uploadFile(formData.appointment_letter, `appointment_letter_${user.id}`),
+          uploadFile(formData.apac_registration, `apac_registration_${user.id}`)
+        ] : []),
+        ...(profile.role === 'vet' ? [uploadFile(formData.practice_letter_head, `practice_letter_head_${user.id}`)] : [])
+      ];
+
+      const uploadedFilePaths = await Promise.all(fileUploadPromises);
+      const [idDocumentPath, brandMarkPath, appointmentLetterPath, apacRegistrationPath, practiceLetterHeadPath] = uploadedFilePaths;
+
+      // 2. Update profile with collected information and mark as completed
+      const updates = {
+        profile_completed: true,
+        profile_completed_at: new Date().toISOString(),
+        id_document_url: idDocumentPath,
+        ...(profile.role === 'seller' && {
+          seller_ownership_type: formData.ownership_type,
+          seller_entity_name: formData.entity_name,
+          responsible_person_designation: formData.responsible_person_title,
+          brand_mark_url: brandMarkPath,
+          declaration_responsible_person_definition: formData.declaration_responsible_person_definition,
+          declaration_no_cloven_hooved_animals: formData.declaration_no_cloven_hooved_animals,
+          declaration_livestock_kept_away: formData.declaration_livestock_kept_away,
+          declaration_no_animal_origin_feed: formData.declaration_no_animal_origin_feed,
+          declaration_veterinary_products_registered: formData.declaration_veterinary_products_registered,
+          declaration_no_foot_mouth_disease: formData.declaration_no_foot_mouth_disease,
+          declaration_no_foot_mouth_disease_farm: formData.declaration_no_foot_mouth_disease_farm,
+          declaration_livestock_south_africa: formData.declaration_livestock_south_africa,
+          declaration_no_gene_editing: formData.declaration_no_gene_editing,
+          signature_data: signature,
+          signature_date: new Date().toISOString(),
+          signed_location: signedLocation
+        }),
+        ...(profile.role === 'agent' && {
+          agency_represented: formData.agency_represented,
+          appointment_letter_url: appointmentLetterPath,
+          apac_registration_url: apacRegistrationPath,
+        }),
+        ...(profile.role === 'vet' && {
+          practice_letter_head_url: practiceLetterHeadPath,
+        }),
+      };
+      
+      console.log("Submitting updates:", updates);
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
+      
+      console.log("Supabase update response:", { error });
+      if (error) {
+        console.error("Supabase error:", error);
+        throw error;
+      }
+
+      // Refresh the profile to get the latest data
+      await refreshProfile();
+
+      toast({
+        title: "Success",
+        description: "Profile completed successfully! Redirecting to your dashboard...",
+        variant: "default"
+      });
+      
+      // Redirect to role-specific page
+      navigate(getRoleRedirectPath());
+      
+    } catch (error) {
+      console.error('Profile completion error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to complete profile. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 flex items-center justify-center">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!profile) return null;
+
+  const renderFileUpload = (label: string, field: keyof FormData, required = false) => (
+    <div>
+      <Label htmlFor={field}>{label} {required && '*'}</Label>
+      <div className="mt-1 flex items-center space-x-2">
+        <Input
+          id={field}
+          type="file"
+          accept="image/*,.pdf"
+          onChange={(e) => handleFileChange(field, e.target.files?.[0] || null)}
+          className="flex-1"
+          required={required}
+        />
+        <Upload className="w-4 h-4 text-gray-400" />
+      </div>
+    </div>
+  );
+
+  const renderDeclaration = (field: keyof FormData, label: string) => (
+    <div className="flex items-center justify-between py-2 border-b">
+      <Label htmlFor={field as string} className="text-sm leading-5 flex-1 pr-4">
+        {label}
+      </Label>
+      <YesNoSwitch
+        value={!!formData[field]}
+        onChange={(checked) => setFormData(prev => ({ ...prev, [field]: checked }))}
+      />
+    </div>
+  );
+
+  const renderBiosecurityDeclarations = () => (
+    <div className="space-y-4 border-t pt-4">
+      <h3 className="text-lg font-semibold">Responsible Person Declaration</h3>
+      
+      <div className="space-y-3">
+        {renderDeclaration("declaration_responsible_person_definition", "The responsible person is a person who is directly part of the management of daily operations of the farming enterprise and whom can attest to information as required. The responsible person must be 18 years and older.")}
+        
+        <h4 className="font-medium pt-4">I hereby declare that:</h4>
+        
+        <div className="space-y-2">
+          {renderDeclaration("declaration_no_cloven_hooved_animals", "No cloven hooved animals (cattle, sheep, goats, pigs) other than those offered for sale have been on the farm for the past 21 days")}
+          {renderDeclaration("declaration_livestock_kept_away", "The livestock offered for sale have been kept away from all other livestock for the past 21 days")}
+          {renderDeclaration("declaration_no_animal_origin_feed", "No feed of animal origin has been fed to the livestock offered for sale")}
+          {renderDeclaration("declaration_veterinary_products_registered", "All veterinary products used on the livestock offered for sale are registered")}
+          {renderDeclaration("declaration_no_foot_mouth_disease", "No foot and mouth disease has occurred on the farm for the past 12 months")}
+          {renderDeclaration("declaration_no_foot_mouth_disease_farm", "No foot and mouth disease has occurred on neighbouring farms for the past 3 months")}
+          {renderDeclaration("declaration_livestock_south_africa", "The livestock offered for sale have been in South Africa for at least 21 days")}
+          {renderDeclaration("declaration_no_gene_editing", "No gene editing technology has been used on the livestock offered for sale")}
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="signedLocation">Location where signed *</Label>
+          <Input
+            id="signedLocation"
+            value={signedLocation}
+            onChange={(e) => setSignedLocation(e.target.value)}
+            placeholder="Enter location"
+            required
+          />
+        </div>
+
+        <SignaturePad 
+          onSignatureChange={setSignature}
+          signature={signature}
+        />
+      </div>
+    </div>
+  );
+
+  const renderSellerFields = () => (
+    <>
+      <div className="space-y-4 border-t pt-4">
+        <h3 className="text-lg font-semibold">Livestock Owner Information</h3>
+        
+        <div>
+          <Label>The livestock is owned by a:</Label>
+          <RadioGroup 
+            value={formData.ownership_type} 
+            onValueChange={(value) => setFormData(prev => ({ ...prev, ownership_type: value }))}
+            className="mt-2"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="sole_proprietor" id="sole_proprietor" />
+              <Label htmlFor="sole_proprietor">Sole Proprietor</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="partnership" id="partnership" />
+              <Label htmlFor="partnership">Partnership</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="trust" id="trust" />
+              <Label htmlFor="trust">Trust</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="company" id="company" />
+              <Label htmlFor="company">Company</Label>
+            </div>
+          </RadioGroup>
+        </div>
+
+        <div>
+          <Label htmlFor="entity_name">Name of Entity *</Label>
+          <Input
+            id="entity_name"
+            value={formData.entity_name}
+            onChange={(e) => setFormData(prev => ({ ...prev, entity_name: e.target.value }))}
+            required
+          />
+        </div>
+
+        <div>
+          <Label>Title of the responsible person:</Label>
+          <Select value={formData.responsible_person_title} onValueChange={(value) => setFormData(prev => ({ ...prev, responsible_person_title: value }))}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select title" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sole_proprietor">Sole Proprietor</SelectItem>
+              <SelectItem value="partner">Partner</SelectItem>
+              <SelectItem value="trustee">Trustee</SelectItem>
+              <SelectItem value="director">Director</SelectItem>
+              <SelectItem value="herd_manager">Herd Manager</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {renderFileUpload("Photo of I.D. or drivers licence of person offering livestock", "id_document", true)}
+        {renderFileUpload("Photo of brand mark of livestock owner", "brand_mark", true)}
+      </div>
+      
+    </>
+  );
+
+  const renderAgentFields = () => (
+    <>
+      <div>
+        <Label htmlFor="agency_represented">Agency Represented *</Label>
+        <Input
+          id="agency_represented"
+          value={formData.agency_represented}
+          onChange={(e) => setFormData(prev => ({ ...prev, agency_represented: e.target.value }))}
+          required
+        />
+      </div>
+      
+      {renderFileUpload("Photo of I.D. or drivers licence", "id_document", true)}
+      {renderFileUpload("Photo of agency appointment letter", "appointment_letter", true)}
+      {renderFileUpload("Photo of APAC registration", "apac_registration", true)}
+    </>
+  );
+
+  const renderVetFields = () => (
+    <>
+      {renderFileUpload("Photo of I.D. or drivers licence", "id_document", true)}
+      {renderFileUpload("Photo of practice letter head", "practice_letter_head", true)}
+    </>
+  );
+
+  const renderDriverFields = () => (
+    <>
+      {renderFileUpload("Photo of I.D. or drivers licence", "id_document", true)}
+    </>
+  );
+
+  const getRoleSpecificFields = () => {
+    switch (profile.role) {
+      case 'seller':
+        return renderSellerFields();
+      case 'agent':
+        return renderAgentFields();
+      case 'vet':
+        return renderVetFields();
+      case 'driver':
+        return renderDriverFields();
+      default:
+        return null;
+    }
+  };
+
+  const getRoleTitle = () => {
+    switch (profile.role) {
+      case 'seller':
+        return 'Seller Profile';
+      case 'agent':
+        return 'Agent Profile';
+      case 'vet':
+        return 'Vet Profile';
+      case 'driver':
+        return 'Driver Profile';
+      default:
+        return 'Profile Completion';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-2xl">
+        <CardHeader className="space-y-4">
+          <div className="text-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-emerald-600 to-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-6 h-6 text-white" />
+            </div>
+            <CardTitle className="text-2xl font-bold">
+              {getRoleTitle()}
+            </CardTitle>
+            <CardDescription>
+              Please complete your profile to proceed with account verification
+            </CardDescription>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* User info display - read-only */}
+            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <h3 className="font-semibold text-gray-700">Your Information</h3>
+              <p className="text-sm text-gray-600">Name: {profile.first_name} {profile.last_name}</p>
+              <p className="text-sm text-gray-600">Email: {profile.email}</p>
+              {profile.phone && <p className="text-sm text-gray-600">Phone: {profile.phone}</p>}
+            </div>
+
+            {/* Role-specific fields */}
+            {getRoleSpecificFields()}
+            {profile?.role === 'seller' && renderBiosecurityDeclarations()}
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? 'Submitting...' : 'Complete Profile'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default ProfileCompletion;

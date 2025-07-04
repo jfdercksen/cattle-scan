@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Eye } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
-type LivestockListing = Tables<'livestock_listings'>;
+type LivestockListing = Tables<'livestock_listings'> & {
+  listing_invitations: {
+    reference_id: string;
+  } | null;
+};
 
 interface LivestockListingsTableProps {
   onViewListing: (listing: LivestockListing) => void;
@@ -20,11 +24,14 @@ export const LivestockListingsTable = ({ onViewListing }: LivestockListingsTable
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchListings = async () => {
+  const fetchListings = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('livestock_listings')
-        .select('*')
+        .select(`
+          *,
+          listing_invitations:invitation_id ( reference_id )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -39,11 +46,11 @@ export const LivestockListingsTable = ({ onViewListing }: LivestockListingsTable
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchListings();
-  }, []);
+  }, [fetchListings]);
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -85,6 +92,7 @@ export const LivestockListingsTable = ({ onViewListing }: LivestockListingsTable
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Reference ID</TableHead>
                 <TableHead>Owner Name</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Breed</TableHead>
@@ -97,6 +105,9 @@ export const LivestockListingsTable = ({ onViewListing }: LivestockListingsTable
             <TableBody>
               {listings.map((listing) => (
                 <TableRow key={listing.id}>
+                  <TableCell className="font-mono">
+                    {listing.listing_invitations?.reference_id || 'N/A'}
+                  </TableCell>
                   <TableCell className="font-medium">
                     {listing.owner_name}
                   </TableCell>

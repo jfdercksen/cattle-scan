@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Shield, UserCheck, UserX, ArrowLeft, Users, Clock, CheckCircle, XCircle, Ban, Trash2 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -28,23 +28,7 @@ const Admin = () => {
   const [reason, setReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        navigate('/auth');
-        return;
-      }
-      
-      if (!profile || !['super_admin', 'admin'].includes(profile.role) || profile.status !== 'approved') {
-        navigate('/');
-        return;
-      }
-      
-      fetchProfiles();
-    }
-  }, [user, profile, loading, navigate]);
-
-  const fetchProfiles = async () => {
+  const fetchProfiles = useCallback(async () => {
     try {
       console.log('Fetching profiles...');
       const { data, error } = await supabase
@@ -69,7 +53,24 @@ const Admin = () => {
     } finally {
       setLoadingProfiles(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+
+    if (profile) {
+      if (!['super_admin', 'admin'].includes(profile.role) || profile.status !== 'approved') {
+        navigate('/');
+        return;
+      }
+      fetchProfiles();
+    }
+  }, [user, profile, loading, navigate, fetchProfiles]);
 
   const handleAction = async (profileId: string, action: 'approved' | 'rejected' | 'suspended') => {
     if (!user || !selectedProfile) return;
@@ -205,7 +206,7 @@ const Admin = () => {
     );
   };
 
-  if (loading || loadingProfiles) {
+  if (loading || !profile || loadingProfiles) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 flex items-center justify-center">
         <div className="text-center">Loading...</div>

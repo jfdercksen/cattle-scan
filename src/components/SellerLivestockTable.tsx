@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, Edit, Beef } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/auth';
 import type { Tables } from '@/integrations/supabase/types';
 
 type LivestockListing = Tables<'livestock_listings'>;
@@ -23,33 +23,36 @@ export const SellerLivestockTable = ({ onViewListing, onEditListing }: SellerLiv
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const fetchListings = async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('livestock_listings')
-        .select('*')
-        .eq('seller_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setListings(data || []);
-    } catch (error) {
-      console.error('Error fetching livestock listings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load livestock listings",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchListings = async () => {
+      if (!user) {
+        setListings([]);
+        return;
+      }
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('livestock_listings')
+          .select('*')
+          .eq('seller_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setListings(data || []);
+      } catch (error) {
+        console.error('Error fetching livestock listings:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load livestock listings",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchListings();
-  }, [user]);
+  }, [user, toast]);
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,11 @@ import { Eye, CheckCircle, XCircle } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type LivestockOffer = Tables<'livestock_offers'> & {
-  livestock_listings: Tables<'livestock_listings'>;
+  livestock_listings: Tables<'livestock_listings'> & {
+    listing_invitations: {
+      reference_id: string;
+    } | null;
+  };
 };
 
 interface SellerOffersTableProps {
@@ -22,13 +26,16 @@ export const SellerOffersTable = ({ onViewOffer }: SellerOffersTableProps) => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchOffers = async () => {
+  const fetchOffers = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('livestock_offers')
         .select(`
           *,
-          livestock_listings (*)
+          livestock_listings (
+            *,
+            listing_invitations!livestock_listings_invitation_id_fkey ( reference_id )
+          )
         `)
         .order('created_at', { ascending: false });
 
@@ -44,11 +51,11 @@ export const SellerOffersTable = ({ onViewOffer }: SellerOffersTableProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchOffers();
-  }, []);
+  }, [fetchOffers]);
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -90,6 +97,7 @@ export const SellerOffersTable = ({ onViewOffer }: SellerOffersTableProps) => {
           <Table>
             <TableHeader>
               <TableRow>
+                                <TableHead>Reference ID</TableHead>
                 <TableHead>Listing</TableHead>
                 <TableHead>Offer Amount</TableHead>
                 <TableHead>Valid Until</TableHead>
@@ -101,6 +109,9 @@ export const SellerOffersTable = ({ onViewOffer }: SellerOffersTableProps) => {
             <TableBody>
               {offers.map((offer) => (
                 <TableRow key={offer.id}>
+                                    <TableCell className="font-mono">
+                    {offer.livestock_listings.listing_invitations?.reference_id || 'N/A'}
+                  </TableCell>
                   <TableCell className="font-medium">
                     {offer.livestock_listings.owner_name} - {offer.livestock_listings.breed}
                   </TableCell>

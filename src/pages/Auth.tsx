@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,13 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, ArrowLeft, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { signUp, signIn, user, profile, needsProfileCompletion, getRoleRedirectPath } = useAuth();
   const { toast } = useToast();
   
@@ -39,13 +40,13 @@ const Auth = () => {
 
   useEffect(() => {
     if (user && profile) {
-      if (needsProfileCompletion()) {
-        navigate('/profile-completion');
-      } else {
-        navigate(getRoleRedirectPath());
+      const redirectPath = getRoleRedirectPath();
+      // Only navigate if we are not already at the destination
+      if (location.pathname !== redirectPath) {
+        navigate(redirectPath);
       }
     }
-  }, [user, profile, navigate, needsProfileCompletion, getRoleRedirectPath]);
+  }, [user, profile, navigate, getRoleRedirectPath, location.pathname]);
 
   // Enhanced input validation
   const validateEmail = (email: string) => {

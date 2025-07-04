@@ -9,7 +9,7 @@ interface SignaturePadProps {
   signature?: string | null;
 }
 
-export const SignaturePad: React.FC<SignaturePadProps> = ({ onSignatureChange, signature }) => {
+export function SignaturePad({ onSignatureChange, signature }: SignaturePadProps) {
   const sigCanvas = useRef<SignatureCanvas>(null);
   const [isEmpty, setIsEmpty] = useState(true);
 
@@ -77,4 +77,4 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSignatureChange, s
       </CardContent>
     </Card>
   );
-};
+}

@@ -1,37 +1,69 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Settings } from "lucide-react";
 
 const ProfileSection = () => {
-  const { user, profile, updateProfile } = useAuth();
+  const { user, profile, updateProfile, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   
   // Profile form state
-  const [firstName, setFirstName] = useState(profile?.first_name || '');
-  const [lastName, setLastName] = useState(profile?.last_name || '');
-  const [phone, setPhone] = useState(profile?.phone || '');
-  const [companyName, setCompanyName] = useState(profile?.company_name || '');
-  const [address, setAddress] = useState(profile?.address || '');
-  const [city, setCity] = useState(profile?.city || '');
-  const [province, setProvince] = useState(profile?.province || '');
-  const [postalCode, setPostalCode] = useState(profile?.postal_code || '');
-  const [language, setLanguage] = useState<'en' | 'af'>(profile?.language_preference || 'en');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [province, setProvince] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [language, setLanguage] = useState<'en' | 'af'>('en');
   
   // Password form state
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  useEffect(() => {
+    if (profile) {
+      setFirstName(profile.first_name || '');
+      setLastName(profile.last_name || '');
+      setPhone(profile.phone || '');
+      setCompanyName(profile.company_name || '');
+      setAddress(profile.address || '');
+      setCity(profile.city || '');
+      setProvince(profile.province || '');
+      setPostalCode(profile.postal_code || '');
+      setLanguage(profile.language_preference || 'en');
+    }
+  }, [profile]);
+
+  if (authLoading || !profile) {
+    return (
+      <div className="space-y-8">
+        <Card>
+          <CardHeader>
+            <div className="h-8 bg-slate-200 rounded w-1/2 animate-pulse"></div>
+            <div className="h-4 bg-slate-200 rounded w-3/4 animate-pulse mt-2"></div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="h-10 bg-slate-200 rounded w-full animate-pulse"></div>
+            <div className="h-10 bg-slate-200 rounded w-full animate-pulse"></div>
+            <div className="h-10 bg-slate-200 rounded w-1/4 animate-pulse ml-auto"></div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
