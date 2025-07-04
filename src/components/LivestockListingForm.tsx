@@ -233,7 +233,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
           seller_id: profile.id,
           signature_data: signature,
           affidavit_file_path: affidavitFilePath,
-          status: 'pending_review' as const,
+          status: 'pending' as const,
         };
         // The type assertion below is a workaround. The Zod schema is too permissive
         // for new listings, making some required fields optional in the inferred type.

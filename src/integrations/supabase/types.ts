@@ -198,6 +198,7 @@ export type Database = {
           growth_implant_type: string | null
           id: string
           invitation_id: string | null
+          invited_vet_email: string | null
           is_breeder_seller: boolean | null
           livestock_at_loading_point_1: number | null
           livestock_at_loading_point_2: number | null
@@ -258,6 +259,7 @@ export type Database = {
           growth_implant_type?: string | null
           id?: string
           invitation_id?: string | null
+          invited_vet_email?: string | null
           is_breeder_seller?: boolean | null
           livestock_at_loading_point_1?: number | null
           livestock_at_loading_point_2?: number | null
@@ -318,6 +320,7 @@ export type Database = {
           growth_implant_type?: string | null
           id?: string
           invitation_id?: string | null
+          invited_vet_email?: string | null
           is_breeder_seller?: boolean | null
           livestock_at_loading_point_1?: number | null
           livestock_at_loading_point_2?: number | null
