@@ -33,7 +33,7 @@ export const OfferTermsSection = () => {
           render={({ field }) => (
             <FormItem>
               <div className="flex items-center justify-between rounded-md border p-4 h-full">
-                <FormLabel>Additional R25 per calf payment for turnover of less than R10 million</FormLabel>
+                <FormLabel>If the entity selling the livestock has a turnover of less than R 10 million, it could mean an additional R 25 per calf payment. Apply?</FormLabel>
                 <FormControl>
                   <YesNoSwitch value={field.value} onChange={field.onChange} />
                 </FormControl>

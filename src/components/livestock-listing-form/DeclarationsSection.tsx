@@ -10,9 +10,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { YesNoSwitch } from "@/components/ui/YesNoSwitch";
 import { LivestockListingFormData } from '@/lib/schemas/livestockListingSchema';
 import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/auth';
 
 export const DeclarationsSection = () => {
   const form = useFormContext<LivestockListingFormData>();
+  const { profile } = useAuth();
 
   const renderDeclaration = (field: keyof LivestockListingFormData, label: string) => (
     <div className="flex items-center justify-between py-2 border-b">
@@ -30,7 +32,7 @@ export const DeclarationsSection = () => {
     <div>
       <h3 className="text-lg font-semibold mb-4">Responsible Person Declarations</h3>
       <p className="text-sm text-gray-600 mb-4">
-        I, the responsible person, hereby declare and affirm that:
+        I, <strong className="font-semibold">{`${profile?.first_name || ''} ${profile?.last_name || ''}`.trim()}</strong>, the responsible person, hereby declare and affirm that:
       </p>
       <div className="space-y-2">
           {renderDeclaration("declaration_no_cloven_hooved_animals", "No cloven hooved animals (cattle, sheep, goats, pigs) other than those offered for sale have been on the farm for the past 21 days")}

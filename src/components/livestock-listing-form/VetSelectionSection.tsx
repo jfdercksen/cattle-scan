@@ -52,7 +52,10 @@ export const VetSelectionSection = () => {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Select a Veterinarian</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingVets}>
+              <Select onValueChange={field.onChange}
+                value={field.value}
+                disabled={isLoadingVets}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a vet" />
