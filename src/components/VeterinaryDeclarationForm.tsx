@@ -19,14 +19,16 @@ import { Tables } from '@/integrations/supabase/types';
 interface VeterinaryDeclarationFormProps {
   listingId: string;
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-export const VeterinaryDeclarationForm = ({ listingId, onSuccess }: VeterinaryDeclarationFormProps) => {
+export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: VeterinaryDeclarationFormProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [listing, setListing] = useState<Tables<'livestock_listings'> | null>(null);
+  const [vetProfile, setVetProfile] = useState<Tables<'profiles'> | null>(null);
 
   const form = useForm<VeterinaryDeclarationFormData>({
     resolver: zodResolver(veterinaryDeclarationSchema),
@@ -64,6 +66,28 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess }: VeterinaryDe
   useEffect(() => {
     fetchListing();
   }, [fetchListing]);
+
+  useEffect(() => {
+    const fetchVetProfile = async () => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to fetch vet profile.', variant: 'destructive' });
+      } else {
+        setVetProfile(data);
+        form.reset({
+          ...form.getValues(),
+          veterinarian_name: data.first_name + ' ' + data.last_name || '',
+          veterinarian_registration_number: data.registration_number || '',
+        });
+      }
+    };
+    fetchVetProfile();
+  }, [user, form, toast]);
 
   const onSubmit = async (data: VeterinaryDeclarationFormData) => {
     setIsSubmitting(true);
@@ -122,6 +146,14 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess }: VeterinaryDe
     }
   };
 
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    } else {
+      navigate('/vet-dashboard');
+    }
+  };
+
   if (!listing) {
     return <div>Loading...</div>;
   }
@@ -130,7 +162,9 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess }: VeterinaryDe
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle>Veterinary Declaration</CardTitle>
-        <CardDescription>Please complete the veterinary declaration for the livestock listing.</CardDescription>
+        <CardDescription>
+          I Dr. {vetProfile?.first_name} {vetProfile?.last_name}, a veterinarian registered with the South African Veterinary Council with registration number {vetProfile?.registration_number}, declare that I inspected the following livestock at the following address: {listing?.location}.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <FormProvider {...form}>
@@ -145,45 +179,27 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess }: VeterinaryDe
 
               <Separator />
 
-              <FormField
-                control={form.control}
-                name="veterinarian_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Veterinarian Name</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="veterinarian_registration_number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Registration Number</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="space-y-2 p-4 border rounded-md bg-gray-50">
+                <h3 className="text-lg font-semibold">Livestock to be Loaded</h3>
+                <p><strong>Number of Cattle:</strong> {listing?.number_cattle_loaded ?? 'N/A'}</p>
+                <p><strong>Number of Sheep:</strong> {listing?.number_sheep_loaded ?? 'N/A'}</p>
+              </div>
 
               <Separator />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField name="cattle_visually_inspected" render={({ field }) => <FormItem><FormLabel>Cattle Visually Inspected</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
-                <FormField name="cattle_mouthed" render={({ field }) => <FormItem><FormLabel>25% of Cattle Mouthed</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
-                <FormField name="sheep_visually_inspected" render={({ field }) => <FormItem><FormLabel>Sheep Visually Inspected</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
-                <FormField name="sheep_mouthed" render={({ field }) => <FormItem><FormLabel>25% of Sheep Mouthed</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
-                <FormField name="foot_and_mouth_symptoms" render={({ field }) => <FormItem><FormLabel>Symptoms of Foot and Mouth Disease</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
-                <FormField name="lumpy_skin_disease_symptoms" render={({ field }) => <FormItem><FormLabel>Symptoms of Lumpy Skin Disease</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
-                <FormField name="foot_and_mouth_case_in_10km" render={({ field }) => <FormItem><FormLabel>Foot and Mouth Case within 10km</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
-                <FormField name="rift_valley_fever_case_in_10km" render={({ field }) => <FormItem><FormLabel>Rift Valley Fever Case within 10km</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
+                <FormField name="cattle_visually_inspected" render={({ field }) => <FormItem><FormLabel>Have {listing?.number_cattle_loaded || 'X'} cattle visually been inspected?</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
+                <FormField name="cattle_mouthed" render={({ field }) => <FormItem><FormLabel>Have {Math.ceil((listing?.number_cattle_loaded || 0) * 0.25)} cattle been mouthed? (25%)</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
+                <FormField name="sheep_visually_inspected" render={({ field }) => <FormItem><FormLabel>Have {listing?.number_sheep_loaded || 'Y'} sheep been visually inspected?</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
+                <FormField name="sheep_mouthed" render={({ field }) => <FormItem><FormLabel>Have {Math.ceil((listing?.number_sheep_loaded || 0) * 0.25)} sheep been mouthed? (25%)</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
+                <FormField name="foot_and_mouth_symptoms" render={({ field }) => <FormItem><FormLabel>Were there any symptoms or lesions (old or new) of Foot and Mouth Disease observed during the inspection of the livestock?</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
+                <FormField name="lumpy_skin_disease_symptoms" render={({ field }) => <FormItem><FormLabel>Were there any symptoms or lesions (old or new) of Lumpy Skin Disease observed during the inspection of the livestock?</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
+                <FormField name="foot_and_mouth_case_in_10km" render={({ field }) => <FormItem><FormLabel>According to my knowledge there has been no case of Foot and Mouth disease within 10 km from the livestock inspection point.</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
+                <FormField name="rift_valley_fever_case_in_10km" render={({ field }) => <FormItem><FormLabel>According to my knowledge there has been no case of Rift Valley Fever within 10 km from the livestock inspection point.</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
               </div>
 
               <div className="flex justify-end space-x-4 mt-8">
-                <Button type="button" variant="outline" onClick={() => navigate('/vet-dashboard')}>
+                <Button type="button" variant="outline" onClick={handleCancel}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>

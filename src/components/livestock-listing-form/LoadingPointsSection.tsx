@@ -1,4 +1,4 @@
-import { useFormContext, useFieldArray } from 'react-hook-form';
+import { useFormContext, FieldArrayWithId, UseFieldArrayAppend, UseFieldArrayRemove } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import {
   FormControl,
@@ -13,13 +13,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 
-export const LoadingPointsSection = () => {
-  const form = useFormContext<LivestockListingFormData>();
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'loading_points',
-  });
+interface LoadingPointsSectionProps {
+  fields: FieldArrayWithId<LivestockListingFormData, 'loading_points', 'id'>[];
+  append: UseFieldArrayAppend<LivestockListingFormData, 'loading_points'>;
+  remove: UseFieldArrayRemove;
+}
 
+export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSectionProps) => {
+  const form = useFormContext<LivestockListingFormData>();
   const livestockType = form.watch('livestock_type');
 
   const addLoadingPoint = () => {
@@ -47,7 +48,7 @@ export const LoadingPointsSection = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="md:col-span-2">
-                <Label>Address of Farm of Birth of Livestock</Label>
+                <Label>Loading address of Livestock</Label>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 p-4 border rounded-md">
                   <FormField
                     control={form.control}

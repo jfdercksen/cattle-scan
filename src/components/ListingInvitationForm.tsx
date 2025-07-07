@@ -36,7 +36,7 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
   const [sellers, setSellers] = useState<Profile[]>([]);
   const [loadingSellers, setLoadingSellers] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const referenceId = nanoid(10).toUpperCase();
+  const [referenceId, setReferenceId] = useState(() => nanoid(10).toUpperCase());
 
   const form = useForm<InvitationFormData>({
     resolver: zodResolver(invitationSchema),
@@ -92,6 +92,7 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
       toast({ title: 'Success', description: 'Invitation sent successfully.' });
       onSuccess();
       form.reset();
+      setReferenceId(nanoid(10).toUpperCase());
     } catch (error) {
       console.error('Error creating invitation:', error);
       toast({ title: 'Error', description: 'Failed to send invitation.', variant: 'destructive' });

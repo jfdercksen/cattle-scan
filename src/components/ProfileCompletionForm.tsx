@@ -13,6 +13,9 @@ import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { SignaturePad } from "@/components/SignaturePad";
+import type { Tables } from '@/integrations/supabase/types';
+
+type Profile = Tables<'profiles'>;
 
 const uploadFile = async (file: File | null, path: string) => {
   if (!file) return null;
@@ -48,13 +51,16 @@ interface FormData {
   appointment_letter: File | null;
   apac_registration: File | null;
   practice_letter_head: File | null;
+  registration_number: string | null;
 }
 
 const ProfileCompletion = () => {
   const navigate = useNavigate();
-  const { profile, user, loading, getRoleRedirectPath, refreshProfile } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  
+
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
   const [signedLocation, setSignedLocation] = useState('');
@@ -77,22 +83,61 @@ const ProfileCompletion = () => {
     appointment_letter: null,
     apac_registration: null,
     practice_letter_head: null,
+    registration_number: null,
   });
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        navigate('/auth');
-        return;
-      }
-      
-      // If profile is already completed, redirect to role-specific page
-      if (profile && profile.profile_completed) {
-        navigate(getRoleRedirectPath());
-        return;
-      }
+    if (user) {
+      setProfileLoading(true);
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Error fetching profile:', error);
+            setProfile(null);
+          } else {
+            setProfile(data);
+          }
+          setProfileLoading(false);
+        });
+    } else if (!authLoading) {
+      setProfileLoading(false);
     }
-  }, [user, profile, loading, navigate, getRoleRedirectPath]);
+  }, [user, authLoading]);
+
+  const getRoleRedirectPath = (role: string | undefined | null) => {
+    switch (role) {
+      case 'seller':
+        return '/seller-dashboard';
+      case 'admin':
+        return '/admin-dashboard';
+      case 'vet':
+        return '/vet-dashboard';
+      case 'agent':
+        return '/agent-dashboard';
+      case 'driver':
+        return '/driver-dashboard';
+      default:
+        return '/';
+    }
+  };
+
+  useEffect(() => {
+    if (authLoading || profileLoading) return;
+
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    
+    if (profile && profile.profile_completed) {
+      navigate(getRoleRedirectPath(profile.role));
+      return;
+    }
+  }, [user, profile, authLoading, profileLoading, navigate]);
 
   const handleFileChange = (field: keyof FormData, file: File | null) => {
     setFormData(prev => ({ ...prev, [field]: file }));
@@ -159,24 +204,19 @@ const ProfileCompletion = () => {
           apac_registration_url: apacRegistrationPath,
         }),
         ...(profile.role === 'vet' && {
+          registration_number: formData.registration_number,
           practice_letter_head_url: practiceLetterHeadPath,
         }),
       };
       
-      console.log("Submitting updates:", updates);
       const { error } = await supabase
         .from('profiles')
         .update(updates)
         .eq('id', user.id);
       
-      console.log("Supabase update response:", { error });
       if (error) {
-        console.error("Supabase error:", error);
         throw error;
       }
-
-      // Refresh the profile to get the latest data
-      await refreshProfile();
 
       toast({
         title: "Success",
@@ -185,7 +225,7 @@ const ProfileCompletion = () => {
       });
       
       // Redirect to role-specific page
-      navigate(getRoleRedirectPath());
+      navigate(getRoleRedirectPath(profile.role));
       
     } catch (error) {
       console.error('Profile completion error:', error);
@@ -199,7 +239,7 @@ const ProfileCompletion = () => {
     }
   };
 
-  if (loading) {
+  if (authLoading || profileLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 flex items-center justify-center">
         <div className="text-center">Loading...</div>
@@ -207,7 +247,11 @@ const ProfileCompletion = () => {
     );
   }
 
-  if (!profile) return null;
+  if (!profile) return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 flex items-center justify-center">
+      <div className="text-center">Could not load profile. Please try again.</div>
+    </div>
+  );
 
   const renderFileUpload = (label: string, field: keyof FormData, required = false) => (
     <div>
@@ -363,6 +407,15 @@ const ProfileCompletion = () => {
 
   const renderVetFields = () => (
     <>
+      <div>
+        <Label htmlFor="registration_number">Registration Number *</Label>
+        <Input
+          id="registration_number"
+          value={formData.registration_number}
+          onChange={(e) => setFormData(prev => ({ ...prev, registration_number: e.target.value }))}
+          required
+        />
+      </div>
       {renderFileUpload("Photo of I.D. or drivers licence", "id_document", true)}
       {renderFileUpload("Photo of practice letter head", "practice_letter_head", true)}
     </>

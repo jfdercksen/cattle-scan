@@ -199,7 +199,7 @@ const Index = () => {
             {t.hero.description}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/auth">
+            <Link to="/auth?view=signup">
               <Button size="lg" className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white px-8 py-3 text-lg">
                 {t.hero.cta}
                 <ChevronRight className="ml-2 h-5 w-5" />

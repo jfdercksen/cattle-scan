@@ -2,15 +2,20 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Beef, LogOut, FileText } from "lucide-react";
+// import { Beef, LogOut, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { LivestockListingDialog } from "@/components/LivestockListingDialog";
 import { SellerInvitationsTable } from '@/components/SellerInvitationsTable';
-import { SellerOffersTable } from "@/components/SellerOffersTable";
-import { OfferDetailsDialog } from "@/components/OfferDetailsDialog";
-import { SellerLivestockDialog } from "@/components/SellerLivestockDialog";
+// import { SellerOffersTable } from "@/components/SellerOffersTable";
+// import { OfferDetailsDialog } from "@/components/OfferDetailsDialog";
+// import { SellerLivestockDialog } from "@/components/SellerLivestockDialog";
 import type { Tables } from '@/integrations/supabase/types';
 import ProfileCompletion from '@/components/ProfileCompletionForm';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ProfileSection from "@/components/ProfileSection";
+import { supabase } from '@/integrations/supabase/client';
+
+type Profile = Tables<'profiles'>;
 
 type LivestockOffer = Tables<'livestock_offers'> & {
   livestock_listings: Tables<'livestock_listings'>;
@@ -18,36 +23,48 @@ type LivestockOffer = Tables<'livestock_offers'> & {
 
 const SellerDashboard = () => {
   const navigate = useNavigate();
-  const { user, profile, loading, signOut, needsProfileCompletion } = useAuth();
-  const [selectedOffer, setSelectedOffer] = useState<LivestockOffer | null>(null);
-  const [offerDialogOpen, setOfferDialogOpen] = useState(false);
-  const [livestockDialogOpen, setLivestockDialogOpen] = useState(false);
-  const [refreshOffers, setRefreshOffers] = useState(0);
+  const { user, loading: authLoading } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
-    if (loading) return;
+    if (user) {
+      setProfileLoading(true);
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Error fetching profile:', error);
+            setProfile(null);
+          } else {
+            setProfile(data);
+          }
+          setProfileLoading(false);
+        });
+    } else if (!authLoading) {
+      setProfileLoading(false);
+    }
+  }, [user, authLoading]);
+
+  useEffect(() => {
+    if (authLoading || profileLoading) return;
+
     if (!user) {
       navigate('/auth');
     } else if (profile && profile.role !== 'seller') {
       navigate('/');
     }
-  }, [user, profile, loading, navigate]);
+  }, [user, profile, authLoading, profileLoading, navigate]);
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
+  const needsProfileCompletion = () => {
+    if (!profile) return true;
+    return !profile.first_name || !profile.last_name || !profile.company_name || !profile.phone;
   };
 
-  const handleViewOffer = (offer: LivestockOffer) => {
-    setSelectedOffer(offer);
-    setOfferDialogOpen(true);
-  };
-
-  const handleOfferUpdated = () => {
-    setRefreshOffers(prev => prev + 1);
-  };
-
-  if (loading || !profile) {
+  if (authLoading || profileLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 flex items-center justify-center">
         <div className="text-center">Loading...</div>
@@ -55,64 +72,39 @@ const SellerDashboard = () => {
     );
   }
 
-  if (needsProfileCompletion()) {
+  if (user && needsProfileCompletion()) {
     return <ProfileCompletion />;
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
       <div className="container mx-auto px-4 py-8">
+        <Tabs defaultValue="dashboard" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+          </TabsList>
+          <TabsContent value="dashboard">
+            <div className="space-y-6 mt-4">
+              <SellerInvitationsTable />
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Beef className="w-5 h-5 mr-2" />
-                Livestock Listings
-              </CardTitle>
-              <CardDescription>
-                Manage your livestock listings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full" onClick={() => setLivestockDialogOpen(true)}>
-                View Livestock Listings
-              </Button>
-            </CardContent>
-          </Card>
+            {/* <OfferDetailsDialog
+              offer={selectedOffer}
+              open={offerDialogOpen}
+              onOpenChange={setOfferDialogOpen}
+              onOfferUpdated={handleOfferUpdated}
+            />
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Status</CardTitle>
-              <CardDescription>
-                Your account status: {profile.status}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm text-gray-600">
-                {profile.status === 'pending' && "Your account is pending approval"}
-                {profile.status === 'approved' && "Your account is approved and active"}
-                {profile.status === 'suspended' && "Your account has been suspended"}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-6">
-          <SellerInvitationsTable />
-        </div>
-
-        <OfferDetailsDialog
-          offer={selectedOffer}
-          open={offerDialogOpen}
-          onOpenChange={setOfferDialogOpen}
-          onOfferUpdated={handleOfferUpdated}
-        />
-
-        <SellerLivestockDialog
-          open={livestockDialogOpen}
-          onOpenChange={setLivestockDialogOpen}
-        />
+            <SellerLivestockDialog
+              open={livestockDialogOpen}
+              onOpenChange={setLivestockDialogOpen}
+            /> */}
+          </TabsContent>
+          <TabsContent value="profile">
+            <ProfileSection />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

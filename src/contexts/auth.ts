@@ -6,16 +6,14 @@ type Profile = Tables<'profiles'>;
 
 export interface AuthContextType {
   user: User | null;
-  profile: Profile | null;
   session: Session | null;
+  profile: Profile | null;
   loading: boolean;
+  needsProfileCompletion: () => boolean;
+  getRoleRedirectPath: () => string;
   signUp: (email: string, password: string, metadata: Record<string, string>) => Promise<{ error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
-  updateProfile: (updates: Partial<Profile>) => Promise<{ error: PostgrestError | null }>;
-  needsProfileCompletion: () => boolean;
-  getRoleRedirectPath: () => string;
-  refreshProfile: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

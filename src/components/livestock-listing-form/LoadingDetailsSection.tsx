@@ -9,53 +9,44 @@ import {
 import { Input } from '@/components/ui/input';
 import { LivestockListingFormData } from '@/lib/schemas/livestockListingSchema';
 
-export const LoadingDetailsSection = () => {
-  const form = useFormContext<LivestockListingFormData>();
+interface LoadingDetailsSectionProps {
+  totalCattle: number;
+  totalSheep: number;
+}
+
+export const LoadingDetailsSection = ({ totalCattle, totalSheep }: LoadingDetailsSectionProps) => {
+  const { control } = useFormContext<LivestockListingFormData>();
 
   return (
     <div>
       <h3 className="text-lg font-semibold mb-4">Livestock Loading Details</h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <FormField
-          control={form.control}
-          name="number_cattle_loaded"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Number of Cattle Loaded</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min="0"
-                  value={field.value}
-                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <FormItem>
+          <FormLabel>Number of Cattle Loaded</FormLabel>
+          <FormControl>
+            <Input
+              type="number"
+              value={totalCattle}
+              readOnly
+              className="bg-gray-100"
+            />
+          </FormControl>
+        </FormItem>
+
+        <FormItem>
+          <FormLabel>Number of Sheep Loaded</FormLabel>
+          <FormControl>
+            <Input
+              type="number"
+              value={totalSheep}
+              readOnly
+              className="bg-gray-100"
+            />
+          </FormControl>
+        </FormItem>
 
         <FormField
-          control={form.control}
-          name="number_sheep_loaded"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Number of Sheep Loaded</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min="0"
-                  value={field.value}
-                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
+          control={control}
           name="truck_registration_number"
           render={({ field }) => (
             <FormItem>

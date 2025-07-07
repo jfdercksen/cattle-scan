@@ -10,9 +10,23 @@ import type { Tables } from '@/integrations/supabase/types';
 import { useNavigate } from 'react-router-dom';
 
 type ListingInvitation = Tables<'listing_invitations'>;
+type LivestockListing = Tables<'livestock_listings'>;
+
+type InvitationWithListing = ListingInvitation & {
+  livestock_listings: Pick<LivestockListing, 'id' | 'status'>[];
+};
+
+const formatStatus = (status: string) => {
+  if (!status) return '';
+  return status
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
 
 export const SellerInvitationsTable = () => {
-  const [invitations, setInvitations] = useState<ListingInvitation[]>([]);
+  const [invitations, setInvitations] = useState<InvitationWithListing[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -24,13 +38,12 @@ export const SellerInvitationsTable = () => {
       try {
         const { data, error } = await supabase
           .from('listing_invitations')
-          .select('*')
+          .select('*, livestock_listings!livestock_listings_invitation_id_fkey(id, status)')
           .eq('seller_id', user.id)
-          // .eq('status', 'pending')
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        setInvitations(data || []);
+        setInvitations(data as InvitationWithListing[] || []);
       } catch (error) {
         console.error('Error fetching invitations:', error);
         toast({
@@ -105,38 +118,52 @@ export const SellerInvitationsTable = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {invitations.map((invitation) => (
-              <TableRow key={invitation.id}>
-                <TableCell className="font-mono">{invitation.reference_id}</TableCell>
-                <TableCell>
-                  {new Date(invitation.created_at).toLocaleDateString()}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={invitation.status === 'pending' ? 'default' : 'secondary'}>
-                    {invitation.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {invitation.status === 'pending' ? (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => handleAcceptInvitation(invitation)}
-                    >
-                      Accept Invitation
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/seller/create-listing/${invitation.id}`)}
-                    >
-                      Edit Listing
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
+            {invitations.map((invitation) => {
+              const listing = invitation.livestock_listings?.[0];
+              const status = listing?.status || invitation.status;
+              const isViewOnly = status === 'completed' || status === 'submitted_to_vet';
+
+              return (
+                <TableRow key={invitation.id}>
+                  <TableCell className="font-mono">{invitation.reference_id}</TableCell>
+                  <TableCell>
+                    {new Date(invitation.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={status === 'pending' ? 'default' : 'secondary'}>
+                      {formatStatus(status)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {invitation.status === 'pending' ? (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleAcceptInvitation(invitation)}
+                      >
+                        Accept Invitation
+                      </Button>
+                    ) : isViewOnly ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/seller/listing/${listing?.id}`)}
+                      >
+                        View Listing
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/seller/create-listing/${invitation.id}`)}
+                      >
+                        Edit Listing
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </CardContent>

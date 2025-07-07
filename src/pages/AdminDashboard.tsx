@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { AdminOfferDetailsDialog } from "@/components/AdminOfferDetailsDialog";
 import { ListingInvitationForm } from '@/components/ListingInvitationForm';
-import { ListingInvitationsTable } from '@/components/ListingInvitationsTable';
+import { ListingInvitationsTable, ListingInvitation } from '@/components/ListingInvitationsTable';
 import ProfileSection from "@/components/ProfileSection";
 import { LivestockListingsTable } from "@/components/LivestockListingsTable";
 import { LivestockListingDetailsDialog } from "@/components/LivestockListingDetailsDialog";
@@ -19,15 +19,7 @@ import { AdminOffersTable } from "@/components/AdminOffersTable";
 
 type Profile = Tables<'profiles'>;
 
-type ListingInvitation = {
-  id: string;
-  reference_id: string;
-  seller_email: string | null;
-  status: string;
-  created_at: string;
-  company_name: string | null;
-  seller_profile_email: string | null;
-};
+
 type LivestockListing = Tables<'livestock_listings'> & {
   listing_invitations: {
     reference_id: string;
@@ -39,9 +31,11 @@ type LivestockOffer = Tables<'livestock_offers'> & {
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { user, profile, loading, signOut } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const { toast } = useToast();
   
+  const [adminProfile, setAdminProfile] = useState<Profile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [selectedListing, setSelectedListing] = useState<LivestockListing | null>(null);
@@ -51,7 +45,30 @@ const AdminDashboard = () => {
   const [invitations, setInvitations] = useState<ListingInvitation[]>([]);
   const [loadingInvitations, setLoadingInvitations] = useState(true);
 
+  useEffect(() => {
+    if (user) {
+      setProfileLoading(true);
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Error fetching admin profile:', error);
+            setAdminProfile(null);
+          } else {
+            setAdminProfile(data);
+          }
+          setProfileLoading(false);
+        });
+    } else if (!authLoading) {
+      setProfileLoading(false);
+    }
+  }, [user, authLoading]);
+
   const fetchProfiles = useCallback(async () => {
+    setLoadingProfiles(true);
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -73,10 +90,11 @@ const AdminDashboard = () => {
   }, [toast]);
 
   const fetchInvitations = useCallback(async () => {
+    setLoadingInvitations(true);
     try {
       const { data, error } = await supabase
         .from('detailed_listing_invitations')
-        .select('*')
+        .select('*, livestock_listings!livestock_listings_invitation_id_fkey(id, status)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -91,8 +109,8 @@ const AdminDashboard = () => {
   }, [toast]);
 
   useEffect(() => {
-    if (loading) {
-      return; // Wait until the auth state is fully resolved.
+    if (authLoading || profileLoading) {
+      return;
     }
 
     if (!user) {
@@ -100,38 +118,20 @@ const AdminDashboard = () => {
       return;
     }
 
-    if (profile) {
-      if (!['super_admin', 'admin'].includes(profile.role) || profile.status !== 'approved') {
+    if (adminProfile) {
+      if (!['super_admin', 'admin'].includes(adminProfile.role) || adminProfile.status !== 'approved') {
         navigate('/');
       } else {
-        // User is authenticated and authorized, so fetch data.
         fetchProfiles();
         fetchInvitations();
       }
+    } else {
+      toast({ title: 'Authorization Error', description: 'Could not load admin profile.', variant: 'destructive' });
+      navigate('/');
     }
-    // If profile is not yet loaded, the loading guard will keep the user on the loading screen.
-  }, [user, profile, loading, navigate, fetchProfiles, fetchInvitations]);
+  }, [user, adminProfile, authLoading, profileLoading, navigate, fetchProfiles, fetchInvitations, toast]);
 
-  // This is the key change. We now explicitly wait for the `loading` flag from `useAuth` to be false
-  // and for the `profile` to be available. This prevents the component from getting stuck.
-  if (loading || !profile) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-slate-50">
-        <div className="text-center">
-          <div className="w-8 h-8 bg-gradient-to-br from-emerald-600 to-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-5 h-5 text-white animate-pulse" />
-          </div>
-          <p className="text-lg font-semibold text-slate-700">Loading Dashboard...</p>
-          <p className="text-sm text-slate-500">Verifying credentials and loading data.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
-  };
+  const recentProfiles = profiles.slice(0, 5);
 
   const handleViewListing = (listing: LivestockListing) => {
     setSelectedListing(listing);
@@ -143,7 +143,7 @@ const AdminDashboard = () => {
     setOfferDialogOpen(true);
   };
 
-  if (loading || loadingProfiles) {
+  if (authLoading || profileLoading || loadingProfiles) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 flex items-center justify-center">
         <div className="text-center">
@@ -161,7 +161,7 @@ const AdminDashboard = () => {
   const rejectedProfiles = profiles.filter(p => p.status === 'rejected');
   const suspendedProfiles = profiles.filter(p => p.status === 'suspended');
 
-  const recentProfiles = profiles.slice(0, 5);
+  // const recentProfiles = profiles.slice(0, 5);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
@@ -171,23 +171,23 @@ const AdminDashboard = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-800 mb-2">Admin Dashboard</h1>
           <p className="text-slate-600">Manage users, monitor system activity, and oversee platform operations.</p>
-        </div>
+          </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="livestock">Livestock</TabsTrigger>
+            {/* <TabsTrigger value="livestock">Livestock</TabsTrigger>
             <TabsTrigger value="offers">Offers</TabsTrigger>
-            <TabsTrigger value="sellers">Sellers</TabsTrigger>
+            <TabsTrigger value="sellers">Sellers</TabsTrigger> */}
             <TabsTrigger value="invitations">Invitations</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
+            {/* <TabsTrigger value="activity">Activity</TabsTrigger> */}
             <TabsTrigger value="profile">Profile</TabsTrigger>
             
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
             {/* Stats Cards */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium text-slate-600 flex items-center">
@@ -319,14 +319,6 @@ const AdminDashboard = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="livestock">
-            <LivestockListingsTable onViewListing={handleViewListing} />
-          </TabsContent>
-
-          <TabsContent value="offers">
-            <AdminOffersTable onViewOffer={handleViewOffer} />
-          </TabsContent>
-
           <TabsContent value="invitations">
             <div className="grid gap-8">
               <ListingInvitationForm onSuccess={fetchInvitations} />
@@ -334,6 +326,14 @@ const AdminDashboard = () => {
                 <ListingInvitationsTable invitations={invitations} loading={loadingInvitations} refetch={fetchInvitations} />
               </div>
             </div>
+          </TabsContent>
+          
+          {/* <TabsContent value="livestock">
+            <LivestockListingsTable onViewListing={handleViewListing} />
+          </TabsContent>
+
+          <TabsContent value="offers">
+            <AdminOffersTable onViewOffer={handleViewOffer} />
           </TabsContent>
 
           <TabsContent value="activity">
@@ -352,7 +352,7 @@ const AdminDashboard = () => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent> */}
 
           <TabsContent value="profile">
             <ProfileSection />

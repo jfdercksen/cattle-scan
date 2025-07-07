@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom';
 import { Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { useAuth } from '@/contexts/auth';
+import { useAuth } from '@/contexts/auth';  
 
 export const Header = () => {
   const [language, setLanguage] = useState('en');
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
 
   return (
     <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
@@ -37,12 +37,14 @@ export const Header = () => {
               </Button>
             </div>
             <ThemeToggle />
-            {user ? (
-              <Button variant="outline" onClick={signOut}>Sign Out</Button>
-            ) : (
-              <Link to="/auth">
-                <Button variant="outline">Sign In</Button>
-              </Link>
+            {loading ? null : (
+              user ? (
+                <Button variant="outline" onClick={signOut}>Sign Out</Button>
+              ) : (
+                <Link to="/auth">
+                  <Button variant="outline">Sign In</Button>
+                </Link>
+              )
             )}
           </div>
         </div>

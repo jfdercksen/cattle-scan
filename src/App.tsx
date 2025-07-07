@@ -15,6 +15,8 @@ import AgentDashboard from "./pages/AgentDashboard";
 import VetDashboard from "./pages/VetDashboard";
 import DriverDashboard from "./pages/DriverDashboard";
 import CreateListingPage from "./pages/CreateListingPage";
+import { ViewListingPage } from "./pages/ViewListingPage";
+import { AdminViewListingPage } from './pages/AdminViewListingPage';
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +40,8 @@ const App = () => (
                 <Route path="/vet-dashboard" element={<VetDashboard />} />
                 <Route path="/driver-dashboard" element={<DriverDashboard />} />
                 <Route path="/seller/create-listing/:invitationId" element={<CreateListingPage />} />
+                <Route path="/seller/listing/:listingId" element={<ViewListingPage />} />
+                <Route path="/admin/listing/:listingId" element={<AdminViewListingPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Route>

@@ -22,7 +22,7 @@ const Auth = () => {
   
   const [language, setLanguage] = useState<'en' | 'af'>('en');
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('signin');
+  const [activeTab, setActiveTab] = useState(searchParams.get('view') || 'signin');
   const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
   
   // Form state

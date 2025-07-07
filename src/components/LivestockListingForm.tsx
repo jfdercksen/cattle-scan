@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useForm, FormProvider, FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
+import { useFieldArray } from 'react-hook-form';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
@@ -29,6 +30,14 @@ interface Address {
   province: string;
 }
 
+interface LoadingPoint {
+  birth_address: Address;
+  is_loading_at_birth_farm: boolean;
+  loading_address?: Address;
+  number_of_cattle: number;
+  number_of_sheep: number;
+}
+
 const safeJsonParse = (str: string | Address | null | undefined, fallback: Address): Address => {
   if (typeof str === 'object' && str !== null) return str as Address;
   if (typeof str !== 'string') return fallback;
@@ -43,6 +52,21 @@ const safeJsonParse = (str: string | Address | null | undefined, fallback: Addre
   }
 };
 
+const safeJsonParseArray = (data: unknown, fallback: LoadingPoint[]): LoadingPoint[] => {
+  if (Array.isArray(data)) {
+    return data as LoadingPoint[];
+  }
+  if (typeof data === 'string') {
+    try {
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+  return fallback;
+};
+
 interface LivestockListingFormProps {
   invitationId: string;
   referenceId: string;
@@ -52,44 +76,20 @@ interface LivestockListingFormProps {
 export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: LivestockListingFormProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, profile } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [profile, setProfile] = useState<Database['public']['Tables']['profiles']['Row'] | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
   const [existingListingId, setExistingListingId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
-
-  const formSections = [
-    { title: "Livestock Details", component: <LivestockDetailsSection /> },
-    { title: "Biosecurity", component: <BiosecuritySection /> },
-    { title: "Loading Points", component: <LoadingPointsSection /> },
-    { title: "Loading Details", component: <LoadingDetailsSection /> },
-    { title: "Veterinarian", component: <VetSelectionSection /> },
-    { title: "Offer Terms", component: <OfferTermsSection /> },
-    { title: "Declarations", component: <DeclarationsSection /> },
-    {
-      title: "Signature",
-      component: <SignatureSection signature={signature} setSignature={setSignature} />,
-    },
-  ];
-
-  const nextStep = () => {
-    setCurrentStep((prev) => Math.min(prev + 1, formSections.length - 1));
-  };
-
-  const prevStep = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 0));
-  };
-
-  const goToStep = (step: number) => {
-    setCurrentStep(step);
-  };
 
   const form = useForm<LivestockListingFormData>({
     resolver: zodResolver(livestockListingSchema),
     defaultValues: {
       invitation_id: invitationId,
       reference_id: referenceId,
-      owner_name: profile?.company_name || `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim(),
+      owner_name: '',
       livestock_type: undefined,
       bred_or_bought: undefined,
       location: '',
@@ -125,12 +125,81 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
       signature_data: '',
       signed_location: '',
       loading_points: [],
-
-      // Vet selection
       assigned_vet_id: '',
       invited_vet_email: '',
     },
   });
+
+  const { control, getValues, setValue, watch } = form;
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'loading_points',
+  });
+
+  const loadingPointsValues = watch('loading_points');
+  const totalCattle = loadingPointsValues?.reduce((sum, point) => sum + (Number(point.number_of_cattle) || 0), 0) ?? 0;
+  const totalSheep = loadingPointsValues?.reduce((sum, point) => sum + (Number(point.number_of_sheep) || 0), 0) ?? 0;
+
+  useEffect(() => {
+    if (getValues('number_cattle_loaded') !== totalCattle) {
+      setValue('number_cattle_loaded', totalCattle, { shouldDirty: true, shouldValidate: true });
+    }
+    if (getValues('number_sheep_loaded') !== totalSheep) {
+      setValue('number_sheep_loaded', totalSheep, { shouldDirty: true, shouldValidate: true });
+    }
+  }, [totalCattle, totalSheep, getValues, setValue]);
+
+
+  useEffect(() => {
+    if (user) {
+      setProfileLoading(true);
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Error fetching profile:', error);
+            toast({ title: 'Error', description: 'Could not load your profile.', variant: 'destructive' });
+            setProfile(null);
+          } else {
+            setProfile(data);
+          }
+          setProfileLoading(false);
+        });
+    } else if (!authLoading) {
+      setProfileLoading(false);
+    }
+  }, [user, authLoading, toast]);
+
+  const formSections = [
+    { title: "Livestock Details", component: <LivestockDetailsSection /> },
+    { title: "Biosecurity", component: <BiosecuritySection /> },
+    { title: "Loading Points", component: <LoadingPointsSection fields={fields} append={append} remove={remove} /> },
+    { title: "Loading Details", component: <LoadingDetailsSection totalCattle={totalCattle} totalSheep={totalSheep} /> },
+    { title: "Veterinarian", component: <VetSelectionSection /> },
+    { title: "Offer Terms", component: <OfferTermsSection /> },
+    { title: "Declarations", component: <DeclarationsSection /> },
+    {
+      title: "Signature",
+      component: <SignatureSection signature={signature} setSignature={setSignature} />,
+    },
+  ];
+
+  const nextStep = () => {
+    setCurrentStep((prev) => Math.min(prev + 1, formSections.length - 1));
+  };
+
+  const prevStep = () => {
+    setCurrentStep((prev) => Math.max(prev - 1, 0));
+  };
+
+  const goToStep = (step: number) => {
+    setCurrentStep(step);
+  };
+
+
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -171,6 +240,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
             invitation_id: listingData.invitation_id,
             reference_id: referenceId, // from invitation
             owner_name: listingData.owner_name ?? '',
+            livestock_type: listingData.livestock_type as "CATTLE AND SHEEP" | "CATTLE" | "SHEEP" | undefined,
             bred_or_bought: listingData.bred_or_bought as "BRED" | "BOUGHT IN" | undefined,
             location: listingData.location ?? '',
             weighing_location: listingData.weighing_location ?? '',
@@ -198,6 +268,12 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
             declaration_no_foot_mouth_disease_farm: listingData.declaration_no_foot_mouth_disease_farm ?? false,
             declaration_livestock_south_africa: listingData.declaration_livestock_south_africa ?? false,
             declaration_no_gene_editing: listingData.declaration_no_gene_editing ?? false,
+            loading_points: safeJsonParseArray(listingData.loading_points, []).map(point => ({
+              ...point,
+              loading_address: point.is_loading_at_birth_farm
+                ? point.birth_address
+                : (point.loading_address || { farm_name: '', district: '', province: '' }),
+            })),
             number_cattle_loaded: listingData.number_cattle_loaded ?? undefined,
             number_sheep_loaded: listingData.number_sheep_loaded ?? undefined,
             truck_registration_number: listingData.truck_registration_number ?? '',
@@ -211,9 +287,24 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
           if (listingData.signature_data) {
             setSignature(listingData.signature_data);
           }
-        } else {
-          // New listing: just set the reference_id
-          form.setValue('reference_id', referenceId);
+        } else if (profile) {
+          // New listing: populate with blank addresses
+          const defaultAddress = { farm_name: '', district: '', province: '' };
+          const defaultLoadingPoint = {
+            birth_address: defaultAddress,
+            is_loading_at_birth_farm: true,
+            loading_address: defaultAddress,
+            number_of_cattle: 0,
+            number_of_sheep: 0,
+          };
+          form.reset({
+            ...form.getValues(),
+            invitation_id: invitationId,
+            reference_id: referenceId,
+            owner_name: profile.company_name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
+            farm_birth_address: defaultAddress,
+            loading_points: [defaultLoadingPoint],
+          });
         }
       } catch (error) {
         console.error('Error loading initial data:', error);
@@ -227,7 +318,16 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
 
     loadInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invitationId, form]);
+  }, [invitationId, form, profile]);
+
+    const onInvalid = (errors: FieldErrors<LivestockListingFormData>) => {
+    console.error('Form validation errors:', errors);
+    toast({
+      title: 'Incomplete Form',
+      description: 'Please go back through the steps and make sure all required fields are completed.',
+      variant: 'destructive',
+    });
+  };
 
   const onSubmit = async (data: LivestockListingFormData) => {
     if (!profile || !user) {
@@ -256,14 +356,14 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         affidavitFilePath = publicUrlData.publicUrl;
       }
 
-      // Manually construct the submission object to ensure type safety
       const submissionData: Omit<Database['public']['Tables']['livestock_listings']['Insert'], 'created_at' | 'id'> = {
         profile_id: profile.id,
         seller_id: user.id,
         signature_data: signature,
         status: data.assigned_vet_id ? 'submitted_to_vet' : 'pending_submission',
+        invitation_id: data.invitation_id,
+        reference_id: data.reference_id,
         affidavit_file_path: affidavitFilePath,
-        // Required fields with defaults
         owner_name: data.owner_name || '',
         livestock_type: data.livestock_type || 'CATTLE',
         bred_or_bought: data.bred_or_bought || 'BRED',
@@ -272,8 +372,10 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         total_livestock_offered: data.total_livestock_offered || 0,
         estimated_average_weight: data.estimated_average_weight || 0,
         breed: data.breed || '',
-
-        // Optional/Nullable Fields
+        number_cattle_loaded: data.number_cattle_loaded || 0,
+        number_sheep_loaded: data.number_sheep_loaded || 0,
+        truck_registration_number: data.truck_registration_number || '',
+        signed_location: data.signed_location || '',
         number_of_heifers: data.number_of_heifers,
         males_castrated: data.males_castrated,
         mothers_status: data.mothers_status,
@@ -291,8 +393,6 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         affidavit_required: data.affidavit_required,
         is_loading_at_birth_farm: data.is_loading_at_birth_farm,
         livestock_moved_out_of_boundaries: data.livestock_moved_out_of_boundaries,
-
-        // Declarations
         declaration_no_cloven_hooved_animals: data.declaration_no_cloven_hooved_animals,
         declaration_livestock_kept_away: data.declaration_livestock_kept_away,
         declaration_no_animal_origin_feed: data.declaration_no_animal_origin_feed,
@@ -301,29 +401,25 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         declaration_no_foot_mouth_disease_farm: data.declaration_no_foot_mouth_disease_farm,
         declaration_livestock_south_africa: data.declaration_livestock_south_africa,
         declaration_no_gene_editing: data.declaration_no_gene_editing,
-
-        // JSONB Fields
         farm_birth_address: JSON.stringify(data.farm_birth_address),
         farm_loading_address: data.is_loading_at_birth_farm ? JSON.stringify(data.farm_birth_address) : JSON.stringify(data.farm_loading_address),
         livestock_moved_location: data.livestock_moved_out_of_boundaries ? JSON.stringify(data.livestock_moved_location) : null,
         loading_points: JSON.stringify(data.loading_points),
       };
 
-      let error;
+      let result;
       if (existingListingId) {
-        const { error: updateError } = await supabase
+        result = await supabase
           .from('livestock_listings')
           .update(submissionData)
           .eq('id', existingListingId);
-        error = updateError;
       } else {
-        const { error: insertError } = await supabase
+        result = await supabase
           .from('livestock_listings')
           .insert(submissionData);
-        error = insertError;
       }
 
-      if (error) throw error;
+      if (result.error) throw result.error;
 
       toast({
         title: 'Success!',
@@ -343,6 +439,20 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
     }
   };
 
+  if (authLoading || profileLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <p>Loading form...</p>
+      </div>
+    );
+  }
+
+  if (!user || !profile) {
+    toast({ title: 'Authentication Error', description: 'You must be logged in to create a listing.', variant: 'destructive' });
+    navigate('/auth');
+    return null;
+  }
+
   return (
     <Card className="w-full max-w-6xl mx-auto">
       <CardHeader>
@@ -354,7 +464,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
       <CardContent>
         <FormProvider {...form}>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-6">
               <FormField
                 control={form.control}
                 name="reference_id"

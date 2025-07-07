@@ -10,12 +10,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { VeterinaryDeclarationForm } from '@/components/VeterinaryDeclarationForm';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tables } from '@/integrations/supabase/types';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ProfileSection from "@/components/ProfileSection";
 
 const VetDashboard = () => {
   const [assignments, setAssignments] = useState<Tables<'livestock_listings'>[]>([]);
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { user, profile, loading, signOut, needsProfileCompletion } = useAuth();
+  const { user, profile, loading, needsProfileCompletion } = useAuth();
 
   const fetchAssignments = useCallback(async () => {
     if (!profile) return;
@@ -43,14 +45,13 @@ const VetDashboard = () => {
     }
   }, [user, profile, loading, navigate, fetchAssignments]);
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
-  };
-
   const handleDeclarationSuccess = () => {
     setSelectedListingId(null);
     fetchAssignments();
+  };
+
+  const handleCancelDeclaration = () => {
+    setSelectedListingId(null);
   };
 
   if (loading || !profile) {
@@ -66,66 +67,64 @@ const VetDashboard = () => {
   }
 
   if (selectedListingId) {
-    return <VeterinaryDeclarationForm listingId={selectedListingId} onSuccess={handleDeclarationSuccess} />;
+    return <VeterinaryDeclarationForm listingId={selectedListingId} onSuccess={handleDeclarationSuccess} onCancel={handleCancelDeclaration} />;
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
       <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Veterinarian Dashboard</h1>
-            <p className="text-gray-600">Welcome back, Dr. {profile.first_name}!</p>
-          </div>
-          <Button onClick={handleSignOut} variant="outline">
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <FileText className="w-5 h-5 mr-2" />
-                Pending Declarations
-              </CardTitle>
-              <CardDescription>
-                Livestock listings requiring your veterinary declaration.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {assignments.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Reference ID</TableHead>
-                      <TableHead>Owner</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {assignments.map((listing) => (
-                      <TableRow key={listing.id}>
-                        <TableCell>{listing.reference_id}</TableCell>
-                        <TableCell>{listing.owner_name}</TableCell>
-                        <TableCell>{listing.location}</TableCell>
-                        <TableCell className="text-right">
-                          <Button onClick={() => setSelectedListingId(listing.id)}>Complete Declaration</Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <p>No pending declarations.</p>
-              )}
-            </CardContent>
-          </Card>
-
-          
-        </div>
+        <Tabs defaultValue="dashboard" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+          </TabsList>
+          <TabsContent value="dashboard">
+            <div className="grid grid-cols-1 gap-6 mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <FileText className="w-5 h-5 mr-2" />
+                    Pending Declarations
+                  </CardTitle>
+                  <CardDescription>
+                    Livestock listings requiring your veterinary declaration.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {assignments.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Reference ID</TableHead>
+                          <TableHead>Owner</TableHead>
+                          <TableHead>Location</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {assignments.map((listing) => (
+                          <TableRow key={listing.id}>
+                            <TableCell>{listing.reference_id}</TableCell>
+                            <TableCell>{listing.owner_name}</TableCell>
+                            <TableCell>{listing.location}</TableCell>
+                            <TableCell className="text-right">
+                              <Button onClick={() => setSelectedListingId(listing.id)}>Complete Declaration</Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p>No pending declarations.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+          <TabsContent value="profile">
+            <ProfileSection />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

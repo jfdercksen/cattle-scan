@@ -28,8 +28,8 @@ export function SignaturePad({ onSignatureChange, signature }: SignaturePadProps
   };
 
   const handleEnd = () => {
-    if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
-      save();
+    if (sigCanvas.current) {
+      setIsEmpty(sigCanvas.current.isEmpty());
     }
   };
 

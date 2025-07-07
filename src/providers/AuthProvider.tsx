@@ -8,88 +8,73 @@ type Profile = Tables<'profiles'>;
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let isMounted = true;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
-    const fetchUserSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-
-        if (isMounted) {
-          setSession(session);
-          const currentUser = session?.user ?? null;
-          setUser(currentUser);
-
-          if (currentUser) {
-            const { data: profileData, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', currentUser.id)
-              .single();
-
-            if (profileError) {
-              console.error('Error fetching profile:', profileError);
-              setProfile(null);
-            } else {
-              setProfile(profileData);
-            }
-          } else {
-            setProfile(null);
-          }
-        }
-      } catch (e) {
-        console.error('Error in initial session fetch:', e);
-        if (isMounted) {
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchUserSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!isMounted) return;
-
+    // Fetch the initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
         setSession(session);
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-
-        if (event === 'SIGNED_IN' && currentUser) {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', currentUser.id)
-            .single();
-
-          if (profileError) {
-            console.error('Error fetching profile on sign in:', profileError);
-            setProfile(null);
-          } else {
-            setProfile(profileData);
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setProfile(null);
-        }
+        setUser(session.user);
       }
-    );
+      setLoading(false);
+    });
 
     return () => {
-      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Error fetching profile:', error);
+          } else {
+            setProfile(data);
+          }
+        });
+    } else {
+      setProfile(null);
+    }
+  }, [user]);
+
+  const needsProfileCompletion = () => {
+    if (!profile) return false;
+    return !profile.first_name || !profile.last_name || !profile.role;
+  };
+
+  const getRoleRedirectPath = () => {
+    if (!profile) return '/';
+    switch (profile.role) {
+      case 'super_admin':
+      case 'admin':
+        return '/admin-dashboard';
+      case 'seller':
+        return '/seller-dashboard';
+      case 'agent':
+        return '/agent-dashboard';
+      case 'vet':
+        return '/vet-dashboard';
+      case 'driver':
+        return '/driver-dashboard';
+      default:
+        return '/';
+    }
+  };
 
   const signUp = async (email: string, password:string, metadata: Record<string, string>) => {
     const { error } = await supabase.auth.signUp({
@@ -112,80 +97,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
   };
 
-  const updateProfile = async (updates: Partial<Profile>): Promise<{ error: PostgrestError | null }> => {
-    if (!user) {
-      return {
-        error: {
-          message: 'User not logged in',
-          details: 'You must be logged in to update your profile.',
-          hint: 'Try logging in again.',
-          code: '401',
-        } as PostgrestError,
-      };
-    }
-    const { error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', user.id);
-    if (!error) {
-      setProfile(prev => (prev ? { ...prev, ...updates } : null));
-    }
-    return { error };
-  };
-
-  const needsProfileCompletion = () => {
-    if (!profile) return false;
-    if (profile.role === 'super_admin') return false;
-    return !profile.profile_completed;
-  };
-
-  const getRoleRedirectPath = () => {
-    if (!profile) return '/';
-    switch (profile.role) {
-      case 'super_admin':
-      case 'admin':
-        return '/admin-dashboard';
-      case 'seller':
-        return '/seller-dashboard';
-      case 'agent':
-        return '/agent-dashboard';
-      case 'vet':
-        return '/vet-dashboard';
-      case 'driver':
-        return '/driver-dashboard';
-      default:
-        return '/';
-    }
-  };
-
-  const refreshProfile = async () => {
-    if (!user) return;
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-    if (error) {
-      console.error('Error refreshing profile:', error);
-      setProfile(null);
-    } else {
-      setProfile(data);
-    }
-  };
-
   return (
     <AuthContext.Provider value={{
       user,
-      profile,
       session,
+      profile,
       loading,
+      needsProfileCompletion,
+      getRoleRedirectPath,
       signUp,
       signIn,
       signOut,
-      updateProfile,
-      needsProfileCompletion,
-      getRoleRedirectPath,
-      refreshProfile
     }}>
       {children}
     </AuthContext.Provider>
