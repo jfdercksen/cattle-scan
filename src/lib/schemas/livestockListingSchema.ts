@@ -6,8 +6,9 @@ export const livestockListingSchema = z.object({
   owner_name: z.string().min(1, 'Owner name is required'),
   livestock_type: z.enum(['CATTLE AND SHEEP', 'CATTLE', 'SHEEP']).optional(),
   bred_or_bought: z.enum(['BRED', 'BOUGHT IN']),
-  location: z.string().min(1, 'Location is required'),
-  weighing_location: z.string().min(1, 'Weighing location is required'),
+  location: z.string().optional(), // Now handled by loading_points
+  // Weighing location - Made optional for initial launch (redundant with loading points)
+  weighing_location: z.string().optional(),
 
   total_livestock_offered: z.number().min(1, 'Must offer at least 1 livestock'),
   number_of_heifers: z.number().min(0).default(0),
@@ -17,8 +18,10 @@ export const livestockListingSchema = z.object({
   grazing_green_feed: z.boolean().default(false),
   growth_implant: z.boolean().default(false),
   growth_implant_type: z.string().optional(),
+  // Estimated weight - Made optional for initial launch
   estimated_average_weight: z.number().min(0).optional(),
-  breed: z.string().min(1, 'Breed is required'),
+  // Breed - Made optional for initial launch
+  breed: z.string().optional(),
   additional_r25_per_calf: z.boolean().optional(),
   affidavit_required: z.boolean().optional(),
   affidavit_file_path: z.string().nullable().optional(),
@@ -28,10 +31,10 @@ export const livestockListingSchema = z.object({
   breeder_name: z.string().min(1, 'Breeder name is required'),
   is_breeder_seller: z.boolean().default(false),
   farm_birth_address: z.object({
-    farm_name: z.string().min(1, 'Farm name is required'),
-    district: z.string().min(1, 'District is required'),
-    province: z.string().min(1, 'Province is required'),
-  }),
+    farm_name: z.string(),
+    district: z.string(),
+    province: z.string(),
+  }).optional(), // Now handled by loading_points
   is_loading_at_birth_farm: z.boolean().default(true),
   farm_loading_address: z.object({
     farm_name: z.string(),
@@ -70,19 +73,25 @@ export const livestockListingSchema = z.object({
   signature_data: z.string().min(1, 'Digital signature is required'),
   signed_location: z.string().min(1, 'Signed location is required'),
 
-  // Loading Points
+  // Enhanced Loading Points with three addresses
   loading_points: z.array(z.object({
     birth_address: z.object({
       farm_name: z.string().min(1, 'Farm name is required'),
       district: z.string().min(1, 'District is required'),
       province: z.string().min(1, 'Province is required'),
     }),
-    is_loading_at_birth_farm: z.boolean().default(true),
+    current_address: z.object({
+      farm_name: z.string().min(1, 'Farm name is required'),
+      district: z.string().min(1, 'District is required'),
+      province: z.string().min(1, 'Province is required'),
+    }),
     loading_address: z.object({
       farm_name: z.string().min(1, 'Farm name is required'),
       district: z.string().min(1, 'District is required'),
       province: z.string().min(1, 'Province is required'),
-    }).optional(),
+    }),
+    is_current_same_as_birth: z.boolean().default(false),
+    is_loading_same_as_current: z.boolean().default(false),
     number_of_cattle: z.number().min(0).default(0),
     number_of_sheep: z.number().min(0).default(0),
   })).min(1, "At least one loading point is required"),
@@ -116,18 +125,58 @@ export const livestockListingSchema = z.object({
     });
   }
 
-  // Conditional validation for farm_loading_address
-  if (data.is_loading_at_birth_farm === false) {
-    if (!data.farm_loading_address?.farm_name) {
-      ctx.addIssue({ path: ['farm_loading_address.farm_name'], message: 'Farm name is required', code: 'custom' });
+  // Enhanced loading points validation
+  data.loading_points?.forEach((loadingPoint, index) => {
+    // Validate current address if not same as birth
+    if (!loadingPoint.is_current_same_as_birth) {
+      if (!loadingPoint.current_address?.farm_name) {
+        ctx.addIssue({ 
+          path: [`loading_points.${index}.current_address.farm_name`], 
+          message: 'Farm name is required for current address', 
+          code: 'custom' 
+        });
+      }
+      if (!loadingPoint.current_address?.district) {
+        ctx.addIssue({ 
+          path: [`loading_points.${index}.current_address.district`], 
+          message: 'District is required for current address', 
+          code: 'custom' 
+        });
+      }
+      if (!loadingPoint.current_address?.province) {
+        ctx.addIssue({ 
+          path: [`loading_points.${index}.current_address.province`], 
+          message: 'Province is required for current address', 
+          code: 'custom' 
+        });
+      }
     }
-    if (!data.farm_loading_address?.district) {
-      ctx.addIssue({ path: ['farm_loading_address.district'], message: 'District is required', code: 'custom' });
+
+    // Validate loading address if not same as current
+    if (!loadingPoint.is_loading_same_as_current) {
+      if (!loadingPoint.loading_address?.farm_name) {
+        ctx.addIssue({ 
+          path: [`loading_points.${index}.loading_address.farm_name`], 
+          message: 'Farm name is required for loading address', 
+          code: 'custom' 
+        });
+      }
+      if (!loadingPoint.loading_address?.district) {
+        ctx.addIssue({ 
+          path: [`loading_points.${index}.loading_address.district`], 
+          message: 'District is required for loading address', 
+          code: 'custom' 
+        });
+      }
+      if (!loadingPoint.loading_address?.province) {
+        ctx.addIssue({ 
+          path: [`loading_points.${index}.loading_address.province`], 
+          message: 'Province is required for loading address', 
+          code: 'custom' 
+        });
+      }
     }
-    if (!data.farm_loading_address?.province) {
-      ctx.addIssue({ path: ['farm_loading_address.province'], message: 'Province is required', code: 'custom' });
-    }
-  }
+  });
 
   // Conditional validation for livestock_moved_location
   if (data.livestock_moved_out_of_boundaries) {

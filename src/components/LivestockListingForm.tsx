@@ -24,16 +24,32 @@ import { VetSelectionSection } from './livestock-listing-form/VetSelectionSectio
 import { OfferTermsSection } from './livestock-listing-form/OfferTermsSection';
 import { FormStepper } from './livestock-listing-form/FormStepper';
 
+/**
+ * FIELD VISIBILITY NOTE:
+ * For initial launch, the following advanced fields are hidden but remain in the database schema:
+ * - weaning status (mothers_status, weaned_duration)
+ * - grain feeding (grazing_green_feed)
+ * - growth implants (growth_implant, growth_implant_type)
+ * - breed details (breed)
+ * - estimated weight (estimated_average_weight)
+ * - weighing location (weighing_location) - redundant with loading points
+ * 
+ * These fields can be re-enabled by updating the fieldVisibility configuration.
+ */
+
 interface Address {
   farm_name: string;
   district: string;
   province: string;
+  postal_code?: string;
 }
 
 interface LoadingPoint {
   birth_address: Address;
-  is_loading_at_birth_farm: boolean;
-  loading_address?: Address;
+  current_address: Address;
+  loading_address: Address;
+  is_current_same_as_birth: boolean;
+  is_loading_same_as_current: boolean;
   number_of_cattle: number;
   number_of_sheep: number;
 }
@@ -52,9 +68,9 @@ const safeJsonParse = (str: string | Address | null | undefined, fallback: Addre
   }
 };
 
-const safeJsonParseArray = (data: unknown, fallback: LoadingPoint[]): LoadingPoint[] => {
+const safeJsonParseArray = (data: unknown, fallback: LoadingPoint[]): any[] => {
   if (Array.isArray(data)) {
-    return data as LoadingPoint[];
+    return data;
   }
   if (typeof data === 'string') {
     try {
@@ -92,7 +108,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
       owner_name: '',
       livestock_type: undefined,
       bred_or_bought: undefined,
-      location: '',
+      location: '', // Legacy field, now handled by loading_points
       weighing_location: '',
       total_livestock_offered: 0,
       number_of_heifers: 0,
@@ -106,8 +122,8 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
       breed: '',
       breeder_name: '',
       is_breeder_seller: false,
-      farm_birth_address: { farm_name: '', district: '', province: '' },
-      is_loading_at_birth_farm: true,
+      farm_birth_address: { farm_name: '', district: '', province: '' }, // Legacy field, now handled by loading_points
+      is_loading_at_birth_farm: true, // Legacy field
       farm_loading_address: { farm_name: '', district: '', province: '' },
       livestock_moved_out_of_boundaries: false,
       livestock_moved_location: { farm_name: '', district: '', province: '' },
@@ -268,12 +284,34 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
             declaration_no_foot_mouth_disease_farm: listingData.declaration_no_foot_mouth_disease_farm ?? false,
             declaration_livestock_south_africa: listingData.declaration_livestock_south_africa ?? false,
             declaration_no_gene_editing: listingData.declaration_no_gene_editing ?? false,
-            loading_points: safeJsonParseArray(listingData.loading_points, []).map(point => ({
-              ...point,
-              loading_address: point.is_loading_at_birth_farm
-                ? point.birth_address
-                : (point.loading_address || { farm_name: '', district: '', province: '' }),
-            })),
+            loading_points: safeJsonParseArray(listingData.loading_points, []).map(point => {
+              // Handle legacy format conversion
+              if ('is_loading_at_birth_farm' in point) {
+                // Convert old format to new format
+                const legacyPoint = point as any;
+                return {
+                  birth_address: legacyPoint.birth_address || { farm_name: '', district: '', province: '', postal_code: '' },
+                  current_address: legacyPoint.birth_address || { farm_name: '', district: '', province: '', postal_code: '' },
+                  loading_address: legacyPoint.is_loading_at_birth_farm 
+                    ? legacyPoint.birth_address 
+                    : (legacyPoint.loading_address || { farm_name: '', district: '', province: '', postal_code: '' }),
+                  is_current_same_as_birth: true,
+                  is_loading_same_as_current: legacyPoint.is_loading_at_birth_farm || false,
+                  number_of_cattle: legacyPoint.number_of_cattle || 0,
+                  number_of_sheep: legacyPoint.number_of_sheep || 0,
+                };
+              }
+              // New format - ensure all fields exist
+              return {
+                birth_address: point.birth_address || { farm_name: '', district: '', province: '', postal_code: '' },
+                current_address: point.current_address || { farm_name: '', district: '', province: '', postal_code: '' },
+                loading_address: point.loading_address || { farm_name: '', district: '', province: '', postal_code: '' },
+                is_current_same_as_birth: point.is_current_same_as_birth || false,
+                is_loading_same_as_current: point.is_loading_same_as_current || false,
+                number_of_cattle: point.number_of_cattle || 0,
+                number_of_sheep: point.number_of_sheep || 0,
+              };
+            }),
             number_cattle_loaded: listingData.number_cattle_loaded ?? undefined,
             number_sheep_loaded: listingData.number_sheep_loaded ?? undefined,
             truck_registration_number: listingData.truck_registration_number ?? '',
@@ -289,11 +327,13 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
           }
         } else if (profile) {
           // New listing: populate with blank addresses
-          const defaultAddress = { farm_name: '', district: '', province: '' };
+          const defaultAddress = { farm_name: '', district: '', province: '', postal_code: '' };
           const defaultLoadingPoint = {
             birth_address: defaultAddress,
-            is_loading_at_birth_farm: true,
+            current_address: defaultAddress,
             loading_address: defaultAddress,
+            is_current_same_as_birth: false,
+            is_loading_same_as_current: false,
             number_of_cattle: 0,
             number_of_sheep: 0,
           };
@@ -367,11 +407,12 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         owner_name: data.owner_name || '',
         livestock_type: data.livestock_type || 'CATTLE',
         bred_or_bought: data.bred_or_bought || 'BRED',
-        location: data.location || '',
-        weighing_location: data.weighing_location || '',
+        location: data.location || (data.loading_points?.[0]?.birth_address ? 
+          `${data.loading_points[0].birth_address.farm_name}|${data.loading_points[0].birth_address.district}|${data.loading_points[0].birth_address.province}` : ''),
+        weighing_location: data.weighing_location || null,
         total_livestock_offered: data.total_livestock_offered || 0,
-        estimated_average_weight: data.estimated_average_weight || 0,
-        breed: data.breed || '',
+        estimated_average_weight: data.estimated_average_weight || null,
+        breed: data.breed || null,
         number_cattle_loaded: data.number_cattle_loaded || 0,
         number_sheep_loaded: data.number_sheep_loaded || 0,
         truck_registration_number: data.truck_registration_number || '',
@@ -391,7 +432,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         invited_vet_email: data.invited_vet_email,
         additional_r25_per_calf: data.additional_r25_per_calf,
         affidavit_required: data.affidavit_required,
-        is_loading_at_birth_farm: data.is_loading_at_birth_farm,
+        is_loading_at_birth_farm: data.loading_points?.[0]?.is_loading_same_as_current ?? data.is_loading_at_birth_farm,
         livestock_moved_out_of_boundaries: data.livestock_moved_out_of_boundaries,
         declaration_no_cloven_hooved_animals: data.declaration_no_cloven_hooved_animals,
         declaration_livestock_kept_away: data.declaration_livestock_kept_away,
@@ -401,8 +442,10 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         declaration_no_foot_mouth_disease_farm: data.declaration_no_foot_mouth_disease_farm,
         declaration_livestock_south_africa: data.declaration_livestock_south_africa,
         declaration_no_gene_editing: data.declaration_no_gene_editing,
-        farm_birth_address: JSON.stringify(data.farm_birth_address),
-        farm_loading_address: data.is_loading_at_birth_farm ? JSON.stringify(data.farm_birth_address) : JSON.stringify(data.farm_loading_address),
+        farm_birth_address: JSON.stringify(data.loading_points?.[0]?.birth_address || data.farm_birth_address),
+        farm_loading_address: data.loading_points?.[0]?.is_loading_same_as_current ? 
+          JSON.stringify(data.loading_points[0].current_address) : 
+          JSON.stringify(data.loading_points?.[0]?.loading_address || data.farm_loading_address),
         livestock_moved_location: data.livestock_moved_out_of_boundaries ? JSON.stringify(data.livestock_moved_location) : null,
         loading_points: JSON.stringify(data.loading_points),
       };
@@ -455,13 +498,13 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
 
   return (
     <Card className="w-full max-w-6xl mx-auto">
-      <CardHeader>
-        <CardTitle>{existingListingId ? 'Edit' : 'Create'} Livestock Listing</CardTitle>
-        <CardDescription>
+      <CardHeader className="px-4 md:px-6">
+        <CardTitle className="text-lg md:text-xl">{existingListingId ? 'Edit' : 'Create'} Livestock Listing</CardTitle>
+        <CardDescription className="text-sm md:text-base">
           Submit your livestock details and biosecurity attestation to sell to Chelmar
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-4 md:px-6">
         <FormProvider {...form}>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-6">
@@ -514,24 +557,39 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
                 {formSections[currentStep].component}
               </div>
 
-              <div className="flex justify-end items-center mt-8 space-x-4">
+              <div className="flex justify-between items-center mt-8">
                 <Button type="button" variant="ghost" onClick={() => navigate('/seller-dashboard')}>
                   Cancel
                 </Button>
-                {currentStep > 0 && (
-                  <Button type="button" variant="outline" onClick={prevStep}>
-                    Back
-                  </Button>
-                )}
-                {currentStep < formSections.length - 1 ? (
-                  <Button type="button" onClick={nextStep}>
-                    Next
-                  </Button>
-                ) : (
-                  <Button type="submit" disabled={isSubmitting || !signature}>
-                    {isSubmitting ? (existingListingId ? 'Updating...' : 'Submitting...') : (existingListingId ? 'Update Listing' : 'Submit Listing')}
-                  </Button>
-                )}
+                
+                <div className="flex items-center space-x-4">
+                  {/* Desktop navigation buttons */}
+                  <div className="hidden md:flex items-center space-x-4">
+                    {currentStep > 0 && (
+                      <Button type="button" variant="outline" onClick={prevStep}>
+                        Back
+                      </Button>
+                    )}
+                    {currentStep < formSections.length - 1 ? (
+                      <Button type="button" onClick={nextStep}>
+                        Next
+                      </Button>
+                    ) : (
+                      <Button type="submit" disabled={isSubmitting || !signature}>
+                        {isSubmitting ? (existingListingId ? 'Updating...' : 'Submitting...') : (existingListingId ? 'Update Listing' : 'Submit Listing')}
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {/* Mobile: Only show submit button on last step */}
+                  <div className="md:hidden">
+                    {currentStep === formSections.length - 1 && (
+                      <Button type="submit" disabled={isSubmitting || !signature}>
+                        {isSubmitting ? (existingListingId ? 'Updating...' : 'Submitting...') : (existingListingId ? 'Update Listing' : 'Submit Listing')}
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
             </form>
           </Form>

@@ -23,7 +23,7 @@ type LivestockOffer = Tables<'livestock_offers'> & {
 
 const SellerDashboard = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, needsProfileCompletion } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
@@ -59,10 +59,7 @@ const SellerDashboard = () => {
     }
   }, [user, profile, authLoading, profileLoading, navigate]);
 
-  const needsProfileCompletion = () => {
-    if (!profile) return true;
-    return !profile.first_name || !profile.last_name || !profile.company_name || !profile.phone;
-  };
+
 
   if (authLoading || profileLoading) {
     return (

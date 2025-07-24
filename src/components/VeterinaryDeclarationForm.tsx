@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
@@ -15,6 +16,7 @@ import type { Database } from '@/integrations/supabase/types';
 import { veterinaryDeclarationSchema, VeterinaryDeclarationFormData } from '@/lib/schemas/veterinaryDeclarationSchema';
 import { YesNoSwitch } from './ui/YesNoSwitch';
 import { Tables } from '@/integrations/supabase/types';
+import { calculationEngine, LivestockCalculations } from '@/lib/calculationEngine';
 
 interface VeterinaryDeclarationFormProps {
   listingId: string;
@@ -34,6 +36,16 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
     resolver: zodResolver(veterinaryDeclarationSchema),
     defaultValues: {
       reference_id: listingId,
+      number_cattle_loaded: 0,
+      number_sheep_loaded: 0,
+      cattle_visually_inspected: null,
+      cattle_mouthed: null,
+      sheep_visually_inspected: null,
+      sheep_mouthed: null,
+      foot_and_mouth_symptoms: null,
+      lumpy_skin_disease_symptoms: null,
+      foot_and_mouth_case_in_10km: null,
+      rift_valley_fever_case_in_10km: null,
     },
   });
 
@@ -59,6 +71,8 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
         reference_id: data.id,
         owner_of_livestock: data.owner_name,
         farm_address: data.farm_loading_address ?? '',
+        number_cattle_loaded: data.number_cattle_loaded ?? 0,
+        number_sheep_loaded: data.number_sheep_loaded ?? 0,
       });
     }
   }, [listingId, form, toast]);
@@ -104,14 +118,14 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
         veterinarian_registration_number: data.veterinarian_registration_number,
         owner_of_livestock: data.owner_of_livestock,
         farm_address: data.farm_address,
-        cattle_visually_inspected: data.cattle_visually_inspected,
-        cattle_mouthed: data.cattle_mouthed,
-        sheep_visually_inspected: data.sheep_visually_inspected,
-        sheep_mouthed: data.sheep_mouthed,
-        foot_and_mouth_symptoms: data.foot_and_mouth_symptoms,
-        lumpy_skin_disease_symptoms: data.lumpy_skin_disease_symptoms,
-        foot_and_mouth_case_in_10km: data.foot_and_mouth_case_in_10km,
-        rift_valley_fever_case_in_10km: data.rift_valley_fever_case_in_10km,
+        cattle_visually_inspected: data.cattle_visually_inspected ?? false,
+        cattle_mouthed: data.cattle_mouthed ?? false,
+        sheep_visually_inspected: data.sheep_visually_inspected ?? false,
+        sheep_mouthed: data.sheep_mouthed ?? false,
+        foot_and_mouth_symptoms: data.foot_and_mouth_symptoms ?? false,
+        lumpy_skin_disease_symptoms: data.lumpy_skin_disease_symptoms ?? false,
+        foot_and_mouth_case_in_10km: data.foot_and_mouth_case_in_10km ?? false,
+        rift_valley_fever_case_in_10km: data.rift_valley_fever_case_in_10km ?? false,
       };
 
       const { error: insertError } = await supabase
@@ -179,23 +193,160 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
 
               <Separator />
 
-              <div className="space-y-2 p-4 border rounded-md bg-gray-50">
+              <div className="space-y-4 p-4 border rounded-md bg-gray-50">
                 <h3 className="text-lg font-semibold">Livestock to be Loaded</h3>
-                <p><strong>Number of Cattle:</strong> {listing?.number_cattle_loaded ?? 'N/A'}</p>
-                <p><strong>Number of Sheep:</strong> {listing?.number_sheep_loaded ?? 'N/A'}</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Only show cattle count if > 0 */}
+                  {(listing?.number_cattle_loaded ?? 0) > 0 && (
+                    <div>
+                      <p><strong>Number of Cattle:</strong> {listing?.number_cattle_loaded}</p>
+                    </div>
+                  )}
+
+                  {/* Only show sheep count if > 0 */}
+                  {(listing?.number_sheep_loaded ?? 0) > 0 && (
+                    <div>
+                      <p><strong>Number of Sheep:</strong> {listing?.number_sheep_loaded}</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <Badge variant="outline">
+                      {LivestockCalculations.determineLivestockType(
+                        listing?.number_cattle_loaded ?? 0,
+                        listing?.number_sheep_loaded ?? 0
+                      ) || "No livestock"}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Mouthing Requirements Display */}
+                {(listing?.number_cattle_loaded ?? 0) > 0 && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <h4 className="font-medium text-blue-900 mb-2">Cattle Mouthing Requirements</h4>
+                    <p className="text-sm text-blue-800">
+                      {calculationEngine.calculateMouthingRequirement(listing?.number_cattle_loaded ?? 0).displayText}
+                    </p>
+                  </div>
+                )}
+
+                {/* Sheep Mouthing Requirements Display */}
+                {(listing?.number_sheep_loaded ?? 0) > 0 && (
+                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
+                    <h4 className="font-medium text-green-900 mb-2">Sheep Mouthing Requirements</h4>
+                    <p className="text-sm text-green-800">
+                      {Math.ceil((listing?.number_sheep_loaded ?? 0) * 0.25)} sheep must be mouthed (25% of {listing?.number_sheep_loaded ?? 0} total sheep)
+                    </p>
+                  </div>
+                )}
               </div>
 
               <Separator />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField name="cattle_visually_inspected" render={({ field }) => <FormItem><FormLabel>Have {listing?.number_cattle_loaded || 'X'} cattle visually been inspected?</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
-                <FormField name="cattle_mouthed" render={({ field }) => <FormItem><FormLabel>Have {Math.ceil((listing?.number_cattle_loaded || 0) * 0.25)} cattle been mouthed? (25%)</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
-                <FormField name="sheep_visually_inspected" render={({ field }) => <FormItem><FormLabel>Have {listing?.number_sheep_loaded || 'Y'} sheep been visually inspected?</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
-                <FormField name="sheep_mouthed" render={({ field }) => <FormItem><FormLabel>Have {Math.ceil((listing?.number_sheep_loaded || 0) * 0.25)} sheep been mouthed? (25%)</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
-                <FormField name="foot_and_mouth_symptoms" render={({ field }) => <FormItem><FormLabel>Were there any symptoms or lesions (old or new) of Foot and Mouth Disease observed during the inspection of the livestock?</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
-                <FormField name="lumpy_skin_disease_symptoms" render={({ field }) => <FormItem><FormLabel>Were there any symptoms or lesions (old or new) of Lumpy Skin Disease observed during the inspection of the livestock?</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
-                <FormField name="foot_and_mouth_case_in_10km" render={({ field }) => <FormItem><FormLabel>According to my knowledge there has been no case of Foot and Mouth disease within 10 km from the livestock inspection point.</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
-                <FormField name="rift_valley_fever_case_in_10km" render={({ field }) => <FormItem><FormLabel>According to my knowledge there has been no case of Rift Valley Fever within 10 km from the livestock inspection point.</FormLabel><FormControl><YesNoSwitch value={field.value} onChange={field.onChange} /></FormControl></FormItem>} />
+                {/* Cattle-related fields - Only show if cattle are loaded */}
+                {LivestockCalculations.shouldShowCattleFields(listing?.number_cattle_loaded ?? 0) && (
+                  <>
+                    <FormField
+                      name="cattle_visually_inspected"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Have {listing?.number_cattle_loaded || 0} cattle visually been inspected?</FormLabel>
+                          <FormControl>
+                            <YesNoSwitch value={field.value} onChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="cattle_mouthed"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Have {calculationEngine.calculateMouthingRequirement(listing?.number_cattle_loaded ?? 0).requiredCount} cattle been mouthed? (25%)
+                          </FormLabel>
+                          <FormControl>
+                            <YesNoSwitch value={field.value} onChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+
+                {/* Sheep-related fields - Only show if sheep are loaded */}
+                {LivestockCalculations.shouldShowSheepFields(listing?.number_sheep_loaded ?? 0) && (
+                  <>
+                    <FormField
+                      name="sheep_visually_inspected"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Have {listing?.number_sheep_loaded || 0} sheep been visually inspected?</FormLabel>
+                          <FormControl>
+                            <YesNoSwitch value={field.value} onChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="sheep_mouthed"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Have {Math.ceil((listing?.number_sheep_loaded || 0) * 0.25)} sheep been mouthed? (25%)</FormLabel>
+                          <FormControl>
+                            <YesNoSwitch value={field.value} onChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+
+                {/* General disease-related fields - Always show */}
+                <FormField
+                  name="foot_and_mouth_symptoms"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Were there any symptoms or lesions (old or new) of Foot and Mouth Disease observed during the inspection of the livestock?</FormLabel>
+                      <FormControl>
+                        <YesNoSwitch value={field.value} onChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="lumpy_skin_disease_symptoms"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Were there any symptoms or lesions (old or new) of Lumpy Skin Disease observed during the inspection of the livestock?</FormLabel>
+                      <FormControl>
+                        <YesNoSwitch value={field.value} onChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="foot_and_mouth_case_in_10km"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>According to my knowledge there has been no case of Foot and Mouth disease within 10 km from the livestock inspection point.</FormLabel>
+                      <FormControl>
+                        <YesNoSwitch value={field.value} onChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="rift_valley_fever_case_in_10km"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>According to my knowledge there has been no case of Rift Valley Fever within 10 km from the livestock inspection point.</FormLabel>
+                      <FormControl>
+                        <YesNoSwitch value={field.value} onChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="flex justify-end space-x-4 mt-8">

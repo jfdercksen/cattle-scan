@@ -53,8 +53,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   const needsProfileCompletion = () => {
-    if (!profile) return false;
-    return !profile.first_name || !profile.last_name || !profile.role;
+    if (!profile) {
+      console.log('needsProfileCompletion: no profile');
+      return false;
+    }
+    const needsCompletion = !profile.first_name || !profile.last_name || !profile.role || !profile.profile_completed;
+    // console.log('needsProfileCompletion check:', {
+    //   first_name: profile.first_name,
+    //   last_name: profile.last_name,
+    //   role: profile.role,
+    //   profile_completed: profile.profile_completed,
+    //   needsCompletion
+    // });
+    return needsCompletion;
   };
 
   const getRoleRedirectPath = () => {
@@ -76,7 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signUp = async (email: string, password:string, metadata: Record<string, string>) => {
+  const signUp = async (email: string, password: string, metadata: Record<string, string>) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -97,6 +108,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
   };
 
+  const refreshProfile = async () => {
+    if (user) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (!error && data) {
+        setProfile(data);
+      }
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -108,6 +133,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signUp,
       signIn,
       signOut,
+      refreshProfile,
     }}>
       {children}
     </AuthContext.Provider>

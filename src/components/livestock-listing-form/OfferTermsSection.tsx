@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/form';
 import { YesNoSwitch } from '@/components/ui/YesNoSwitch';
 import { Input } from '@/components/ui/input';
+import FileUploadManager, { type UploadResult } from '@/components/FileUploadManager';
 import { LivestockListingFormData } from '@/lib/schemas/livestockListingSchema';
 
 export const OfferTermsSection = () => {
@@ -22,6 +23,12 @@ export const OfferTermsSection = () => {
     // This removes the need for a second switch and makes the logic clearer.
     setValue('affidavit_required', additionalR25, { shouldValidate: true });
   }, [additionalR25, setValue]);
+
+  const handleAffidavitUpload = (result: UploadResult) => {
+    if (result.success && result.fileUrl) {
+      setValue('affidavit_file_path', result.fileUrl, { shouldValidate: true, shouldDirty: true });
+    }
+  };
 
   return (
     <div>
@@ -51,34 +58,16 @@ export const OfferTermsSection = () => {
             <a href="/BEE_Affidavit-EME-Gen.pdf" download className="text-blue-600 hover:underline">
               Download BEE Affidavit Form
             </a>
-            <FormField
-              control={form.control}
-              name="affidavit_file"
-              render={({ field: { onChange, value, ...rest } }) => (
-                <FormItem>
-                  <FormLabel>Upload Completed Affidavit</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="file"
-                      accept="application/pdf"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files.length > 0) {
-                          onChange(e.target.files[0]);
-                          form.trigger('affidavit_file'); // Manually trigger validation
-                        }
-                      }}
-                      {...rest}
-                    />
-                  </FormControl>
-                  {affidavitFilePath && typeof affidavitFilePath === 'string' && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      Current file: <a href={affidavitFilePath} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">View Uploaded Affidavit</a>
-                    </p>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div>
+              <FileUploadManager
+                documentType="affidavit"
+                label="Upload Completed Affidavit"
+                required={true}
+                accept="application/pdf,image/*"
+                onUploadComplete={handleAffidavitUpload}
+                currentFileUrl={affidavitFilePath || undefined}
+              />
+            </div>
           </div>
         )}
       </div>

@@ -13,31 +13,19 @@ import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { SignaturePad } from "@/components/SignaturePad";
+import FileUploadManager, { type UploadResult } from "@/components/FileUploadManager";
 import type { Tables } from '@/integrations/supabase/types';
 
 type Profile = Tables<'profiles'>;
 
-const uploadFile = async (file: File | null, path: string) => {
-  if (!file) return null;
-  const { data, error } = await supabase.storage
-    .from('documents')
-    .upload(path, file, {
-      cacheControl: '3600',
-      upsert: true,
-    });
-  if (error) {
-    console.error('File upload error:', error);
-    throw error;
-  }
-  return data.path;
-};
+
 
 interface FormData {
-  id_document: File | null;
+  id_document_url: string | null;
   ownership_type: string;
   entity_name: string;
   responsible_person_title: string;
-  brand_mark: File | null;
+  brand_mark_url: string | null;
   declaration_responsible_person_definition: boolean;
   declaration_no_cloven_hooved_animals: boolean;
   declaration_livestock_kept_away: boolean;
@@ -48,15 +36,15 @@ interface FormData {
   declaration_livestock_south_africa: boolean;
   declaration_no_gene_editing: boolean;
   agency_represented: string;
-  appointment_letter: File | null;
-  apac_registration: File | null;
-  practice_letter_head: File | null;
+  appointment_letter_url: string | null;
+  apac_registration_url: string | null;
+  practice_letter_head_url: string | null;
   registration_number: string | null;
 }
 
 const ProfileCompletion = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshProfile } = useAuth();
   const { toast } = useToast();
 
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -65,11 +53,11 @@ const ProfileCompletion = () => {
   const [signature, setSignature] = useState<string | null>(null);
   const [signedLocation, setSignedLocation] = useState('');
   const [formData, setFormData] = useState<FormData>({
-    id_document: null,
+    id_document_url: null,
     ownership_type: '',
     entity_name: '',
     responsible_person_title: '',
-    brand_mark: null,
+    brand_mark_url: null,
     declaration_responsible_person_definition: false,
     declaration_no_cloven_hooved_animals: false,
     declaration_livestock_kept_away: false,
@@ -80,9 +68,9 @@ const ProfileCompletion = () => {
     declaration_livestock_south_africa: false,
     declaration_no_gene_editing: false,
     agency_represented: '',
-    appointment_letter: null,
-    apac_registration: null,
-    practice_letter_head: null,
+    appointment_letter_url: null,
+    apac_registration_url: null,
+    practice_letter_head_url: null,
     registration_number: null,
   });
 
@@ -132,22 +120,24 @@ const ProfileCompletion = () => {
       navigate('/auth');
       return;
     }
-    
+
     if (profile && profile.profile_completed) {
       navigate(getRoleRedirectPath(profile.role));
       return;
     }
   }, [user, profile, authLoading, profileLoading, navigate]);
 
-  const handleFileChange = (field: keyof FormData, file: File | null) => {
-    setFormData(prev => ({ ...prev, [field]: file }));
+  const handleFileUpload = (field: keyof FormData, result: UploadResult) => {
+    if (result.success && result.fileUrl) {
+      setFormData(prev => ({ ...prev, [field]: result.fileUrl }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user || !profile) return;
-    
+
     // Validate signature for sellers
     if (profile.role === 'seller' && !signature) {
       toast({
@@ -157,34 +147,57 @@ const ProfileCompletion = () => {
       });
       return;
     }
-    
+
     setSubmitting(true);
-    
+
     try {
-      // 1. Upload files
-      const fileUploadPromises = [
-        uploadFile(formData.id_document, `id_document_${user.id}`),
-        ...(profile.role === 'seller' ? [uploadFile(formData.brand_mark, `brand_mark_${user.id}`)] : []),
-        ...(profile.role === 'agent' ? [
-          uploadFile(formData.appointment_letter, `appointment_letter_${user.id}`),
-          uploadFile(formData.apac_registration, `apac_registration_${user.id}`)
-        ] : []),
-        ...(profile.role === 'vet' ? [uploadFile(formData.practice_letter_head, `practice_letter_head_${user.id}`)] : [])
-      ];
+      // Validate required file uploads
+      if (!formData.id_document_url) {
+        toast({
+          title: "Error",
+          description: "ID document upload is required.",
+          variant: "destructive"
+        });
+        return;
+      }
 
-      const uploadedFilePaths = await Promise.all(fileUploadPromises);
-      const [idDocumentPath, brandMarkPath, appointmentLetterPath, apacRegistrationPath, practiceLetterHeadPath] = uploadedFilePaths;
+      if (profile.role === 'seller' && !formData.brand_mark_url) {
+        toast({
+          title: "Error",
+          description: "Brand mark photo upload is required for sellers.",
+          variant: "destructive"
+        });
+        return;
+      }
 
-      // 2. Update profile with collected information and mark as completed
+      if (profile.role === 'vet' && !formData.practice_letter_head_url) {
+        toast({
+          title: "Error",
+          description: "Practice letterhead upload is required for veterinarians.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (profile.role === 'agent' && (!formData.appointment_letter_url || !formData.apac_registration_url)) {
+        toast({
+          title: "Error",
+          description: "Appointment letter and APAC registration uploads are required for agents.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update profile with collected information and mark as completed
       const updates = {
         profile_completed: true,
         profile_completed_at: new Date().toISOString(),
-        id_document_url: idDocumentPath,
+        id_document_url: formData.id_document_url,
         ...(profile.role === 'seller' && {
           seller_ownership_type: formData.ownership_type,
           seller_entity_name: formData.entity_name,
           responsible_person_designation: formData.responsible_person_title,
-          brand_mark_url: brandMarkPath,
+          brand_mark_url: formData.brand_mark_url,
           declaration_responsible_person_definition: formData.declaration_responsible_person_definition,
           declaration_no_cloven_hooved_animals: formData.declaration_no_cloven_hooved_animals,
           declaration_livestock_kept_away: formData.declaration_livestock_kept_away,
@@ -200,33 +213,36 @@ const ProfileCompletion = () => {
         }),
         ...(profile.role === 'agent' && {
           agency_represented: formData.agency_represented,
-          appointment_letter_url: appointmentLetterPath,
-          apac_registration_url: apacRegistrationPath,
+          appointment_letter_url: formData.appointment_letter_url,
+          apac_registration_url: formData.apac_registration_url,
         }),
         ...(profile.role === 'vet' && {
           registration_number: formData.registration_number,
-          practice_letter_head_url: practiceLetterHeadPath,
+          practice_letter_head_url: formData.practice_letter_head_url,
         }),
       };
-      
+
       const { error } = await supabase
         .from('profiles')
         .update(updates)
         .eq('id', user.id);
-      
+
       if (error) {
         throw error;
       }
+
+      // Refresh the AuthProvider's profile state
+      await refreshProfile();
 
       toast({
         title: "Success",
         description: "Profile completed successfully! Redirecting to your dashboard...",
         variant: "default"
       });
-      
+
       // Redirect to role-specific page
       navigate(getRoleRedirectPath(profile.role));
-      
+
     } catch (error) {
       console.error('Profile completion error:', error);
       toast({
@@ -253,21 +269,14 @@ const ProfileCompletion = () => {
     </div>
   );
 
-  const renderFileUpload = (label: string, field: keyof FormData, required = false) => (
-    <div>
-      <Label htmlFor={field}>{label} {required && '*'}</Label>
-      <div className="mt-1 flex items-center space-x-2">
-        <Input
-          id={field}
-          type="file"
-          accept="image/*,.pdf"
-          onChange={(e) => handleFileChange(field, e.target.files?.[0] || null)}
-          className="flex-1"
-          required={required}
-        />
-        <Upload className="w-4 h-4 text-gray-400" />
-      </div>
-    </div>
+  const renderFileUpload = (label: string, field: keyof FormData, documentType: 'brand_photo' | 'vet_letterhead' | 'affidavit', required = false) => (
+    <FileUploadManager
+      documentType={documentType}
+      label={label}
+      required={required}
+      onUploadComplete={(result) => handleFileUpload(field, result)}
+      currentFileUrl={formData[field] as string || undefined}
+    />
   );
 
   const renderDeclaration = (field: keyof FormData, label: string) => (
@@ -285,12 +294,12 @@ const ProfileCompletion = () => {
   const renderBiosecurityDeclarations = () => (
     <div className="space-y-4 border-t pt-4">
       <h3 className="text-lg font-semibold">Responsible Person Declaration</h3>
-      
+
       <div className="space-y-3">
         {renderDeclaration("declaration_responsible_person_definition", "The responsible person is a person who is directly part of the management of daily operations of the farming enterprise and whom can attest to information as required. The responsible person must be 18 years and older.")}
-        
+
         <h4 className="font-medium pt-4">I hereby declare that:</h4>
-        
+
         <div className="space-y-2">
           {renderDeclaration("declaration_no_cloven_hooved_animals", "No cloven hooved animals (cattle, sheep, goats, pigs) other than those offered for sale have been on the farm for the past 21 days")}
           {renderDeclaration("declaration_livestock_kept_away", "The livestock offered for sale have been kept away from all other livestock for the past 21 days")}
@@ -315,7 +324,7 @@ const ProfileCompletion = () => {
           />
         </div>
 
-        <SignaturePad 
+        <SignaturePad
           onSignatureChange={setSignature}
           signature={signature}
         />
@@ -327,11 +336,11 @@ const ProfileCompletion = () => {
     <>
       <div className="space-y-4 border-t pt-4">
         <h3 className="text-lg font-semibold">Livestock Owner Information</h3>
-        
+
         <div>
           <Label>The livestock is owned by a:</Label>
-          <RadioGroup 
-            value={formData.ownership_type} 
+          <RadioGroup
+            value={formData.ownership_type}
             onValueChange={(value) => setFormData(prev => ({ ...prev, ownership_type: value }))}
             className="mt-2"
           >
@@ -380,10 +389,22 @@ const ProfileCompletion = () => {
           </Select>
         </div>
 
-        {renderFileUpload("Photo of I.D. or drivers licence of person offering livestock", "id_document", true)}
-        {renderFileUpload("Photo of brand mark of livestock owner", "brand_mark", true)}
+        <FileUploadManager
+          documentType="affidavit"
+          label="Photo of I.D. or drivers licence of person offering livestock"
+          required={true}
+          onUploadComplete={(result) => handleFileUpload("id_document_url", result)}
+          currentFileUrl={formData.id_document_url || undefined}
+        />
+        <FileUploadManager
+          documentType="brand_photo"
+          label="Photo of brand mark of livestock owner"
+          required={true}
+          onUploadComplete={(result) => handleFileUpload("brand_mark_url", result)}
+          currentFileUrl={formData.brand_mark_url || undefined}
+        />
       </div>
-      
+
     </>
   );
 
@@ -398,10 +419,28 @@ const ProfileCompletion = () => {
           required
         />
       </div>
-      
-      {renderFileUpload("Photo of I.D. or drivers licence", "id_document", true)}
-      {renderFileUpload("Photo of agency appointment letter", "appointment_letter", true)}
-      {renderFileUpload("Photo of APAC registration", "apac_registration", true)}
+
+      <FileUploadManager
+        documentType="affidavit"
+        label="Photo of I.D. or drivers licence"
+        required={true}
+        onUploadComplete={(result) => handleFileUpload("id_document_url", result)}
+        currentFileUrl={formData.id_document_url || undefined}
+      />
+      <FileUploadManager
+        documentType="affidavit"
+        label="Photo of agency appointment letter"
+        required={true}
+        onUploadComplete={(result) => handleFileUpload("appointment_letter_url", result)}
+        currentFileUrl={formData.appointment_letter_url || undefined}
+      />
+      <FileUploadManager
+        documentType="affidavit"
+        label="Photo of APAC registration"
+        required={true}
+        onUploadComplete={(result) => handleFileUpload("apac_registration_url", result)}
+        currentFileUrl={formData.apac_registration_url || undefined}
+      />
     </>
   );
 
@@ -416,14 +455,32 @@ const ProfileCompletion = () => {
           required
         />
       </div>
-      {renderFileUpload("Photo of I.D. or drivers licence", "id_document", true)}
-      {renderFileUpload("Photo of practice letter head", "practice_letter_head", true)}
+      <FileUploadManager
+        documentType="affidavit"
+        label="Photo of I.D. or drivers licence"
+        required={true}
+        onUploadComplete={(result) => handleFileUpload("id_document_url", result)}
+        currentFileUrl={formData.id_document_url || undefined}
+      />
+      <FileUploadManager
+        documentType="vet_letterhead"
+        label="Photo of practice letter head"
+        required={true}
+        onUploadComplete={(result) => handleFileUpload("practice_letter_head_url", result)}
+        currentFileUrl={formData.practice_letter_head_url || undefined}
+      />
     </>
   );
 
   const renderDriverFields = () => (
     <>
-      {renderFileUpload("Photo of I.D. or drivers licence", "id_document", true)}
+      <FileUploadManager
+        documentType="affidavit"
+        label="Photo of I.D. or drivers licence"
+        required={true}
+        onUploadComplete={(result) => handleFileUpload("id_document_url", result)}
+        currentFileUrl={formData.id_document_url || undefined}
+      />
     </>
   );
 
