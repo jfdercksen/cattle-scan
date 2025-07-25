@@ -1,10 +1,10 @@
-import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Shield, Users, FileCheck, Truck, ChevronRight } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
+import { useLanguage } from "@/contexts/languageContext";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 interface RoleContent {
@@ -44,7 +44,7 @@ interface ContentStructure {
 }
 
 const Index = () => {
-  const [language, setLanguage] = useState<'en' | 'af'>('en');
+  const { language } = useLanguage();
   const { user } = useAuth();
 
   const content: Record<'en' | 'af', ContentStructure> = {
@@ -53,7 +53,7 @@ const Index = () => {
         title: "Cattle Scan",
         subtitle: "Advanced Biosecurity & Traceability Platform",
         description: "Streamline cattle transactions with digital attestation, veterinary inspections, and complete supply chain visibility. Built for the modern livestock industry.",
-        cta: "Register"
+        cta: "Sign In"
       },
       roles: {
         title: "Choose Your Role",
@@ -105,7 +105,7 @@ const Index = () => {
         ]
       },
       footer: {
-        company: "Built for the future of livestock management",
+        company: "Powered By Workbalance",
         privacy: "Privacy Policy",
         terms: "Terms of Service"
       }
@@ -115,7 +115,7 @@ const Index = () => {
         title: "Cattle Scan",
         subtitle: "Gevorderde Biosekuriteit & Naspeurbaarheidsplatform",
         description: "Vereenvoudig beestransaksies met digitale attestasie, veeartsenykige inspeksies, en volledige voorsieningskettingsigbaarheid. Gebou vir die moderne veebedryf.",
-        cta: "Begin Vandag"
+        cta: "Teken In"
       },
       roles: {
         title: "Kies Jou Rol",
@@ -167,7 +167,7 @@ const Index = () => {
         ]
       },
       footer: {
-        company: "Gebou vir die toekoms van veestok bestuur",
+        company: "Powered By Workbalance",
         privacy: "Privaatheid Beleid",
         terms: "Terme van Diens"
       }
@@ -199,7 +199,7 @@ const Index = () => {
             {t.hero.description}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/auth?view=signup">
+            <Link to="/auth">
               <Button size="lg" className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white px-8 py-3 text-lg">
                 {t.hero.cta}
                 <ChevronRight className="ml-2 h-5 w-5" />
@@ -283,7 +283,14 @@ const Index = () => {
               </div>
               <span className="text-xl font-bold">Cattle Scan</span>
             </div>
-            <p className="text-slate-400 text-center md:text-left mb-4 md:mb-0">{t.footer.company}</p>
+            <a 
+              href="https://modernmanagement.co.za/workbalance/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-slate-400 hover:text-white transition-colors text-center md:text-left mb-4 md:mb-0 block"
+            >
+              {t.footer.company}
+            </a>
             <div className="flex space-x-6 text-sm">
               <a href="#" className="text-slate-400 hover:text-white transition-colors">{t.footer.privacy}</a>
               <a href="#" className="text-slate-400 hover:text-white transition-colors">{t.footer.terms}</a>

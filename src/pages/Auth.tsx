@@ -10,8 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, ArrowLeft, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
+import { useLanguage } from "@/contexts/languageContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { InvitationManager } from "@/services/invitationManager";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -20,7 +22,7 @@ const Auth = () => {
   const { signUp, signIn, user, profile, needsProfileCompletion, getRoleRedirectPath } = useAuth();
   const { toast } = useToast();
   
-  const [language, setLanguage] = useState<'en' | 'af'>('en');
+  const { language, setLanguage } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(searchParams.get('view') || 'signin');
   const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
@@ -34,6 +36,28 @@ const Auth = () => {
   const [role, setRole] = useState(searchParams.get('role') || 'seller');
   const [phone, setPhone] = useState('');
   const [companyName, setCompanyName] = useState('');
+  
+  // Pending invitation state
+  const [pendingInvitation, setPendingInvitation] = useState<{
+    id: string;
+    relationship_type: string;
+    companies: { id: string; name: string };
+  } | null>(null);
+  const [isCompanyNameLocked, setIsCompanyNameLocked] = useState(false);
+
+  // Helper function to determine if signup should be allowed
+  const isSignupAllowed = () => {
+    // Allow signup if using special admin/buyer link
+    if (isBuyerSignup) {
+      return true;
+    }
+    // Allow signup if user has a valid pending invitation
+    if (pendingInvitation) {
+      return true;
+    }
+    // Otherwise, disable signup
+    return false;
+  };
 
   // Check if this is buyer signup (hidden route)
   const isBuyerSignup = searchParams.get('buyer') === 'true';
@@ -47,6 +71,68 @@ const Auth = () => {
       }
     }
   }, [user, profile, navigate, getRoleRedirectPath, location.pathname]);
+
+  // Check for pending invitations when email changes
+  useEffect(() => {
+    const checkPendingInvitation = async () => {
+      if (!email.trim() || !validateEmail(email.trim())) {
+        setPendingInvitation(null);
+        setIsCompanyNameLocked(false);
+        setCompanyName('');
+        return;
+      }
+
+      try {
+        // Use security definer function to avoid RLS recursion issues
+        const { data: invitationData, error } = await supabase
+          .rpc('get_company_name_for_pending_invitation' as any, {
+            invitation_email: email.trim()
+          }) as { data: any[] | null, error: any };
+        
+        if (error) {
+          return;
+        }
+        
+        if (invitationData && Array.isArray(invitationData) && invitationData.length > 0) {
+          const invitationInfo = invitationData[0];
+          
+          // Create the expected data structure for pendingInvitation state
+          const invitation = {
+            id: '', // We don't need the invitation ID for role assignment
+            relationship_type: invitationInfo.relationship_type,
+            companies: {
+              id: invitationInfo.company_id,
+              name: invitationInfo.company_name
+            }
+          };
+          
+          setPendingInvitation(invitation);
+          
+          // If the invitation is for admin role, lock the company name
+          if (invitationInfo.relationship_type === 'admin') {
+            setCompanyName(invitationInfo.company_name);
+            setIsCompanyNameLocked(true);
+          } else {
+            setIsCompanyNameLocked(false);
+          }
+        } else {
+          setPendingInvitation(null);
+          setIsCompanyNameLocked(false);
+          if (isCompanyNameLocked) {
+            setCompanyName('');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking pending invitations:', error);
+        setPendingInvitation(null);
+        setIsCompanyNameLocked(false);
+      }
+    };
+
+    // Debounce the API call
+    const timeoutId = setTimeout(checkPendingInvitation, 500);
+    return () => clearTimeout(timeoutId);
+  }, [email, isCompanyNameLocked]);
 
   // Enhanced input validation
   const validateEmail = (email: string) => {
@@ -261,14 +347,33 @@ const Auth = () => {
     setLoading(true);
     
     try {
-      const { error } = await signUp(email, password, {
+      // Check for pending invitations to determine the correct role
+      let assignedRole = role;
+      
+      // Use the pendingInvitation state that was already fetched by useEffect
+      if (pendingInvitation) {
+        // Use role from pending invitation (admin, seller, etc.)
+        assignedRole = pendingInvitation.relationship_type;
+      } else if (isBuyerSignup) {
+        // No pending invitations but using special buyer link - this is the first user (super admin)
+        assignedRole = 'super_admin';
+      }
+
+      // For invited users, don't create a new company - they'll be linked to existing company
+      const signupData: any = {
         first_name: firstName.trim(),
         last_name: lastName.trim(),
-        role: isBuyerSignup ? 'super_admin' : role,
+        role: assignedRole, // Use the correctly determined role
         language: language,
-        phone: phone.trim() || null,
-        company_name: companyName.trim() || null
-      });
+        phone: phone.trim() || null
+      };
+      
+      // Only create a new company if user is NOT invited (i.e., super_admin via special link)
+      if (!pendingInvitation && isBuyerSignup) {
+        signupData.company_name = companyName.trim() || null;
+      }
+      
+      const { error } = await signUp(email, password, signupData);
 
       if (error) {
         toast({
@@ -277,6 +382,17 @@ const Auth = () => {
           variant: "destructive"
         });
       } else {
+        // Update listing invitations with the new user ID after successful registration
+        try {
+          const { data: { user: newUser } } = await supabase.auth.getUser();
+          if (newUser) {
+            await InvitationManager.updateListingInvitationsAfterRegistration(email.trim(), newUser.id);
+          }
+        } catch (invitationError) {
+          console.error('Error updating listing invitations after registration:', invitationError);
+          // Don't show error to user as this is a background operation
+        }
+
         toast({
           title: "Success",
           description: isBuyerSignup 
@@ -307,20 +423,6 @@ const Auth = () => {
               {t.backToHome}
             </Link>
             <div className="flex items-center space-x-2">
-              <Button
-                variant={language === 'en' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setLanguage('en')}
-              >
-                EN
-              </Button>
-              <Button
-                variant={language === 'af' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setLanguage('af')}
-              >
-                AF
-              </Button>
             </div>
           </div>
           
@@ -454,8 +556,9 @@ const Auth = () => {
                 />
               </div>
               
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Creating Account...' : t.signUp}
+              <Button type="submit" className="w-full" disabled={loading || !isSignupAllowed()}>
+                {loading ? 'Creating Account...' : 
+                 !isSignupAllowed() ? 'Signup requires an invitation' : t.signUp}
               </Button>
             </form>
           ) : (
@@ -546,20 +649,7 @@ const Auth = () => {
                     />
                   </div>
                   
-                  <div>
-                    <Label htmlFor="signup-role">{t.role}</Label>
-                    <Select value={role} onValueChange={setRole}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="seller">{t.roles.seller}</SelectItem>
-                        <SelectItem value="vet">{t.roles.vet}</SelectItem>
-                        <SelectItem value="agent">{t.roles.agent}</SelectItem>
-                        <SelectItem value="driver">{t.roles.driver}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Role selection removed - role is determined by pending invitation */}
                   
                   <div>
                     <Label htmlFor="signup-phone">{t.phone}</Label>
@@ -574,12 +664,23 @@ const Auth = () => {
                   
                   <div>
                     <Label htmlFor="signup-companyName">{t.companyName}</Label>
+                    {pendingInvitation && (
+                      <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                        <p className="text-sm text-blue-800">
+                          <Mail className="w-4 h-4 inline mr-1" />
+                          You've been invited to join <strong>{pendingInvitation.companies.name}</strong> as a <strong>{pendingInvitation.relationship_type}</strong>
+                        </p>
+                      </div>
+                    )}
                     <Input
                       id="signup-companyName"
                       type="text"
                       value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
+                      onChange={(e) => !isCompanyNameLocked && setCompanyName(e.target.value)}
                       maxLength={100}
+                      disabled={isCompanyNameLocked}
+                      className={isCompanyNameLocked ? 'bg-gray-100 cursor-not-allowed' : ''}
+                      placeholder={isCompanyNameLocked ? 'Company set by invitation' : 'Enter company name'}
                     />
                   </div>
                   
@@ -607,8 +708,9 @@ const Auth = () => {
                     />
                   </div>
                   
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? 'Creating Account...' : t.signUp}
+                  <Button type="submit" className="w-full" disabled={loading || !isSignupAllowed()}>
+                    {loading ? 'Creating Account...' : 
+                     !isSignupAllowed() ? 'Signup requires an invitation' : t.signUp}
                   </Button>
                 </form>
               </TabsContent>

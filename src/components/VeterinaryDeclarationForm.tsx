@@ -199,14 +199,14 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                   {/* Only show cattle count if > 0 */}
                   {(listing?.number_cattle_loaded ?? 0) > 0 && (
                     <div>
-                      <p><strong>Number of Cattle:</strong> {listing?.number_cattle_loaded}</p>
+                      <p><strong>Total Cattle:</strong> {listing?.number_cattle_loaded}</p>
                     </div>
                   )}
 
                   {/* Only show sheep count if > 0 */}
                   {(listing?.number_sheep_loaded ?? 0) > 0 && (
                     <div>
-                      <p><strong>Number of Sheep:</strong> {listing?.number_sheep_loaded}</p>
+                      <p><strong>Total Sheep:</strong> {listing?.number_sheep_loaded}</p>
                     </div>
                   )}
 
@@ -219,6 +219,74 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                     </Badge>
                   </div>
                 </div>
+
+                {/* Loading Points Information */}
+                {listing?.loading_points && (() => {
+                  try {
+                    const loadingPoints = typeof listing.loading_points === 'string' 
+                      ? JSON.parse(listing.loading_points) 
+                      : listing.loading_points;
+                    
+                    if (Array.isArray(loadingPoints) && loadingPoints.length > 0) {
+                      return (
+                        <div className="mt-4">
+                          <h4 className="font-medium mb-3">Loading Points Breakdown</h4>
+                          <div className="space-y-3">
+                            {loadingPoints.map((point: any, index: number) => {
+                              const hasCattle = (point.number_of_cattle ?? 0) > 0;
+                              const hasSheep = (point.number_of_sheep ?? 0) > 0;
+                              
+                              if (!hasCattle && !hasSheep) return null;
+                              
+                              return (
+                                <div key={index} className="p-3 bg-white border rounded-md">
+                                  <div className="flex justify-between items-start mb-2">
+                                    <h5 className="font-medium text-sm">Loading Point {index + 1}</h5>
+                                    <div className="flex gap-2">
+                                      {hasCattle && (
+                                        <Badge variant="secondary" className="text-xs">
+                                          {point.number_of_cattle} Cattle
+                                        </Badge>
+                                      )}
+                                      {hasSheep && (
+                                        <Badge variant="secondary" className="text-xs">
+                                          {point.number_of_sheep} Sheep
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-gray-600">
+                                    <div>
+                                      <strong>Birth:</strong> {point.birth_address?.farm_name || 'N/A'}, {point.birth_address?.district || 'N/A'}, {point.birth_address?.province || 'N/A'}
+                                    </div>
+                                    <div>
+                                      <strong>Current:</strong> {
+                                        point.is_current_same_as_birth 
+                                          ? 'Same as birth address'
+                                          : `${point.current_address?.farm_name || 'N/A'}, ${point.current_address?.district || 'N/A'}, ${point.current_address?.province || 'N/A'}`
+                                      }
+                                    </div>
+                                    <div>
+                                      <strong>Loading:</strong> {
+                                        point.is_loading_same_as_current 
+                                          ? 'Same as current address'
+                                          : `${point.loading_address?.farm_name || 'N/A'}, ${point.loading_address?.district || 'N/A'}, ${point.loading_address?.province || 'N/A'}`
+                                      }
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    }
+                  } catch (error) {
+                    console.error('Error parsing loading_points:', error);
+                  }
+                  return null;
+                })()}
 
                 {/* Mouthing Requirements Display */}
                 {(listing?.number_cattle_loaded ?? 0) > 0 && (

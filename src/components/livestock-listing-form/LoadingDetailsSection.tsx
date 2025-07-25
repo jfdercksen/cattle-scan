@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LivestockListingFormData } from '@/lib/schemas/livestockListingSchema';
-import { calculationEngine, LivestockCalculations } from '@/lib/calculationEngine';
+import { LivestockCalculations } from '@/lib/calculationEngine';
 
 interface LoadingDetailsSectionProps {
   totalCattle: number;
@@ -21,7 +21,6 @@ export const LoadingDetailsSection = ({ totalCattle, totalSheep }: LoadingDetail
   const { control } = useFormContext<LivestockListingFormData>();
 
   // Calculate mouthing requirements
-  const mouthingRequirement = calculationEngine.calculateMouthingRequirement(totalCattle);
   const livestockType = LivestockCalculations.determineLivestockType(totalCattle, totalSheep);
 
   return (
@@ -66,38 +65,6 @@ export const LoadingDetailsSection = ({ totalCattle, totalSheep }: LoadingDetail
           </div>
         </CardContent>
       </Card>
-
-      {/* Mouthing Requirements - Only show if cattle are present */}
-      {totalCattle > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Mouthing Requirements</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <p className="text-sm font-medium text-blue-900">
-                  {mouthingRequirement.displayText}
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <span className="font-medium">Total Cattle:</span>
-                  <span className="ml-2">{mouthingRequirement.totalCattle}</span>
-                </div>
-                <div>
-                  <span className="font-medium">Required Percentage:</span>
-                  <span className="ml-2">{mouthingRequirement.requiredPercentage}%</span>
-                </div>
-                <div>
-                  <span className="font-medium">Required Count:</span>
-                  <span className="ml-2 font-bold text-blue-600">{mouthingRequirement.requiredCount}</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Transportation Details */}
       <Card>

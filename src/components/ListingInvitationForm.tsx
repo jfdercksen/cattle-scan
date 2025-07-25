@@ -11,10 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
+import { useCompany } from '@/contexts/companyContext';
+import { CompanyService } from '@/services/companyService';
 import { nanoid } from 'nanoid';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Profile = Tables<'profiles'>;
+type CompanyUser = { profiles: Profile };
 
 const invitationSchema = z.object({
   seller_id: z.string().optional(),
@@ -32,8 +35,9 @@ interface ListingInvitationFormProps {
 
 export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps) => {
   const { user } = useAuth();
+  const { currentCompany } = useCompany();
   const { toast } = useToast();
-  const [sellers, setSellers] = useState<Profile[]>([]);
+  const [sellers, setSellers] = useState<CompanyUser[]>([]);
   const [loadingSellers, setLoadingSellers] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [referenceId, setReferenceId] = useState(() => nanoid(10).toUpperCase());
@@ -44,16 +48,24 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
 
   useEffect(() => {
     const fetchSellers = async () => {
+      if (!currentCompany) {
+        setLoadingSellers(false);
+        return;
+      }
+      
       setLoadingSellers(true);
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('role', 'seller')
-          .eq('status', 'approved')
-          .order('company_name', { ascending: true });
+        // Get all company users and filter for sellers with approved status
+        const { data, error } = await CompanyService.getCompanyUsers(currentCompany.companyId);
         if (error) throw error;
-        setSellers(data || []);
+        
+        // Filter for sellers with approved status
+        const approvedSellers = (data || []).filter(user => 
+          user.relationship_type === 'seller' && 
+          user.profiles.status === 'approved'
+        );
+        
+        setSellers(approvedSellers);
       } catch (error) {
         console.error('Error fetching sellers:', error);
         toast({
@@ -66,12 +78,16 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
       }
     };
     fetchSellers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentCompany, toast]);
 
   const onSubmit = async (data: InvitationFormData) => {
     if (!user) {
       toast({ title: 'Authentication Error', description: 'You must be logged in to create an invitation.', variant: 'destructive' });
+      return;
+    }
+
+    if (!currentCompany) {
+      toast({ title: 'Company Required', description: 'You must have a company selected to create invitations.', variant: 'destructive' });
       return;
     }
 
@@ -84,6 +100,7 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
           seller_email: data.seller_email || null,
           reference_id: referenceId,
           created_by: user.id,
+          company_id: currentCompany.companyId, // Required for RLS policies
           status: 'pending',
         });
 
@@ -112,6 +129,7 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
           <Label>Reference ID</Label>
           <Input type="text" value={referenceId} readOnly className="font-mono" />
         </div>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
@@ -127,9 +145,9 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {sellers.map(seller => (
-                        <SelectItem key={seller.id} value={seller.id}>
-                          {seller.company_name || 'Unnamed Seller'} ({seller.email})
+                      {sellers.map((seller) => (
+                        <SelectItem key={seller.profiles.id} value={seller.profiles.id}>
+                          {seller.profiles.seller_entity_name || 'Unnamed Seller'} ({seller.profiles.email})
                         </SelectItem>
                       ))}
                     </SelectContent>

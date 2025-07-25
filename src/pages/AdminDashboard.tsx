@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Users, Clock, CheckCircle, Ban, Settings, Activity, BarChart3, ArrowRight, LogOut } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Shield, Users, Clock, CheckCircle, Ban, Settings, Activity, BarChart3, ArrowRight, LogOut, Building2, Plus } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
+import { useCompany } from "@/contexts/companyContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { MultiTenantDashboardController, type DashboardData } from "@/services/multiTenantDashboardController";
 import type { Tables } from "@/integrations/supabase/types";
 import { AdminOfferDetailsDialog } from "@/components/AdminOfferDetailsDialog";
 import { ListingInvitationForm } from '@/components/ListingInvitationForm';
@@ -16,9 +19,12 @@ import ProfileSection from "@/components/ProfileSection";
 import { LivestockListingsTable } from "@/components/LivestockListingsTable";
 import { LivestockListingDetailsDialog } from "@/components/LivestockListingDetailsDialog";
 import { AdminOffersTable } from "@/components/AdminOffersTable";
+import { CompanySelector } from "@/components/CompanySelector";
+import { CompanyManagement } from "@/components/CompanyManagement";
+import { CompanyRegistrationForm } from '@/components/CompanyRegistrationForm';
+
 
 type Profile = Tables<'profiles'>;
-
 
 type LivestockListing = Tables<'livestock_listings'> & {
   listing_invitations: {
@@ -31,107 +37,113 @@ type LivestockOffer = Tables<'livestock_offers'> & {
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading, signOut, profile } = useAuth();
+  const { currentCompany, userCompanies, loading: companyLoading } = useCompany();
   const { toast } = useToast();
   
-  const [adminProfile, setAdminProfile] = useState<Profile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [invitations, setInvitations] = useState<any[]>([]);
+  const [loadingInvitations, setLoadingInvitations] = useState(true);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
+  
   const [selectedListing, setSelectedListing] = useState<LivestockListing | null>(null);
   const [listingDialogOpen, setListingDialogOpen] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<LivestockOffer | null>(null);
   const [offerDialogOpen, setOfferDialogOpen] = useState(false);
-  const [invitations, setInvitations] = useState<ListingInvitation[]>([]);
-  const [loadingInvitations, setLoadingInvitations] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
 
+  // Multi-tenant modal states
+  const [showCompanyManagement, setShowCompanyManagement] = useState(false);
+  const [showCompanyRegistration, setShowCompanyRegistration] = useState(false);
+
+
+  const isSuperAdmin = profile?.role === 'super_admin';
+  const isAdmin = profile?.role === 'admin' || isSuperAdmin;
+
+  // Handle navigation redirects
   useEffect(() => {
-    if (user) {
-      setProfileLoading(true);
-      supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-        .then(({ data, error }) => {
-          if (error) {
-            console.error('Error fetching admin profile:', error);
-            setAdminProfile(null);
-          } else {
-            setAdminProfile(data);
-          }
-          setProfileLoading(false);
-        });
-    } else if (!authLoading) {
-      setProfileLoading(false);
-    }
-  }, [user, authLoading]);
-
-  const fetchProfiles = useCallback(async () => {
-    setLoadingProfiles(true);
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      setProfiles(data || []);
-    } catch (error) {
-      console.error('Error fetching profiles:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load user profiles",
-        variant: "destructive"
-      });
-    } finally {
-      setLoadingProfiles(false);
-    }
-  }, [toast]);
-
-  const fetchInvitations = useCallback(async () => {
-    setLoadingInvitations(true);
-    try {
-      const { data, error } = await supabase
-        .from('detailed_listing_invitations')
-        .select('*, livestock_listings!livestock_listings_invitation_id_fkey(id, status)')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setInvitations((data as ListingInvitation[]) || []);
-    } catch (error) {
-      console.error('Error fetching invitations:', error);
-      toast({ title: 'Error', description: 'Failed to load invitations.', variant: 'destructive' });
-    } finally {
-      setLoadingInvitations(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    if (authLoading || profileLoading) {
-      return;
-    }
-
-    if (!user) {
+    if (!user || !profile) {
       navigate('/auth');
       return;
     }
-
-    if (adminProfile) {
-      if (!['super_admin', 'admin'].includes(adminProfile.role) || adminProfile.status !== 'approved') {
-        navigate('/');
-      } else {
-        fetchProfiles();
-        fetchInvitations();
-      }
-    } else {
-      toast({ title: 'Authorization Error', description: 'Could not load admin profile.', variant: 'destructive' });
-      navigate('/');
+    
+    if (!isAdmin) {
+      navigate('/dashboard');
+      return;
     }
-  }, [user, adminProfile, authLoading, profileLoading, navigate, fetchProfiles, fetchInvitations, toast]);
+  }, [user, profile, isAdmin, navigate]);
 
-  const recentProfiles = profiles.slice(0, 5);
+  useEffect(() => {
+    if (user && profile && !companyLoading) {
+      fetchDashboardData();
+    }
+  }, [user, profile, currentCompany, companyLoading]);
+
+  const fetchDashboardData = useCallback(async () => {
+    if (!user || !profile) return;
+
+    setLoading(true);
+    setLoadingInvitations(true);
+    try {
+      const { data, error } = await MultiTenantDashboardController.getDashboardData(
+        user.id, 
+        profile.role
+      );
+
+      if (error) throw error;
+      setDashboardData(data);
+      setInvitations(data?.invitations || []);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+      setLoadingInvitations(false);
+    }
+  }, [user, profile, currentCompany, toast]);
+
+  // Function to refresh invitations data
+  const fetchInvitations = useCallback(async () => {
+    if (!user || !profile) return;
+
+    setLoadingInvitations(true);
+    try {
+      const { data, error } = await MultiTenantDashboardController.getDashboardData(
+        user.id, 
+        profile.role
+      );
+
+      if (error) throw error;
+      setDashboardData(data);
+      setInvitations(data?.invitations || []);
+    } catch (error) {
+      console.error('Error fetching invitations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh invitations",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingInvitations(false);
+    }
+  }, [user, profile, toast]);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/auth');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+
 
   const handleViewListing = (listing: LivestockListing) => {
     setSelectedListing(listing);
@@ -143,7 +155,7 @@ const AdminDashboard = () => {
     setOfferDialogOpen(true);
   };
 
-  if (authLoading || profileLoading || loadingProfiles) {
+  if (authLoading || companyLoading || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 flex items-center justify-center">
         <div className="text-center">
@@ -156,128 +168,154 @@ const AdminDashboard = () => {
     );
   }
 
-  const pendingProfiles = profiles.filter(p => p.status === 'pending');
-  const approvedProfiles = profiles.filter(p => p.status === 'approved');
-  const rejectedProfiles = profiles.filter(p => p.status === 'rejected');
-  const suspendedProfiles = profiles.filter(p => p.status === 'suspended');
+  // Navigation is now handled in useEffect to avoid setState during render
+  if (!user || !profile || !isAdmin) {
+    return null;
+  }
 
-  // const recentProfiles = profiles.slice(0, 5);
+  // Show company setup for users without companies
+  if (!isSuperAdmin && userCompanies.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl">
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center">
+              <Building2 className="w-6 h-6 mr-2" />
+              Welcome to Cattle Secure Trace
+            </CardTitle>
+            <CardDescription>
+              You need to be associated with a company to access the admin dashboard.
+              Please contact your system administrator.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button onClick={handleSignOut} variant="outline">
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const stats = {
+    totalListings: dashboardData?.listings?.length || 0,
+    pendingInvitations: dashboardData?.invitations?.filter(inv => inv.status === 'pending').length || 0,
+    activeOffers: dashboardData?.offers?.filter(offer => offer.status === 'pending').length || 0,
+    totalUsers: dashboardData?.profiles?.length || 0,
+    totalCompanies: dashboardData?.companies?.length || 0
+  };
+
+  const recentProfiles = dashboardData?.profiles?.slice(0, 5) || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
-
-      <div className="container mx-auto px-4 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">Admin Dashboard</h1>
-          <p className="text-slate-600">Manage users, monitor system activity, and oversee platform operations.</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="bg-white border-b border-slate-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center">
+                <Shield className="w-8 h-8 text-emerald-600 mr-3" />
+                <div>
+                  <h1 className="text-2xl font-bold text-slate-900">
+                    {isSuperAdmin ? 'Super Admin Dashboard' : 'Admin Dashboard'}
+                  </h1>
+                  <p className="text-sm text-slate-600">
+                    {isSuperAdmin ? 'Platform-wide management' : 'Company management'}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+             {!isSuperAdmin && (userCompanies.length > 0 && (
+                <CompanySelector />
+              ))}
+            </div>
           </div>
+        </div>
+      </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-3' : 'grid-cols-3'}`}>
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            {isSuperAdmin && <TabsTrigger value="companies" onClick={() => setShowCompanyManagement(true)}>Companies</TabsTrigger>}
             {/* <TabsTrigger value="livestock">Livestock</TabsTrigger>
             <TabsTrigger value="offers">Offers</TabsTrigger>
             <TabsTrigger value="sellers">Sellers</TabsTrigger> */}
-            <TabsTrigger value="invitations">Invitations</TabsTrigger>
+            {!isSuperAdmin && <TabsTrigger value="invitations">Invitations</TabsTrigger>}
             {/* <TabsTrigger value="activity">Activity</TabsTrigger> */}
             <TabsTrigger value="profile">Profile</TabsTrigger>
             
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
-            {/* Stats Cards */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <TabsContent value="overview">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+              {isSuperAdmin && (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Companies</CardTitle>
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.totalCompanies}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Active companies on platform
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-slate-600 flex items-center">
-                    <Clock className="w-4 h-4 mr-2" />
-                    Pending Approval
-                  </CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Listings</CardTitle>
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-orange-600">{pendingProfiles.length}</div>
-                  <p className="text-xs text-slate-500 mt-1">Requires attention</p>
+                  <div className="text-2xl font-bold">{stats.totalListings}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {currentCompany ? `From ${currentCompany.companyName}` : 'All companies'}
+                  </p>
                 </CardContent>
               </Card>
-              
+
               <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-slate-600 flex items-center">
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Approved Users
-                  </CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Pending Invitations</CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-green-600">{approvedProfiles.length}</div>
-                  <p className="text-xs text-slate-500 mt-1">Active users</p>
+                  <div className="text-2xl font-bold">{stats.pendingInvitations}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Awaiting response
+                  </p>
                 </CardContent>
               </Card>
-              
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-slate-600 flex items-center">
-                    <Ban className="w-4 h-4 mr-2" />
-                    Suspended
-                  </CardTitle>
+
+              {/* <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Active Offers</CardTitle>
+                  <Activity className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-orange-600">{suspendedProfiles.length}</div>
-                  <p className="text-xs text-slate-500 mt-1">Suspended accounts</p>
+                  <div className="text-2xl font-bold">{stats.activeOffers}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Pending offers
+                  </p>
                 </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-slate-600 flex items-center">
-                    <Users className="w-4 h-4 mr-2" />
-                    Total Users
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-blue-600">{profiles.length}</div>
-                  <p className="text-xs text-slate-500 mt-1">All registrations</p>
-                </CardContent>
-              </Card>
+              </Card> */}
             </div>
 
-            {/* Quick Actions */}
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid gap-6 md:grid-cols-2">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <Users className="w-5 h-5 mr-2" />
-                    Quick Actions
+                    Recent Users
                   </CardTitle>
-                  <CardDescription>Common administrative tasks</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Link to="/admin">
-                    <Button className="w-full justify-start" variant="outline">
-                      <Users className="w-4 h-4 mr-2" />
-                      Manage All Users
-                      <ArrowRight className="w-4 h-4 ml-auto" />
-                    </Button>
-                  </Link>
-                  {pendingProfiles.length > 0 && (
-                    <Link to="/admin">
-                      <Button className="w-full justify-start bg-orange-600 hover:bg-orange-700 text-white">
-                        <Clock className="w-4 h-4 mr-2" />
-                        Review {pendingProfiles.length} Pending Users
-                        <ArrowRight className="w-4 h-4 ml-auto" />
-                      </Button>
-                    </Link>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Activity className="w-5 h-5 mr-2" />
-                    Recent Registrations
-                  </CardTitle>
-                  <CardDescription>Latest user sign-ups</CardDescription>
+                  <CardDescription>Latest user registrations</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -313,10 +351,84 @@ const AdminDashboard = () => {
                     ) : (
                       <p className="text-sm text-slate-500 text-center py-4">No recent registrations</p>
                     )}
+                    
+                    {isSuperAdmin && <div className="pt-3 border-t border-slate-200">
+                      <Button 
+                        onClick={() => navigate('/admin')}
+                        className="w-full justify-start" 
+                        variant="outline"
+                      >
+                        <Users className="w-4 h-4 mr-2" />
+                        Manage All Users
+                        <ArrowRight className="w-4 h-4 ml-auto" />
+                      </Button>
+                    </div>}
                   </div>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Building2 className="w-5 h-5 mr-2" />
+                    Company Management
+                  </CardTitle>
+                  <CardDescription>Manage companies and relationships</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {isSuperAdmin ? (
+                    <>
+                      <Button 
+                        onClick={() => setActiveTab('companies')}
+                        className="w-full justify-start" 
+                        variant="outline"
+                      >
+                        <Building2 className="w-4 h-4 mr-2" />
+                        Manage All Companies
+                        <ArrowRight className="w-4 h-4 ml-auto" />
+                      </Button>
+                      <Dialog open={showCompanyRegistration} onOpenChange={setShowCompanyRegistration}>
+                        <DialogTrigger asChild>
+                          <Button 
+                            className="w-full justify-start" 
+                            variant="outline"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create New Company
+                            <ArrowRight className="w-4 h-4 ml-auto" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Create New Company</DialogTitle>
+                          </DialogHeader>
+                          <CompanyRegistrationForm 
+                            onSuccess={() => {
+                              setShowCompanyRegistration(false);
+                              fetchDashboardData();
+                            }}
+                          />
+                        </DialogContent>
+                      </Dialog>
+                    </>
+                  ) : (
+                    <Button 
+                      onClick={() => navigate('/admin')}
+                      className="w-full justify-start" 
+                      variant="outline"
+                    >
+                      <Users className="w-4 h-4 mr-2" />
+                      Manage Company Users
+                      <ArrowRight className="w-4 h-4 ml-auto" />
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="companies">
+            <CompanyManagement onClose={() => setShowCompanyManagement(false)} />
           </TabsContent>
 
           <TabsContent value="invitations">
@@ -359,6 +471,23 @@ const AdminDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Multi-tenant Modal Components */}
+      
+      {/* {showCompanyRegistration && (
+        <CompanyRegistrationForm 
+          onSuccess={() => {
+            setShowCompanyRegistration(false);
+            toast({
+              title: "Success",
+              description: "Company created successfully",
+            });
+          }}
+          onCancel={() => setShowCompanyRegistration(false)}
+        />
+      )} */}
+      
+
 
       <LivestockListingDetailsDialog
         listing={selectedListing}

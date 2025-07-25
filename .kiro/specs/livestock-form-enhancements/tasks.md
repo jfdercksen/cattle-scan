@@ -2,7 +2,7 @@
 
 ## FOUNDATIONAL ARCHITECTURE TASKS (Must be completed first)
 
-- [ ] 0. Implement Multi-Tenant Company-Based Architecture (FOUNDATIONAL)
+- [-] 0. Implement Multi-Tenant Company-Based Architecture (FOUNDATIONAL)
   - Create company-based multi-tenancy system
   - Implement company-user relationship management
   - Update invitation system for multi-company support
@@ -290,7 +290,7 @@
   - Add validation error handling and user feedback
   - _Requirements: 10.1, 10.2, 10.4, 10.5_
 
-- [ ] 10. Enhanced Form Structure and User Experience (HIGH PRIORITY)
+- [x] 10. Enhanced Form Structure and User Experience (HIGH PRIORITY)
   - Hide advanced livestock detail fields for initial launch (modular approach)
   - Create dedicated "Livestock Location" tab separate from other sections
   - Implement livestock type-specific field visibility with complete hiding of irrelevant fields

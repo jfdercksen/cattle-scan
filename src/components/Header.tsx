@@ -1,12 +1,12 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { useAuth } from '@/contexts/auth';  
+import { useAuth } from '@/contexts/auth';
+import { useLanguage } from '@/contexts/languageContext';  
 
 export const Header = () => {
-  const [language, setLanguage] = useState('en');
+  const { language, setLanguage } = useLanguage();
   const { user, signOut, loading } = useAuth();
 
   return (

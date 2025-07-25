@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from '@/providers/AuthProvider';
+import { CompanyProvider } from '@/contexts/companyContext';
+import { LanguageProvider } from '@/contexts/languageContext';
 import { ThemeProvider } from "@/components/theme-provider";
 import { AppLayout } from "./layouts/AppLayout";
 import Index from "./pages/Index";
@@ -25,32 +27,36 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="system" storageKey="cattle-scan-theme">
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route element={<AppLayout />}>
-                <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="/admin-dashboard" element={<AdminDashboard />} />
-                <Route path="/seller-dashboard" element={<SellerDashboard />} />
-                <Route path="/agent-dashboard" element={<AgentDashboard />} />
-                <Route path="/vet-dashboard" element={<VetDashboard />} />
-                <Route path="/driver-dashboard" element={<DriverDashboard />} />
-                <Route path="/seller/create-listing/:invitationId" element={<CreateListingPage />} />
-                <Route path="/seller/listing/:listingId" element={<ViewListingPage />} />
-                <Route path="/admin/listing/:listingId" element={<AdminViewListingPage />} />
-                <Route path="/profile-completion" element={<ProfileCompletion />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <CompanyProvider>
+            <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route element={<AppLayout />}>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="/admin-dashboard" element={<AdminDashboard />} />
+                  <Route path="/seller-dashboard" element={<SellerDashboard />} />
+                  <Route path="/agent-dashboard" element={<AgentDashboard />} />
+                  <Route path="/vet-dashboard" element={<VetDashboard />} />
+                  <Route path="/driver-dashboard" element={<DriverDashboard />} />
+                  <Route path="/seller/create-listing/:invitationId" element={<CreateListingPage />} />
+                  <Route path="/seller/listing/:listingId" element={<ViewListingPage />} />
+                  <Route path="/admin/listing/:listingId" element={<AdminViewListingPage />} />
+                  <Route path="/profile-completion" element={<ProfileCompletion />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Route>
+              </Routes>
+            </BrowserRouter>
+            </TooltipProvider>
+          </CompanyProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
