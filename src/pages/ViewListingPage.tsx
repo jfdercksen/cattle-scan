@@ -62,28 +62,23 @@ export const ViewListingPage = () => {
       if (!listingId) return;
 
       try {
-        // Fetch listing data
+        // Fetch listing data with company info using JOIN
         const { data: listingData, error: listingError } = await supabase
           .from('livestock_listings')
-          .select('*')
+          .select(`
+            *,
+            companies (
+              id,
+              name
+            )
+          `)
           .eq('id', listingId)
           .single();
 
         if (listingError) throw listingError;
 
-        // Fetch company info using security definer function
-        const { data: companyData, error: companyError } = await supabase
-          .rpc('get_company_for_listing', { listing_id: listingId });
-
-        if (companyError) {
-          console.warn('Could not fetch company info:', companyError);
-        }
-
-        // Combine the data
-        const combinedData = {
-          ...listingData,
-          companies: companyData?.[0] ? { name: companyData[0].company_name } : null
-        };
+        // Data is already combined from the JOIN query
+        const combinedData = listingData;
 
         setListing(combinedData);
       } catch (err) {

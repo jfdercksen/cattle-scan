@@ -19,7 +19,7 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { signUp, signIn, user, profile, needsProfileCompletion, getRoleRedirectPath } = useAuth();
+  const { signUp, signIn, user, profile, loading: authLoading, needsProfileCompletion, getRoleRedirectPath } = useAuth();
   const { toast } = useToast();
   
   const { language, setLanguage } = useLanguage();
@@ -63,14 +63,21 @@ const Auth = () => {
   const isBuyerSignup = searchParams.get('buyer') === 'true';
 
   useEffect(() => {
+    // Don't do anything while auth is still loading
+    if (authLoading) {
+      console.log('Auth is still loading, waiting...');
+      return;
+    }
+
     if (user && profile) {
       const redirectPath = getRoleRedirectPath();
+      console.log('Redirecting to:', redirectPath, 'Current path:', location.pathname);
       // Only navigate if we are not already at the destination
       if (location.pathname !== redirectPath) {
         navigate(redirectPath);
       }
     }
-  }, [user, profile, navigate, getRoleRedirectPath, location.pathname]);
+  }, [user, profile, authLoading, navigate, location.pathname, getRoleRedirectPath]);
 
   // Check for pending invitations when email changes
   useEffect(() => {

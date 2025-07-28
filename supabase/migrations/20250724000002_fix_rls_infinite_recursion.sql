@@ -1,6 +1,9 @@
 -- Fix Infinite Recursion in RLS Policies
 -- This migration fixes the circular dependency between companies and company_user_relationships tables
 
+-- Drop existing function if it exists to avoid signature conflicts
+DROP FUNCTION IF EXISTS public.get_user_companies(UUID);
+
 -- Drop the problematic policies that cause infinite recursion
 DROP POLICY IF EXISTS "Users can view companies they belong to" ON public.companies;
 DROP POLICY IF EXISTS "Company admins can view their company relationships" ON public.company_user_relationships;

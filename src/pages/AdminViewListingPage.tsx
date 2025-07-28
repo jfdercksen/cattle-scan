@@ -1,4 +1,4 @@
-import { useEffect, useState, ReactNode } from 'react';
+import { useEffect, useState, useCallback, ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables, Json } from '@/integrations/supabase/types';
@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { LivestockCalculations } from '@/lib/calculationEngine';
+import { LoadMasterAssignment } from '@/components/admin/LoadMasterAssignment';
 
 type LivestockListing = Tables<'livestock_listings'> & {
   companies?: {
@@ -50,10 +51,10 @@ const AddressDisplay = ({ address }: { address: Json | null | undefined }) => {
 };
 
 const YesNoDisplay = ({ label, value }: { label: string; value: boolean | null | undefined }) => (
-    <div className="flex justify-between items-center">
-        <p className="text-sm font-medium text-gray-500">{label}</p>
-        <Badge variant={value ? 'default' : 'destructive'}>{value ? 'Yes' : 'No'}</Badge>
-    </div>
+  <div className="flex justify-between items-center">
+    <p className="text-sm font-medium text-gray-500">{label}</p>
+    <Badge variant={value ? 'default' : 'destructive'}>{value ? 'Yes' : 'No'}</Badge>
+  </div>
 );
 
 export const AdminViewListingPage = () => {
@@ -64,43 +65,32 @@ export const AdminViewListingPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchListingAndDeclaration = async () => {
-      if (!listingId) return;
+  const fetchListingAndDeclaration = useCallback(async () => {
+    if (!listingId) return;
 
-      setLoading(true);
+    setLoading(true);
 
-      try {
-        // Fetch listing data
-        const { data: listingData, error: listingError } = await supabase
-          .from('livestock_listings')
-          .select('*')
-          .eq('id', listingId)
-          .single();
+    try {
+      // Fetch listing data with company information
+      const { data: listingData, error: listingError } = await supabase
+        .from('livestock_listings')
+        .select(`
+          *,
+          companies(name)
+        `)
+        .eq('id', listingId)
+        .single();
 
-        if (listingError) throw listingError;
+      if (listingError) throw listingError;
 
-        // Fetch company info using security definer function
-        const { data: companyData, error: companyError } = await supabase
-          .rpc('get_company_for_listing', { listing_id: listingId });
+      setListing(listingData);
 
-        if (companyError) {
-          console.warn('Could not fetch company info:', companyError);
-        }
-
-        // Combine the data
-        const combinedData = {
-          ...listingData,
-          companies: companyData?.[0] ? { name: companyData[0].company_name } : null
-        };
-
-        setListing(combinedData);
-
-        // Fetch veterinary declaration
+      // Fetch veterinary declaration using the listing's reference_id, not the UUID
+      if (listingData.reference_id) {
         const { data: declarationData, error: declarationError } = await supabase
           .from('veterinary_declarations')
           .select('*')
-          .eq('reference_id', listingId)
+          .eq('reference_id', listingData.reference_id)
           .single();
 
         if (declarationError && declarationError.code !== 'PGRST116') { // Ignore 'single row not found' error
@@ -108,16 +98,18 @@ export const AdminViewListingPage = () => {
         } else {
           setDeclaration(declarationData);
         }
-      } catch (err) {
-        console.error('Error fetching listing:', err);
-        setError('Failed to load listing details.');
-      } finally {
-        setLoading(false);
       }
-    };
-
-    fetchListingAndDeclaration();
+    } catch (err) {
+      console.error('Error fetching listing:', err);
+      setError('Failed to load listing details.');
+    } finally {
+      setLoading(false);
+    }
   }, [listingId]);
+
+  useEffect(() => {
+    fetchListingAndDeclaration();
+  }, [listingId, fetchListingAndDeclaration]);
 
   if (loading) {
     return <div className="text-center p-4">Loading listing details...</div>;
@@ -145,8 +137,8 @@ export const AdminViewListingPage = () => {
               <CardTitle>Listing Details</CardTitle>
               <CardDescription>
                 Reference ID: {listing.reference_id}
-                {(listing as any).companies && (
-                  <><br />Company: {(listing as any).companies?.name || 'Unknown Company'}</>
+                {listing.companies && (
+                  <><br />Company: {listing.companies.name || 'Unknown Company'}</>
                 )}
               </CardDescription>
             </div>
@@ -217,10 +209,10 @@ export const AdminViewListingPage = () => {
                     {/* Loading Points Information */}
                     {listing.loading_points && (() => {
                       try {
-                        const loadingPoints = typeof listing.loading_points === 'string' 
-                          ? JSON.parse(listing.loading_points) 
+                        const loadingPoints = typeof listing.loading_points === 'string'
+                          ? JSON.parse(listing.loading_points)
                           : listing.loading_points;
-                        
+
                         if (Array.isArray(loadingPoints) && loadingPoints.length > 0) {
                           return (
                             <div className="mt-4">
@@ -229,9 +221,9 @@ export const AdminViewListingPage = () => {
                                 {loadingPoints.map((point: any, index: number) => {
                                   const hasCattle = (point.number_of_cattle ?? 0) > 0;
                                   const hasSheep = (point.number_of_sheep ?? 0) > 0;
-                                  
+
                                   if (!hasCattle && !hasSheep) return null;
-                                  
+
                                   return (
                                     <div key={index} className="p-3 bg-white border rounded-md">
                                       <div className="flex justify-between items-start mb-2">
@@ -249,21 +241,21 @@ export const AdminViewListingPage = () => {
                                           )}
                                         </div>
                                       </div>
-                                      
+
                                       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-gray-600">
                                         <div>
                                           <strong>Birth:</strong> {point.birth_address?.farm_name || 'N/A'}, {point.birth_address?.district || 'N/A'}, {point.birth_address?.province || 'N/A'}
                                         </div>
                                         <div>
                                           <strong>Current:</strong> {
-                                            point.is_current_same_as_birth 
+                                            point.is_current_same_as_birth
                                               ? 'Same as birth address'
                                               : `${point.current_address?.farm_name || 'N/A'}, ${point.current_address?.district || 'N/A'}, ${point.current_address?.province || 'N/A'}`
                                           }
                                         </div>
                                         <div>
                                           <strong>Loading:</strong> {
-                                            point.is_loading_same_as_current 
+                                            point.is_loading_same_as_current
                                               ? 'Same as current address'
                                               : `${point.loading_address?.farm_name || 'N/A'}, ${point.loading_address?.district || 'N/A'}, ${point.loading_address?.province || 'N/A'}`
                                           }
@@ -299,7 +291,7 @@ export const AdminViewListingPage = () => {
                 <DetailItem label="No gene editing or cloning" value={<BooleanDisplay value={listing.declaration_no_gene_editing} />} />
               </AccordionContent>
             </AccordionItem>
-            
+
             <AccordionItem value="item-6">
               <AccordionTrigger>Loading Information</AccordionTrigger>
               <AccordionContent>
@@ -346,6 +338,21 @@ export const AdminViewListingPage = () => {
         </CardContent>
       </Card>
 
+      {/* Load Master Assignment Section */}
+      {listing.company_id && (
+        <div className="mt-6">
+          <LoadMasterAssignment
+            listingId={listingId!}
+            companyId={listing.company_id}
+            currentStatus={listing.status || ''}
+            assignedLoadMasterId={listing.assigned_load_master_id}
+            onAssignmentComplete={() => {
+              // Refresh the listing data
+              fetchListingAndDeclaration();
+            }}
+          />
+        </div>
+      )}
 
     </div>
   );

@@ -28,7 +28,7 @@ export interface CompanyUserRelationshipData {
 export interface PendingInvitationData {
   company_id: string;
   email: string;
-  relationship_type: 'admin' | 'seller' | 'vet' | 'agent' | 'driver';
+  relationship_type: 'admin' | 'seller' | 'vet' | 'agent' | 'load_master';
   invited_by: string;
   status?: 'pending' | 'accepted' | 'expired' | 'cancelled';
 }
@@ -305,7 +305,7 @@ export class CompanyService {
   static async inviteUser(
     companyId: string, 
     email: string, 
-    relationshipType: 'admin' | 'seller' | 'vet' | 'agent' | 'driver'
+    relationshipType: 'admin' | 'seller' | 'vet' | 'agent' | 'load_master'
   ): Promise<{ data: any; error: any }> {
     try {
       // Get current user ID for invited_by field

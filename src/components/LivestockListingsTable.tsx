@@ -9,11 +9,15 @@ import { useToast } from '@/hooks/use-toast';
 import { Eye } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
-type LivestockListing = Tables<'livestock_listings'> & {
-  listing_invitations: {
+// Extended type that includes the invitation_id field and joined invitation data
+type LivestockListingWithInvitation = Tables<'livestock_listings'> & {
+  invitation_id?: string | null;
+  listing_invitations?: {
     reference_id: string;
   } | null;
 };
+
+type LivestockListing = LivestockListingWithInvitation;
 
 interface LivestockListingsTableProps {
   onViewListing: (listing: LivestockListing) => void;
@@ -26,16 +30,42 @@ export const LivestockListingsTable = ({ onViewListing }: LivestockListingsTable
 
   const fetchListings = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      // First, fetch all livestock listings
+      const { data: listingsData, error: listingsError } = await supabase
         .from('livestock_listings')
-        .select(`
-          *,
-          listing_invitations:invitation_id ( reference_id )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setListings(data || []);
+      if (listingsError) throw listingsError;
+
+      // Then, fetch invitation data separately to avoid complex join issues
+      const listingsWithInvitations: LivestockListing[] = [];
+      
+      for (const listing of listingsData || []) {
+        let invitationData = null;
+        
+        // Cast to our extended type to access invitation_id property
+        const listingWithInvitation = listing as LivestockListingWithInvitation;
+        
+        if (listingWithInvitation.invitation_id) {
+          const { data: invitation, error: invitationError } = await supabase
+            .from('listing_invitations')
+            .select('reference_id')
+            .eq('id', listingWithInvitation.invitation_id)
+            .single();
+          
+          if (!invitationError && invitation) {
+            invitationData = invitation;
+          }
+        }
+        
+        listingsWithInvitations.push({
+          ...listing,
+          listing_invitations: invitationData
+        });
+      }
+
+      setListings(listingsWithInvitations);
     } catch (error) {
       console.error('Error fetching livestock listings:', error);
       toast({

@@ -35,7 +35,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
   const form = useForm<VeterinaryDeclarationFormData>({
     resolver: zodResolver(veterinaryDeclarationSchema),
     defaultValues: {
-      reference_id: listingId,
+      reference_id: '', // Will be set when listing data is fetched
       number_cattle_loaded: 0,
       number_sheep_loaded: 0,
       cattle_visually_inspected: null,
@@ -68,7 +68,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
       setListing(data);
       form.reset({
         ...form.getValues(),
-        reference_id: data.id,
+        reference_id: data.reference_id,
         owner_of_livestock: data.owner_name,
         farm_address: data.farm_loading_address ?? '',
         number_cattle_loaded: data.number_cattle_loaded ?? 0,
@@ -136,7 +136,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
 
       const { error: updateError } = await supabase
         .from('livestock_listings')
-        .update({ status: 'completed' })
+        .update({ status: 'available_for_loading' })
         .eq('id', listingId);
 
       if (updateError) throw updateError;

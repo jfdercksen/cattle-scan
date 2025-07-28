@@ -697,7 +697,7 @@ export type Database = {
     }
     Enums: {
       language_preference: "en" | "af"
-      user_role: "super_admin" | "admin" | "seller" | "vet" | "agent" | "driver"
+      user_role: "super_admin" | "admin" | "seller" | "vet" | "agent" | "driver" | "load_master"
       user_status: "pending" | "approved" | "rejected" | "suspended"
     }
     CompositeTypes: {
@@ -815,7 +815,7 @@ export const Constants = {
   public: {
     Enums: {
       language_preference: ["en", "af"],
-      user_role: ["super_admin", "admin", "seller", "vet", "agent", "driver"],
+      user_role: ["super_admin", "admin", "seller", "vet", "agent", "driver", "load_master"],
       user_status: ["pending", "approved", "rejected", "suspended"],
     },
   },

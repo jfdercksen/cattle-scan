@@ -106,8 +106,8 @@ const ProfileCompletion = () => {
         return '/vet-dashboard';
       case 'agent':
         return '/agent-dashboard';
-      case 'driver':
-        return '/driver-dashboard';
+      case 'load_master':
+        return '/load-master-dashboard';
       default:
         return '/';
     }
@@ -472,7 +472,7 @@ const ProfileCompletion = () => {
     </>
   );
 
-  const renderDriverFields = () => (
+  const renderLoadMasterFields = () => (
     <>
       <FileUploadManager
         documentType="affidavit"
@@ -492,8 +492,8 @@ const ProfileCompletion = () => {
         return renderAgentFields();
       case 'vet':
         return renderVetFields();
-      case 'driver':
-        return renderDriverFields();
+      case 'load_master':
+        return renderLoadMasterFields();
       default:
         return null;
     }
@@ -507,8 +507,8 @@ const ProfileCompletion = () => {
         return 'Agent Profile';
       case 'vet':
         return 'Vet Profile';
-      case 'driver':
-        return 'Driver Profile';
+      case 'load_master':
+        return 'Load Master Profile';
       default:
         return 'Profile Completion';
     }

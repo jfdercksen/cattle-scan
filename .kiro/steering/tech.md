@@ -30,9 +30,11 @@
 ### Backend & Database
 - **Supabase**: Backend-as-a-Service with PostgreSQL database
 - **Supabase Auth**: Authentication and user management
-- **Row Level Security (RLS)**: Database-level security policies
+- **Row Level Security (RLS)**: Database-level security policies with multi-tenant isolation
 - **Real-time Subscriptions**: Live data updates via Supabase realtime
 - **Auto-generated Types**: TypeScript types generated from database schema
+- **Multi-Tenant Architecture**: Company-based data isolation with cross-company user relationships
+- **Supabase Storage**: Secure file storage with role-based access policies
 
 ### Routing & Navigation
 - **React Router DOM 6.26+**: Client-side routing with nested routes
@@ -74,10 +76,16 @@
 - **Custom Themes**: Chart theming that matches application design
 
 ### Specialized Components
-- **react-signature-canvas**: Digital signature capture
+- **react-signature-canvas**: Digital signature capture with mobile touch calibration
 - **embla-carousel-react**: Touch-friendly carousel component
 - **react-resizable-panels**: Resizable layout panels
 - **cmdk**: Command palette and search interface
+
+### File Upload & Storage
+- **Supabase Storage**: Secure file storage with bucket-based organization
+- **File Upload Manager**: Custom component for brand photos, vet letterheads, and affidavits
+- **Camera Integration**: Mobile camera capture for document uploads
+- **File Type Validation**: Strict validation for security and compliance
 
 ### Internationalization Libraries (Recommended)
 - **react-i18next**: Comprehensive i18n framework for React applications
@@ -168,24 +176,40 @@ VITE_DEBUG_MODE=true
 - **Render Props**: Flexible component composition
 - **Custom Hooks**: Reusable stateful logic
 - **Higher-Order Components**: Cross-cutting concerns (rare usage)
+- **Modular Field Visibility**: Dynamic field showing/hiding based on feature flags
 
 ### State Management Patterns
 - **Server State**: TanStack Query for all API interactions
 - **Client State**: React Context for global app state
-- **Form State**: React Hook Form for complex forms
+- **Form State**: React Hook Form for complex forms with state locking
 - **URL State**: React Router for navigation state
+- **Multi-Tenant State**: Company context switching for users with multiple relationships
 
 ### Data Flow Patterns
 - **Unidirectional Data Flow**: Props down, events up
 - **Optimistic Updates**: Immediate UI updates with rollback
 - **Background Sync**: Automatic data synchronization
 - **Error Boundaries**: Graceful error handling
+- **Form State Locking**: Workflow-based form section locking
 
 ### Authentication Patterns
 - **Context Provider**: Auth state management
 - **Protected Routes**: Route-level authentication
 - **Role-based Access**: Component-level permission checks
 - **Session Management**: Automatic token refresh
+- **Multi-Tenant Access Control**: Company-based data isolation
+
+### Multi-Tenant Architecture Patterns
+- **Company-Based Isolation**: Data segregation by company with shared user relationships
+- **Cross-Company User Sharing**: Users can belong to multiple companies
+- **Invitation Management**: Smart invitation system for new vs existing users
+- **Role-Based Multi-Tenancy**: Different roles across different companies
+
+### Mobile Optimization Patterns
+- **Touch Calibration**: Signature pad accuracy improvements for mobile devices
+- **Responsive Form Navigation**: Adaptive tab layouts for mobile screens
+- **Camera Integration**: Native camera access for document capture
+- **Progressive Enhancement**: Mobile-first with desktop enhancements
 
 ### Internationalization Patterns
 - **Language Context**: Global language state management via React Context

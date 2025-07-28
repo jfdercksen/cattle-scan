@@ -135,7 +135,7 @@ export const SellerInvitationsTable = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {invitation.status === 'pending' ? (
+                    {invitation.status === 'pending' && !listing ? (
                       <Button
                         variant="default"
                         size="sm"

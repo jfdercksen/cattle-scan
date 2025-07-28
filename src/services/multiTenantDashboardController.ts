@@ -134,8 +134,12 @@ export class MultiTenantDashboardController {
       // Vets see listings they're assigned to (regardless of company)
       const vetQuery = baseQuery.eq('assigned_vet_id', userId);
       return vetQuery.order('created_at', { ascending: false });
+    } else if (userRole === 'load_master') {
+      // Load Masters see listings they're assigned to (regardless of company)
+      const loadMasterQuery = baseQuery.eq('assigned_load_master_id', userId);
+      return loadMasterQuery.order('created_at', { ascending: false });
     } else {
-      // Admins, agents, load masters see all company listings
+      // Admins, agents see all company listings
       const adminQuery = baseQuery.in('company_id', companyIds);
       return adminQuery.order('created_at', { ascending: false });
     }

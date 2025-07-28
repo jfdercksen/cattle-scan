@@ -15,7 +15,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import SellerDashboard from "./pages/SellerDashboard";
 import AgentDashboard from "./pages/AgentDashboard";
 import VetDashboard from "./pages/VetDashboard";
-import DriverDashboard from "./pages/DriverDashboard";
+import LoadMasterDashboard from "./pages/LoadMasterDashboard";
 import CreateListingPage from "./pages/CreateListingPage";
 import { ViewListingPage } from "./pages/ViewListingPage";
 import { AdminViewListingPage } from './pages/AdminViewListingPage';
@@ -43,7 +43,7 @@ const App = () => (
                   <Route path="/seller-dashboard" element={<SellerDashboard />} />
                   <Route path="/agent-dashboard" element={<AgentDashboard />} />
                   <Route path="/vet-dashboard" element={<VetDashboard />} />
-                  <Route path="/driver-dashboard" element={<DriverDashboard />} />
+                  <Route path="/load-master-dashboard" element={<LoadMasterDashboard />} />
                   <Route path="/seller/create-listing/:invitationId" element={<CreateListingPage />} />
                   <Route path="/seller/listing/:listingId" element={<ViewListingPage />} />
                   <Route path="/admin/listing/:listingId" element={<AdminViewListingPage />} />

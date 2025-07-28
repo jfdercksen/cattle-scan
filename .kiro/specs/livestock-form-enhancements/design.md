@@ -26,9 +26,9 @@ stateDiagram-v2
     note right of LoadingCompleted : All forms locked - review only
 ```
 
-### Multi-Tenant Company-Based Architecture
+### Multi-Tenant Company-Based Architecture (IMPLEMENTED)
 
-The system implements a multi-tenant architecture where multiple livestock trading companies can operate independently while sharing certain resources (sellers, vets) across companies.
+The system implements a comprehensive multi-tenant architecture where multiple livestock trading companies can operate independently while sharing certain resources (sellers, vets) across companies. This has been fully implemented with database schema, services, and UI components.
 
 ```mermaid
 erDiagram
@@ -36,7 +36,9 @@ erDiagram
         string id PK
         string name
         string admin_user_id FK
+        jsonb settings
         timestamp created_at
+        timestamp updated_at
     }
     
     USERS {
@@ -51,7 +53,10 @@ erDiagram
         string company_id FK
         string user_id FK
         enum relationship_type
+        enum status
+        string invited_by FK
         timestamp created_at
+        timestamp accepted_at
     }
     
     LIVESTOCK_LISTINGS {
@@ -59,13 +64,32 @@ erDiagram
         string company_id FK
         string seller_id FK
         string reference_id
+        jsonb loading_points
+        enum status
+    }
+    
+    LISTING_INVITATIONS {
+        string id PK
+        string company_id FK
+        string seller_id FK
+        string seller_email
+        string reference_id
+        enum status
     }
     
     COMPANIES ||--o{ COMPANY_USER_RELATIONSHIPS : has
     USERS ||--o{ COMPANY_USER_RELATIONSHIPS : belongs_to
     COMPANIES ||--o{ LIVESTOCK_LISTINGS : owns
+    COMPANIES ||--o{ LISTING_INVITATIONS : creates
     USERS ||--o{ LIVESTOCK_LISTINGS : creates
 ```
+
+**Implementation Status**: ✅ COMPLETED
+- Database schema implemented with RLS policies
+- CompanyService for company management
+- InvitationManager for multi-tenant invitations
+- MultiTenantDashboardController for role-based data access
+- Company context switching UI components
 
 ### Role-Based Access Control with Multi-Tenancy
 
@@ -85,11 +109,11 @@ Forms will implement a state-based locking system where different sections becom
 
 ## Components and Interfaces
 
-### Form Simplification Strategy
+### Form Simplification Strategy (IMPLEMENTED)
 
-The initial system launch will implement a modular approach where advanced features are hidden but remain in the database schema for future activation. This "Lego block" approach allows for incremental feature rollout based on user adoption and feedback.
+The initial system launch implements a modular approach where advanced features are hidden but remain in the database schema for future activation. This "Lego block" approach allows for incremental feature rollout based on user adoption and feedback.
 
-#### Hidden Fields for Initial Launch
+#### Hidden Fields for Initial Launch (IMPLEMENTED)
 - Weaning status and duration
 - Grain feeding information  
 - Growth implant details
@@ -97,45 +121,82 @@ The initial system launch will implement a modular approach where advanced featu
 - Estimated weight fields
 - Weighing location (redundant with loading points)
 
-#### Field Visibility Controller
+#### Field Visibility Controller (IMPLEMENTED)
 ```typescript
-interface FieldVisibilityController {
-  isFieldVisible(fieldName: string, context: FormContext): boolean;
-  hideAdvancedFields(): void;
-  showAdvancedFields(): void;
+export class FieldVisibilityController {
+  private context: FormContext;
+
+  constructor(context: FormContext = {}) {
+    this.context = {
+      isInitialLaunch: true, // Default to initial launch mode
+      ...context,
+    };
+  }
+
+  isFieldVisible(fieldName: string, section?: FormSection): boolean;
   getVisibleFields(section: FormSection): string[];
+  showAdvancedFields(): boolean;
+  hideAdvancedFields(): void;
+  enableAdvancedFields(): void;
+  updateContext(newContext: Partial<FormContext>): void;
+  getHiddenFields(): string[];
+  isAdvancedField(fieldName: string): boolean;
 }
 ```
+
+**Implementation Status**: ✅ COMPLETED
+- FieldVisibilityController class implemented
+- Hidden fields array defined and enforced
+- Modular field system ready for future activation
+- Database schema preserved for all fields
 
 ### Enhanced Form Components
 
-#### 1. Livestock Location Manager
+#### 1. Livestock Location Manager (IMPLEMENTED)
 ```typescript
-interface LivestockLocationManager {
-  herds: HerdLocation[];
+export class LivestockLocationManager {
+  private form: any;
+
+  constructor(form: any) {
+    this.form = form;
+  }
+
   addHerd(): void;
-  updateHerdLocation(herdId: string, location: LocationData): void;
-  copyLocationData(sourceHerd: string, targetHerd: string): void;
+  updateHerdLocation(herdIndex: number, locationData: Partial<HerdLocation>): void;
+  copyLocationData(targetHerdIndex: number, copyOption: LocationCopyOptions, sourceHerdIndex?: number): void;
+  removeHerd(herdIndex: number): void;
+  getHerdCount(): number;
+  validateHerd(herdIndex: number): boolean;
 }
 
-interface HerdLocation {
-  id: string;
-  herdNumber: number;
-  birthLocation: FarmAddress;
-  currentLocation: FarmAddress;
-  loadingPoints: LoadingPoint[];
-  hasBeenMoved: boolean;
-  movementHistory: MovementRecord[];
+export interface HerdLocation {
+  birth_address: FarmAddress;
+  current_address: FarmAddress;
+  loading_address: FarmAddress;
+  is_current_same_as_birth: boolean;
+  is_loading_same_as_current: boolean;
+  number_of_cattle: number;
+  number_of_sheep: number;
 }
 
-interface FarmAddress {
-  farmName: string;
-  portion?: string;
+export interface FarmAddress {
+  farm_name: string;
   district: string;
   province: string;
-  fullAddress: string; // Accommodates complex SA farm addresses
+  coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
 }
+
+export type LocationCopyOptions = 'birth_to_current' | 'current_to_loading' | 'birth_to_loading' | 'from_herd';
 ```
+
+**Implementation Status**: ✅ COMPLETED
+- LivestockLocationManager class implemented
+- Enhanced location data models with complex SA farm address support
+- Copy functionality for reducing repetitive data entry
+- Hook integration with React Hook Form
 
 #### 2. Form State Controller
 ```typescript
@@ -175,39 +236,96 @@ enum FormState {
 }
 ```
 
-#### 3. File Upload Manager
+#### 3. File Upload Manager (IMPLEMENTED)
 ```typescript
-interface FileUploadManager {
-  uploadBrandPhoto(file: File): Promise<UploadResult>;
-  uploadVetLetterhead(file: File): Promise<UploadResult>;
-  uploadAffidavit(file: File): Promise<UploadResult>;
-  capturePhoto(type: DocumentType): Promise<CaptureResult>;
-  validateFileType(file: File, allowedTypes: string[]): boolean;
+export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
+  documentType,
+  label,
+  required = false,
+  accept,
+  maxSizeBytes = MAX_FILE_SIZE,
+  onUploadComplete,
+  onUploadStart,
+  currentFileUrl,
+  disabled = false
+}) => {
+  // Component implementation with camera integration
 }
 
-interface UploadResult {
+export interface UploadResult {
   success: boolean;
   fileUrl?: string;
   error?: string;
   fileId: string;
 }
-```
 
-#### 4. Signature Pad Controller
-```typescript
-interface SignaturePadController {
-  calibrateTouchInput(): void;
-  adjustTouchOffset(device: DeviceInfo): TouchOffset;
-  validateSignatureAccuracy(): boolean;
-  resetSignaturePad(): void;
+export interface CaptureResult {
+  success: boolean;
+  file?: File;
+  error?: string;
 }
 
-interface TouchOffset {
+export type DocumentType = 'brand_photo' | 'vet_letterhead' | 'affidavit';
+
+// Implemented methods:
+uploadBrandPhoto(file: File, userId: string): Promise<UploadResult>;
+uploadVetLetterhead(file: File, userId: string): Promise<UploadResult>;
+uploadAffidavit(file: File, listingId?: string): Promise<UploadResult>;
+capturePhoto(): Promise<CaptureResult>;
+validateFileType(file: File): boolean;
+validateFileSize(file: File): boolean;
+```
+
+**Implementation Status**: ✅ COMPLETED
+- FileUploadManager React component implemented
+- Camera integration for mobile devices
+- File type and size validation
+- Supabase Storage integration with bucket organization
+- Progress tracking and error handling
+
+#### 4. Signature Pad Controller (IMPLEMENTED)
+```typescript
+export class SignaturePadController {
+  private deviceInfo: DeviceInfo;
+
+  constructor() {
+    this.deviceInfo = this.detectDevice();
+  }
+
+  calculateTouchOffset(canvas: HTMLCanvasElement): TouchOffset;
+  getSignatureOptions(): SignatureOptions;
+  calculateCanvasSize(containerWidth: number): { width: number; height: number };
+  getCorrectedTouchCoordinates(canvas: HTMLCanvasElement, clientX: number, clientY: number): { x: number; y: number };
+  calibrateTouchInput(canvas: HTMLCanvasElement): void;
+  enhanceTouchAccuracy(signatureCanvas: any): void;
+  validateSignatureAccuracy(canvas: HTMLCanvasElement): ValidationResult;
+  resetSignaturePad(canvas: HTMLCanvasElement): void;
+  getDeviceInfo(): DeviceInfo;
+  updateDeviceInfo(): void;
+}
+
+export interface TouchOffset {
   x: number;
   y: number;
   scaleFactor: number;
 }
+
+export interface DeviceInfo {
+  isMobile: boolean;
+  devicePixelRatio: number;
+  touchSupport: boolean;
+  userAgent: string;
+  screenWidth: number;
+  screenHeight: number;
+}
 ```
+
+**Implementation Status**: ✅ COMPLETED
+- SignaturePadController class with device-specific calibration
+- Touch offset calculations for iOS and Android
+- Responsive canvas sizing
+- Signature validation and quality metrics
+- Mobile touch accuracy improvements
 
 ### Mobile-First Responsive Design
 
@@ -263,23 +381,56 @@ interface MultiTenantDashboardController {
 #### 3. Enhanced Role-Specific Dashboards
 Each role will have tailored dashboard components showing relevant information and actions based on their responsibilities in the workflow, filtered by company relationships.
 
-### Calculation Engine
+### Calculation Engine (IMPLEMENTED)
 
-#### 1. Automated Percentage Calculator
+#### 1. Automated Percentage Calculator (IMPLEMENTED)
 ```typescript
-interface CalculationEngine {
+export class DefaultCalculationEngine implements CalculationEngine {
   calculateMouthingRequirement(totalCattle: number): MouthingRequirement;
   calculateAdditionalFees(turnover: number): FeeCalculation;
   validatePercentageCompliance(required: number, actual: number): ValidationResult;
 }
 
-interface MouthingRequirement {
+export interface MouthingRequirement {
   totalCattle: number;
   requiredPercentage: number;
   requiredCount: number;
   displayText: string;
 }
+
+export interface FeeCalculation {
+  baseFee: number;
+  additionalFee: number;
+  totalFee: number;
+  description: string;
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  message: string;
+  severity: 'error' | 'warning' | 'info';
+}
+
+// Additional utility functions implemented:
+export const LivestockCalculations = {
+  calculateTotalLivestock(loadingPoints: Array<{ number_of_cattle?: number; number_of_sheep?: number }>): {
+    totalCattle: number;
+    totalSheep: number;
+    totalLivestock: number;
+  };
+  determineLivestockType(cattleCount: number, sheepCount: number): 'CATTLE' | 'SHEEP' | 'CATTLE AND SHEEP' | null;
+  shouldShowCattleFields(cattleCount: number): boolean;
+  shouldShowSheepFields(sheepCount: number): boolean;
+};
 ```
+
+**Implementation Status**: ✅ COMPLETED
+- DefaultCalculationEngine class implemented
+- Mouthing requirement calculations (25% for cattle and sheep)
+- Additional fee calculations based on turnover
+- Livestock type determination utilities
+- Conditional field visibility helpers
+- Unit tests included
 
 ## Data Models
 

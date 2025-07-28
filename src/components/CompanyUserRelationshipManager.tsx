@@ -16,6 +16,9 @@ import type { Tables, Database } from "@/integrations/supabase/types";
 type Profile = Tables<'profiles'>;
 type UserRole = Database['public']['Enums']['user_role'];
 
+// Define roles that can be invited to companies (excludes super_admin)
+type CompanyInvitableRole = 'admin' | 'seller' | 'vet' | 'agent' | 'load_master';
+
 interface CompanyUserRelationshipManagerProps {
   companyId: string;
   companyName: string;
@@ -25,7 +28,7 @@ interface CompanyUserRelationshipManagerProps {
 
 interface InviteUserFormData {
   email: string;
-  role: UserRole;
+  role: CompanyInvitableRole;
 }
 
 export const CompanyUserRelationshipManager: React.FC<CompanyUserRelationshipManagerProps> = ({
@@ -274,7 +277,7 @@ export const CompanyUserRelationshipManager: React.FC<CompanyUserRelationshipMan
                 <Label htmlFor="role">Role</Label>
                 <Select
                   value={inviteForm.role}
-                  onValueChange={(value: UserRole) => setInviteForm(prev => ({ ...prev, role: value }))}
+                  onValueChange={(value: CompanyInvitableRole) => setInviteForm(prev => ({ ...prev, role: value }))}
                   disabled={inviteLoading}
                 >
                   <SelectTrigger>

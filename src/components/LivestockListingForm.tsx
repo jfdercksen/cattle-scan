@@ -12,13 +12,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
 import { useNavigate } from 'react-router-dom';
-import type { Database } from '@/integrations/supabase/types';
+import { Database } from '@/integrations/supabase/types';
 import { livestockListingSchema, LivestockListingFormData } from '@/lib/schemas/livestockListingSchema';
 import { LivestockDetailsSection } from './livestock-listing-form/LivestockDetailsSection';
 import { BiosecuritySection } from './livestock-listing-form/BiosecuritySection';
 import { DeclarationsSection } from './livestock-listing-form/DeclarationsSection';
 import { LoadingPointsSection } from './livestock-listing-form/LoadingPointsSection';
-import { LoadingDetailsSection } from './livestock-listing-form/LoadingDetailsSection';
+
 import { SignatureSection } from './livestock-listing-form/SignatureSection';
 import { VetSelectionSection } from './livestock-listing-form/VetSelectionSection';
 import { OfferTermsSection } from './livestock-listing-form/OfferTermsSection';
@@ -93,7 +93,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
-  const [profile, setProfile] = useState<Database['public']['Tables']['profiles']['Row'] | null>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
@@ -174,7 +174,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         .select('*')
         .eq('id', user.id)
         .single()
-        .then(({ data, error }) => {
+        .then(({ data, error }: { data: any; error: any }) => {
           if (error) {
             console.error('Error fetching profile:', error);
             toast({ title: 'Error', description: 'Could not load your profile.', variant: 'destructive' });
@@ -193,7 +193,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
     { title: "Livestock Details", component: <LivestockDetailsSection /> },
     { title: "Biosecurity", component: <BiosecuritySection /> },
     { title: "Loading Points", component: <LoadingPointsSection fields={fields} append={append} remove={remove} /> },
-    { title: "Loading Details", component: <LoadingDetailsSection totalCattle={totalCattle} totalSheep={totalSheep} /> },
+
     { title: "Veterinarian", component: <VetSelectionSection /> },
     { title: "Offer Terms", component: <OfferTermsSection /> },
     { title: "Declarations", component: <DeclarationsSection /> },
@@ -222,10 +222,27 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
       if (!invitationId) return;
 
       try {
-        const [invitationRes, listingRes] = await Promise.all([
-          supabase.from('listing_invitations').select('reference_id').eq('id', invitationId).single(),
-          supabase.from('livestock_listings').select('*').eq('invitation_id', invitationId).maybeSingle()
-        ]);
+        // Fetch invitation data with explicit typing to avoid deep type inference
+        const invitationQuery = supabase
+          .from('listing_invitations')
+          .select('reference_id')
+          .eq('id', invitationId)
+          .single();
+        
+        const invitationRes = await invitationQuery;
+
+        // Fetch listing data with simple type assertion to avoid deep type inference
+        const listingRes = await supabase
+          .from('livestock_listings')
+          .select('*')
+          .eq('invitation_id', invitationId)
+          .maybeSingle();
+        
+        // Use simple type assertion to avoid TypeScript complexity
+        const typedListingRes = listingRes as {
+          data: Record<string, unknown> | null;
+          error: Error | null;
+        };
 
         const { data: invitationData, error: invitationError } = invitationRes;
         if (invitationError) {
@@ -238,7 +255,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
           return;
         }
 
-        const { data: listingData, error: listingError } = listingRes;
+        const { data: listingData, error: listingError } = typedListingRes;
         if (listingError) {
           console.error('Error fetching listing data:', listingError);
           toast({
@@ -248,42 +265,54 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
           });
           return;
         }
-        
+
         const referenceId = invitationData?.reference_id || '';
 
         if (listingData) {
+          // Helper functions to safely extract values
+          const getString = (value: unknown): string => (value as string) || '';
+          const getNumber = (value: unknown): number => (value as number) || 0;
+          const getBoolean = (value: unknown): boolean => (value as boolean) || false;
+          const getJsonValue = (value: unknown): string | Address | null | undefined => {
+            if (value === null) return null;
+            if (value === undefined) return undefined;
+            if (typeof value === 'string') return value;
+            if (typeof value === 'object' && value !== null) return value as Address;
+            return null;
+          };
+          
           const formData: Partial<LivestockListingFormData> = {
-            invitation_id: listingData.invitation_id,
+            invitation_id: getString(listingData.invitation_id) || invitationId, // from database or props
             reference_id: referenceId, // from invitation
-            owner_name: listingData.owner_name ?? '',
-            livestock_type: listingData.livestock_type as "CATTLE AND SHEEP" | "CATTLE" | "SHEEP" | undefined,
-            bred_or_bought: listingData.bred_or_bought as "BRED" | "BOUGHT IN" | undefined,
-            location: listingData.location ?? '',
-            weighing_location: listingData.weighing_location ?? '',
-            total_livestock_offered: listingData.total_livestock_offered ?? 0,
-            number_of_heifers: listingData.number_of_heifers ?? undefined,
-            males_castrated: listingData.males_castrated ?? false,
-            mothers_status: listingData.mothers_status as "WITH MOTHERS" | "ALREADY WEANED" | undefined,
-            weaned_duration: listingData.weaned_duration ?? '',
-            grazing_green_feed: listingData.grazing_green_feed ?? false,
-            growth_implant: listingData.growth_implant ?? false,
-            growth_implant_type: listingData.growth_implant_type ?? '',
-            estimated_average_weight: listingData.estimated_average_weight ?? undefined,
-            breed: listingData.breed ?? '',
-            breeder_name: listingData.breeder_name ?? '',
-            is_breeder_seller: listingData.is_breeder_seller ?? false,
-            farm_birth_address: safeJsonParse(listingData.farm_birth_address, { farm_name: '', district: '', province: '' }),
-            farm_loading_address: safeJsonParse(listingData.farm_loading_address, { farm_name: '', district: '', province: '' }),
-            livestock_moved_out_of_boundaries: listingData.livestock_moved_out_of_boundaries ?? false,
-            livestock_moved_location: safeJsonParse(listingData.livestock_moved_location, { farm_name: '', district: '', province: '' }),
-            declaration_no_cloven_hooved_animals: listingData.declaration_no_cloven_hooved_animals ?? false,
-            declaration_livestock_kept_away: listingData.declaration_livestock_kept_away ?? false,
-            declaration_no_animal_origin_feed: listingData.declaration_no_animal_origin_feed ?? false,
-            declaration_veterinary_products_registered: listingData.declaration_veterinary_products_registered ?? false,
-            declaration_no_foot_mouth_disease: listingData.declaration_no_foot_mouth_disease ?? false,
-            declaration_no_foot_mouth_disease_farm: listingData.declaration_no_foot_mouth_disease_farm ?? false,
-            declaration_livestock_south_africa: listingData.declaration_livestock_south_africa ?? false,
-            declaration_no_gene_editing: listingData.declaration_no_gene_editing ?? false,
+            owner_name: getString(listingData.owner_name),
+            livestock_type: getString(listingData.livestock_type) as "CATTLE AND SHEEP" | "CATTLE" | "SHEEP" | undefined,
+            bred_or_bought: getString(listingData.bred_or_bought) as "BRED" | "BOUGHT IN" | undefined,
+            location: getString(listingData.location),
+            weighing_location: getString(listingData.weighing_location),
+            total_livestock_offered: getNumber(listingData.total_livestock_offered),
+            number_of_heifers: getNumber(listingData.number_of_heifers) || undefined,
+            males_castrated: getBoolean(listingData.males_castrated),
+            mothers_status: getString(listingData.mothers_status) as "WITH MOTHERS" | "ALREADY WEANED" | undefined,
+            weaned_duration: getString(listingData.weaned_duration),
+            grazing_green_feed: getBoolean(listingData.grazing_green_feed),
+            growth_implant: getBoolean(listingData.growth_implant),
+            growth_implant_type: getString(listingData.growth_implant_type),
+            estimated_average_weight: getNumber(listingData.estimated_average_weight) || undefined,
+            breed: getString(listingData.breed),
+            breeder_name: getString(listingData.breeder_name),
+            is_breeder_seller: getBoolean(listingData.is_breeder_seller),
+            farm_birth_address: safeJsonParse(getJsonValue(listingData.farm_birth_address), { farm_name: '', district: '', province: '' }),
+            farm_loading_address: safeJsonParse(getJsonValue(listingData.farm_loading_address), { farm_name: '', district: '', province: '' }),
+            livestock_moved_out_of_boundaries: getBoolean(listingData.livestock_moved_out_of_boundaries),
+            livestock_moved_location: safeJsonParse(getJsonValue(listingData.livestock_moved_location), { farm_name: '', district: '', province: '' }),
+            declaration_no_cloven_hooved_animals: getBoolean(listingData.declaration_no_cloven_hooved_animals),
+            declaration_livestock_kept_away: getBoolean(listingData.declaration_livestock_kept_away),
+            declaration_no_animal_origin_feed: getBoolean(listingData.declaration_no_animal_origin_feed),
+            declaration_veterinary_products_registered: getBoolean(listingData.declaration_veterinary_products_registered),
+            declaration_no_foot_mouth_disease: getBoolean(listingData.declaration_no_foot_mouth_disease),
+            declaration_no_foot_mouth_disease_farm: getBoolean(listingData.declaration_no_foot_mouth_disease_farm),
+            declaration_livestock_south_africa: getBoolean(listingData.declaration_livestock_south_africa),
+            declaration_no_gene_editing: getBoolean(listingData.declaration_no_gene_editing),
             loading_points: safeJsonParseArray(listingData.loading_points, []).map(point => {
               // Handle legacy format conversion
               if ('is_loading_at_birth_farm' in point) {
@@ -292,8 +321,8 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
                 return {
                   birth_address: legacyPoint.birth_address || { farm_name: '', district: '', province: '', postal_code: '' },
                   current_address: legacyPoint.birth_address || { farm_name: '', district: '', province: '', postal_code: '' },
-                  loading_address: legacyPoint.is_loading_at_birth_farm 
-                    ? legacyPoint.birth_address 
+                  loading_address: legacyPoint.is_loading_at_birth_farm
+                    ? legacyPoint.birth_address
                     : (legacyPoint.loading_address || { farm_name: '', district: '', province: '', postal_code: '' }),
                   is_current_same_as_birth: true,
                   is_loading_same_as_current: legacyPoint.is_loading_at_birth_farm || false,
@@ -312,18 +341,18 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
                 number_of_sheep: point.number_of_sheep || 0,
               };
             }),
-            number_cattle_loaded: listingData.number_cattle_loaded ?? undefined,
-            number_sheep_loaded: listingData.number_sheep_loaded ?? undefined,
-            truck_registration_number: listingData.truck_registration_number ?? '',
-            signature_data: listingData.signature_data ?? '',
-            signed_location: listingData.signed_location ?? '',
-            assigned_vet_id: listingData.assigned_vet_id ?? undefined,
-            invited_vet_email: listingData.invited_vet_email ?? '',
+            number_cattle_loaded: getNumber(listingData.number_cattle_loaded) || undefined,
+            number_sheep_loaded: getNumber(listingData.number_sheep_loaded) || undefined,
+            truck_registration_number: getString(listingData.truck_registration_number),
+            signature_data: getString(listingData.signature_data),
+            signed_location: getString(listingData.signed_location),
+            assigned_vet_id: getString(listingData.assigned_vet_id) || undefined,
+            invited_vet_email: getString(listingData.invited_vet_email),
           };
           form.reset(formData);
-          setExistingListingId(listingData.id);
-          if (listingData.signature_data) {
-            setSignature(listingData.signature_data);
+          setExistingListingId(getString(listingData.id));
+          if (getString(listingData.signature_data)) {
+            setSignature(getString(listingData.signature_data));
           }
         } else if (profile) {
           // New listing: populate with blank addresses
@@ -360,7 +389,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invitationId, form, profile]);
 
-    const onInvalid = (errors: FieldErrors<LivestockListingFormData>) => {
+  const onInvalid = (errors: FieldErrors<LivestockListingFormData>) => {
     console.error('Form validation errors:', errors);
     toast({
       title: 'Incomplete Form',
@@ -396,7 +425,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         affidavitFilePath = publicUrlData.publicUrl;
       }
 
-      const submissionData: Omit<Database['public']['Tables']['livestock_listings']['Insert'], 'created_at' | 'id'> = {
+      const submissionData: any = {
         profile_id: profile.id,
         seller_id: user.id,
         signature_data: signature,
@@ -407,7 +436,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         owner_name: data.owner_name || '',
         livestock_type: data.livestock_type || 'CATTLE',
         bred_or_bought: data.bred_or_bought || 'BRED',
-        location: data.location || (data.loading_points?.[0]?.birth_address ? 
+        location: data.location || (data.loading_points?.[0]?.birth_address ?
           `${data.loading_points[0].birth_address.farm_name}|${data.loading_points[0].birth_address.district}|${data.loading_points[0].birth_address.province}` : ''),
         weighing_location: data.weighing_location || null,
         total_livestock_offered: data.total_livestock_offered || 0,
@@ -443,8 +472,8 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         declaration_livestock_south_africa: data.declaration_livestock_south_africa,
         declaration_no_gene_editing: data.declaration_no_gene_editing,
         farm_birth_address: JSON.stringify(data.loading_points?.[0]?.birth_address || data.farm_birth_address),
-        farm_loading_address: data.loading_points?.[0]?.is_loading_same_as_current ? 
-          JSON.stringify(data.loading_points[0].current_address) : 
+        farm_loading_address: data.loading_points?.[0]?.is_loading_same_as_current ?
+          JSON.stringify(data.loading_points[0].current_address) :
           JSON.stringify(data.loading_points?.[0]?.loading_address || data.farm_loading_address),
         livestock_moved_location: data.livestock_moved_out_of_boundaries ? JSON.stringify(data.livestock_moved_location) : null,
         loading_points: JSON.stringify(data.loading_points),
@@ -561,7 +590,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
                 <Button type="button" variant="ghost" onClick={() => navigate('/seller-dashboard')}>
                   Cancel
                 </Button>
-                
+
                 <div className="flex items-center space-x-4">
                   {/* Desktop navigation buttons */}
                   <div className="hidden md:flex items-center space-x-4">
@@ -580,7 +609,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
                       </Button>
                     )}
                   </div>
-                  
+
                   {/* Mobile: Only show submit button on last step */}
                   <div className="md:hidden">
                     {currentStep === formSections.length - 1 && (

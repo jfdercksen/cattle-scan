@@ -173,7 +173,7 @@ const Admin = () => {
       const { error } = await CompanyService.inviteUser(
         currentCompany.companyId,
         inviteEmail,
-        inviteRole as 'admin' | 'seller' | 'vet' | 'agent' | 'driver'
+        inviteRole as 'admin' | 'seller' | 'vet' | 'agent' | 'load_master'
       );
       
       if (error) {

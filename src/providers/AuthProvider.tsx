@@ -11,19 +11,103 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('Auth state change:', _event, session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      
+      // Load profile when user signs in
+      if (session?.user) {
+        // Prevent multiple concurrent profile loads
+        if (isLoadingProfile) {
+          console.log('Profile loading already in progress, skipping...');
+          return;
+        }
+        
+        console.log('Loading profile for user:', session.user.id);
+        setIsLoadingProfile(true);
+        
+        // Use RPC approach with timeout to prevent hanging
+        console.log('Loading profile with RPC function...');
+        try {
+          // Add timeout to prevent RPC call from hanging indefinitely
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('RPC timeout')), 3000)
+          );
+          
+          const rpcPromise = supabase
+            .rpc('get_user_profile', { user_id: session.user.id });
+          
+          const { data, error } = await Promise.race([rpcPromise, timeoutPromise]) as any;
+          
+          console.log('RPC call completed. Data:', data, 'Error:', error);
+          
+          if (!error && data && Array.isArray(data) && data.length > 0) {
+            console.log('Profile loaded successfully:', data[0]);
+            setProfile(data[0] as Profile);
+          } else {
+            console.error('Error loading profile:', error);
+            console.log('Setting profile to null due to error or no data');
+            // Set profile to null but don't block the auth flow
+            setProfile(null);
+          }
+        } catch (err) {
+          console.error('Exception or timeout loading profile:', err);
+          console.log('Setting profile to null due to exception/timeout');
+          setProfile(null);
+        }
+        
+        setIsLoadingProfile(false);
+        // Only set loading to false after profile loading is complete
+        setLoading(false);
+      } else {
+        console.log('No session user, clearing profile');
+        setProfile(null);
+        setIsLoadingProfile(false);
+        // Set loading to false immediately when no user
+        setLoading(false);
+      }
     });
 
     // Fetch the initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
         setSession(session);
         setUser(session.user);
+        
+        // Load profile for initial session using the same safe RPC function with timeout
+        // Note: Don't check isLoadingProfile here - initial session should always load profile
+        console.log('Loading initial profile for user:', session.user.id);
+        
+        try {
+          // Add timeout to prevent RPC call from hanging indefinitely
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('RPC timeout')), 3000)
+          );
+          
+          const rpcPromise = supabase
+            .rpc('get_user_profile', { user_id: session.user.id });
+          
+          const { data, error } = await Promise.race([rpcPromise, timeoutPromise]) as any;
+          
+          console.log('Initial RPC call completed. Data:', data, 'Error:', error);
+          
+          if (!error && data && Array.isArray(data) && data.length > 0) {
+            console.log('Initial profile loaded successfully:', data[0]);
+            setProfile(data[0] as Profile);
+          } else {
+            console.error('Error loading initial profile:', error);
+            setProfile(null);
+          }
+        } catch (err) {
+          console.error('Exception or timeout loading initial profile:', err);
+          setProfile(null);
+        }
+      } else {
+        setProfile(null);
       }
       setLoading(false);
     });
@@ -80,8 +164,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return '/agent-dashboard';
       case 'vet':
         return '/vet-dashboard';
-      case 'driver':
-        return '/driver-dashboard';
+      case 'load_master':
+        return '/load-master-dashboard';
       default:
         return '/';
     }

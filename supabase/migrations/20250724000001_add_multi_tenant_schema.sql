@@ -35,9 +35,33 @@ CREATE TABLE public.company_user_relationships (
 ALTER TABLE public.livestock_listings 
 ADD COLUMN company_id UUID REFERENCES public.companies(id) ON DELETE CASCADE;
 
--- Add company_id to listing_invitations table
-ALTER TABLE public.listing_invitations 
-ADD COLUMN company_id UUID REFERENCES public.companies(id) ON DELETE CASCADE;
+-- Add company_id to listing_invitations table (create table if it doesn't exist)
+DO $$ 
+BEGIN
+    -- Create listing_invitations table if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'listing_invitations') THEN
+        CREATE TABLE public.listing_invitations (
+            id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+            reference_id TEXT NOT NULL UNIQUE,
+            seller_id UUID REFERENCES auth.users(id),
+            seller_email TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'completed', 'expired')),
+            created_by UUID NOT NULL REFERENCES auth.users(id),
+            listing_id UUID REFERENCES public.livestock_listings(id),
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+        );
+        
+        -- Enable RLS
+        ALTER TABLE public.listing_invitations ENABLE ROW LEVEL SECURITY;
+    END IF;
+    
+    -- Add company_id column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'listing_invitations' AND column_name = 'company_id') THEN
+        ALTER TABLE public.listing_invitations 
+        ADD COLUMN company_id UUID REFERENCES public.companies(id) ON DELETE CASCADE;
+    END IF;
+END $$;
 
 -- Create indexes for performance
 CREATE INDEX idx_companies_admin_user_id ON public.companies(admin_user_id);

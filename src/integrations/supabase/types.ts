@@ -155,7 +155,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "company_user_relationships_user_id_fkey"
+            foreignKeyName: "fk_company_user_relationships_user_id"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -267,6 +267,7 @@ export type Database = {
           additional_r25_per_calf: boolean | null
           affidavit_file_path: string | null
           affidavit_required: boolean | null
+          assigned_load_master_id: string | null
           assigned_vet_id: string | null
           bred_or_bought: string
           breed: string | null
@@ -297,7 +298,13 @@ export type Database = {
           livestock_moved_out_of_boundaries: boolean | null
           livestock_moved_year: number | null
           livestock_type: string | null
+          loading_completion_data: Json | null
           loading_points: Json | null
+          loading_points_1: number | null
+          loading_points_2: number | null
+          loading_points_3: number | null
+          loading_points_4: number | null
+          loading_points_5: number | null
           location: string | null
           males_castrated: boolean | null
           mothers_status: string | null
@@ -324,6 +331,7 @@ export type Database = {
           additional_r25_per_calf?: boolean | null
           affidavit_file_path?: string | null
           affidavit_required?: boolean | null
+          assigned_load_master_id?: string | null
           assigned_vet_id?: string | null
           bred_or_bought: string
           breed?: string | null
@@ -354,7 +362,13 @@ export type Database = {
           livestock_moved_out_of_boundaries?: boolean | null
           livestock_moved_year?: number | null
           livestock_type?: string | null
+          loading_completion_data?: Json | null
           loading_points?: Json | null
+          loading_points_1?: number | null
+          loading_points_2?: number | null
+          loading_points_3?: number | null
+          loading_points_4?: number | null
+          loading_points_5?: number | null
           location?: string | null
           males_castrated?: boolean | null
           mothers_status?: string | null
@@ -381,6 +395,7 @@ export type Database = {
           additional_r25_per_calf?: boolean | null
           affidavit_file_path?: string | null
           affidavit_required?: boolean | null
+          assigned_load_master_id?: string | null
           assigned_vet_id?: string | null
           bred_or_bought?: string
           breed?: string | null
@@ -411,7 +426,13 @@ export type Database = {
           livestock_moved_out_of_boundaries?: boolean | null
           livestock_moved_year?: number | null
           livestock_type?: string | null
+          loading_completion_data?: Json | null
           loading_points?: Json | null
+          loading_points_1?: number | null
+          loading_points_2?: number | null
+          loading_points_3?: number | null
+          loading_points_4?: number | null
+          loading_points_5?: number | null
           location?: string | null
           males_castrated?: boolean | null
           mothers_status?: string | null
@@ -436,24 +457,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "livestock_listings_assigned_vet_id_fkey"
-            columns: ["assigned_vet_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            foreignKeyName: "fk_livestock_listings_reference_id"
+            columns: ["reference_id"]
+            isOneToOne: true
+            referencedRelation: "listing_invitations"
+            referencedColumns: ["reference_id"]
           },
           {
             foreignKeyName: "livestock_listings_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "livestock_listings_invitation_id_fkey"
-            columns: ["invitation_id"]
-            isOneToOne: false
-            referencedRelation: "detailed_listing_invitations"
             referencedColumns: ["id"]
           },
           {
@@ -590,7 +604,7 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
-          agent_agency_represented: string | null
+          agency_represented: string | null
           apac_registration_url: string | null
           appointment_letter_url: string | null
           approved_at: string | null
@@ -609,11 +623,13 @@ export type Database = {
           declaration_responsible_person_definition: boolean | null
           declaration_veterinary_products_registered: boolean | null
           email: string
+          entity_name: string | null
           first_name: string | null
           id: string
           id_document_url: string | null
           language_preference: Database["public"]["Enums"]["language_preference"]
           last_name: string | null
+          ownership_type: string | null
           phone: string | null
           postal_code: string | null
           practice_letter_head_url: string | null
@@ -623,6 +639,7 @@ export type Database = {
           registration_number: string | null
           responsible_person_designation: string | null
           responsible_person_name: string | null
+          responsible_person_title: string | null
           role: Database["public"]["Enums"]["user_role"]
           seller_entity_name: string | null
           seller_ownership_type: string | null
@@ -637,7 +654,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
-          agent_agency_represented?: string | null
+          agency_represented?: string | null
           apac_registration_url?: string | null
           appointment_letter_url?: string | null
           approved_at?: string | null
@@ -656,11 +673,13 @@ export type Database = {
           declaration_responsible_person_definition?: boolean | null
           declaration_veterinary_products_registered?: boolean | null
           email: string
+          entity_name?: string | null
           first_name?: string | null
           id: string
           id_document_url?: string | null
           language_preference?: Database["public"]["Enums"]["language_preference"]
           last_name?: string | null
+          ownership_type?: string | null
           phone?: string | null
           postal_code?: string | null
           practice_letter_head_url?: string | null
@@ -670,6 +689,7 @@ export type Database = {
           registration_number?: string | null
           responsible_person_designation?: string | null
           responsible_person_name?: string | null
+          responsible_person_title?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           seller_entity_name?: string | null
           seller_ownership_type?: string | null
@@ -684,7 +704,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
-          agent_agency_represented?: string | null
+          agency_represented?: string | null
           apac_registration_url?: string | null
           appointment_letter_url?: string | null
           approved_at?: string | null
@@ -703,11 +723,13 @@ export type Database = {
           declaration_responsible_person_definition?: boolean | null
           declaration_veterinary_products_registered?: boolean | null
           email?: string
+          entity_name?: string | null
           first_name?: string | null
           id?: string
           id_document_url?: string | null
           language_preference?: Database["public"]["Enums"]["language_preference"]
           last_name?: string | null
+          ownership_type?: string | null
           phone?: string | null
           postal_code?: string | null
           practice_letter_head_url?: string | null
@@ -717,6 +739,7 @@ export type Database = {
           registration_number?: string | null
           responsible_person_designation?: string | null
           responsible_person_name?: string | null
+          responsible_person_title?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           seller_entity_name?: string | null
           seller_ownership_type?: string | null
@@ -736,98 +759,78 @@ export type Database = {
           cattle_mouthed: boolean | null
           cattle_visually_inspected: boolean | null
           created_at: string
-          farm_address: string | null
+          farm_address: string
           farm_district: string | null
           farm_name: string | null
           farm_province: string | null
           foot_and_mouth_case_in_10km: boolean | null
           foot_and_mouth_symptoms: boolean | null
-          id: number
+          id: string
           lumpy_skin_disease_symptoms: boolean | null
-          owner_of_livestock: string | null
+          owner_of_livestock: string
           reference_id: string
           rift_valley_fever_case_in_10km: boolean | null
           sheep_mouthed: boolean | null
           sheep_visually_inspected: boolean | null
-          veterinarian_name: string | null
-          veterinarian_registration_number: string | null
+          updated_at: string
+          veterinarian_name: string
+          veterinarian_registration_number: string
         }
         Insert: {
           cattle_mouthed?: boolean | null
           cattle_visually_inspected?: boolean | null
           created_at?: string
-          farm_address?: string | null
+          farm_address: string
           farm_district?: string | null
           farm_name?: string | null
           farm_province?: string | null
           foot_and_mouth_case_in_10km?: boolean | null
           foot_and_mouth_symptoms?: boolean | null
-          id?: never
+          id?: string
           lumpy_skin_disease_symptoms?: boolean | null
-          owner_of_livestock?: string | null
+          owner_of_livestock: string
           reference_id: string
           rift_valley_fever_case_in_10km?: boolean | null
           sheep_mouthed?: boolean | null
           sheep_visually_inspected?: boolean | null
-          veterinarian_name?: string | null
-          veterinarian_registration_number?: string | null
+          updated_at?: string
+          veterinarian_name: string
+          veterinarian_registration_number: string
         }
         Update: {
           cattle_mouthed?: boolean | null
           cattle_visually_inspected?: boolean | null
           created_at?: string
-          farm_address?: string | null
+          farm_address?: string
           farm_district?: string | null
           farm_name?: string | null
           farm_province?: string | null
           foot_and_mouth_case_in_10km?: boolean | null
           foot_and_mouth_symptoms?: boolean | null
-          id?: never
+          id?: string
           lumpy_skin_disease_symptoms?: boolean | null
-          owner_of_livestock?: string | null
+          owner_of_livestock?: string
           reference_id?: string
           rift_valley_fever_case_in_10km?: boolean | null
           sheep_mouthed?: boolean | null
           sheep_visually_inspected?: boolean | null
-          veterinarian_name?: string | null
-          veterinarian_registration_number?: string | null
+          updated_at?: string
+          veterinarian_name?: string
+          veterinarian_registration_number?: string
         }
         Relationships: [
           {
-            foreignKeyName: "veterinary_declarations_reference_id_fkey"
+            foreignKeyName: "fk_veterinary_declarations_reference_id"
             columns: ["reference_id"]
             isOneToOne: false
             referencedRelation: "livestock_listings"
-            referencedColumns: ["id"]
+            referencedColumns: ["reference_id"]
           },
         ]
       }
     }
     Views: {
-      detailed_listing_invitations: {
-        Row: {
-          company_name: string | null
-          created_at: string | null
-          created_by: string | null
-          id: string | null
-          listing_id: string | null
-          reference_id: string | null
-          seller_email: string | null
-          seller_id: string | null
-          seller_profile_email: string | null
-          status: string | null
-          updated_at: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "listing_invitations_listing_id_fkey"
-            columns: ["listing_id"]
-            isOneToOne: false
-            referencedRelation: "livestock_listings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       approve_user_by_admin: {
@@ -851,19 +854,12 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      get_company_for_listing: {
-        Args: { listing_id: string }
-        Returns: {
-          company_id: string
-          company_name: string
-        }[]
-      }
       get_company_name_for_pending_invitation: {
         Args: { invitation_email: string }
         Returns: {
           company_id: string
           company_name: string
-          relationship_type: Database["public"]["Enums"]["user_role"]
+          relationship_type: string
         }[]
       }
       get_company_users: {
@@ -910,10 +906,41 @@ export type Database = {
           user_role: Database["public"]["Enums"]["user_role"]
         }[]
       }
+      get_user_profile: {
+        Args: { user_id?: string }
+        Returns: {
+          id: string
+          first_name: string
+          last_name: string
+          email: string
+          phone: string
+          role: Database["public"]["Enums"]["user_role"]
+          status: Database["public"]["Enums"]["user_status"]
+          profile_completed: boolean
+          seller_entity_name: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      link_listing_invitations_for_user: {
+        Args: { user_id: string; user_email: string }
+        Returns: number
+      }
+      link_user_invitations: {
+        Args: { user_email: string }
+        Returns: Json
+      }
     }
     Enums: {
       language_preference: "en" | "af"
-      user_role: "super_admin" | "admin" | "seller" | "vet" | "agent" | "driver"
+      user_role:
+        | "super_admin"
+        | "admin"
+        | "seller"
+        | "vet"
+        | "agent"
+        | "driver"
+        | "load_master"
       user_status: "pending" | "approved" | "rejected" | "suspended"
     }
     CompositeTypes: {
@@ -1043,7 +1070,15 @@ export const Constants = {
   public: {
     Enums: {
       language_preference: ["en", "af"],
-      user_role: ["super_admin", "admin", "seller", "vet", "agent", "driver"],
+      user_role: [
+        "super_admin",
+        "admin",
+        "seller",
+        "vet",
+        "agent",
+        "driver",
+        "load_master",
+      ],
       user_status: ["pending", "approved", "rejected", "suspended"],
     },
   },

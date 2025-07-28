@@ -67,7 +67,7 @@ export const livestockListingSchema = z.object({
   // Livestock loading details
   number_cattle_loaded: z.number().min(0).default(0),
   number_sheep_loaded: z.number().min(0).default(0),
-  truck_registration_number: z.string().min(1, 'Truck registration number is required'),
+  truck_registration_number: z.string().optional(), // Now captured by Load Master during loading process
   
   // Signature validation
   signature_data: z.string().min(1, 'Digital signature is required'),

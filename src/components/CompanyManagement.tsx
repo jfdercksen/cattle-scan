@@ -17,6 +17,15 @@ import type { Tables } from "@/integrations/supabase/types";
 
 type Profile = Tables<'profiles'>;
 
+// Define the structure of company settings JSON
+interface CompanySettings {
+  description?: string;
+  phone?: string;
+  registration_number?: string;
+  address?: string;
+  [key: string]: unknown; // Allow for additional properties
+}
+
 interface CompanyWithUsers extends Company {
   userCount: number;
   users: (CompanyUserRelationship & { profiles: Profile })[];
@@ -36,7 +45,7 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'admin' | 'seller' | 'vet'>('seller');
+  const [inviteRole, setInviteRole] = useState<'admin' | 'seller' | 'vet' | 'load_master'>('seller');
   const [inviteLoading, setInviteLoading] = useState(false);
 
   const isSuperAdmin = profile?.role === 'super_admin';
@@ -277,7 +286,7 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
                 )}
               </CardTitle>
               <CardDescription>
-                {company.settings?.description || 'No description provided'}
+                {(company.settings as CompanySettings)?.description || 'No description provided'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -293,15 +302,15 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
                   </span>
                 </div>
 
-                {company.settings?.phone && (
+                {(company.settings as CompanySettings)?.phone && (
                   <div className="text-sm text-slate-600">
-                    <strong>Phone:</strong> {company.settings.phone}
+                    <strong>Phone:</strong> {(company.settings as CompanySettings).phone}
                   </div>
                 )}
 
-                {company.settings?.registration_number && (
+                {(company.settings as CompanySettings)?.registration_number && (
                   <div className="text-sm text-slate-600">
-                    <strong>Reg #:</strong> {company.settings.registration_number}
+                    <strong>Reg #:</strong> {(company.settings as CompanySettings).registration_number}
                   </div>
                 )}
 
@@ -411,30 +420,30 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
                       <div>
                         <strong>Created:</strong> {new Date(selectedCompany.created_at).toLocaleDateString()}
                       </div>
-                      {selectedCompany.settings?.phone && (
+                      {(selectedCompany.settings as CompanySettings)?.phone && (
                         <div>
-                          <strong>Phone:</strong> {selectedCompany.settings.phone}
+                          <strong>Phone:</strong> {(selectedCompany.settings as CompanySettings).phone}
                         </div>
                       )}
-                      {selectedCompany.settings?.registration_number && (
+                      {(selectedCompany.settings as CompanySettings)?.registration_number && (
                         <div>
-                          <strong>Registration:</strong> {selectedCompany.settings.registration_number}
+                          <strong>Registration:</strong> {(selectedCompany.settings as CompanySettings).registration_number}
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {selectedCompany.settings?.address && (
+                  {(selectedCompany.settings as CompanySettings)?.address && (
                     <div>
                       <strong>Address:</strong>
-                      <p className="text-sm text-slate-600 mt-1">{selectedCompany.settings.address}</p>
+                      <p className="text-sm text-slate-600 mt-1">{(selectedCompany.settings as CompanySettings).address}</p>
                     </div>
                   )}
 
-                  {selectedCompany.settings?.description && (
+                  {(selectedCompany.settings as CompanySettings)?.description && (
                     <div>
                       <strong>Description:</strong>
-                      <p className="text-sm text-slate-600 mt-1">{selectedCompany.settings.description}</p>
+                      <p className="text-sm text-slate-600 mt-1">{(selectedCompany.settings as CompanySettings).description}</p>
                     </div>
                   )}
                 </div>
@@ -472,7 +481,7 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
 
             <div className="space-y-2">
               <Label htmlFor="invite-role">Role</Label>
-              <Select value={inviteRole} onValueChange={(value: 'admin' | 'seller' | 'vet') => setInviteRole(value)}>
+              <Select value={inviteRole} onValueChange={(value: 'admin' | 'seller' | 'vet' | 'load_master') => setInviteRole(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
@@ -480,6 +489,7 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="seller">Seller</SelectItem>
                   <SelectItem value="vet">Veterinarian</SelectItem>
+                  <SelectItem value="load_master">Load Master</SelectItem>
                 </SelectContent>
               </Select>
             </div>

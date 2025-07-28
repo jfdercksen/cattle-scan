@@ -1,6 +1,14 @@
 -- Allow company members to view seller profiles for invitation dashboard
 -- This policy allows users to view profiles of sellers who have invitations in their company
 
+-- First create the missing function
+CREATE OR REPLACE FUNCTION public.get_current_user_status() 
+RETURNS public.user_status 
+AS $$ 
+  SELECT status FROM public.profiles WHERE id = auth.uid(); 
+$$ 
+LANGUAGE sql SECURITY DEFINER;
+
 CREATE POLICY "Company members can view seller profiles for invitations"
   ON public.profiles
   FOR SELECT

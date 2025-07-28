@@ -52,10 +52,15 @@ components/
 ```
 components/
 ├── LivestockListingForm.tsx      # Main livestock listing form container
-├── VeterinaryDeclarationForm.tsx # Veterinary health declaration form
+├── VeterinaryDeclarationForm.tsx # Veterinary health declaration form with conditional field visibility
 ├── LivestockOfferForm.tsx        # Offer submission form
 ├── ListingInvitationForm.tsx     # Admin invitation creation form
-└── SignaturePad.tsx              # Digital signature capture component
+├── SignaturePad.tsx              # Digital signature capture with mobile calibration
+├── FileUploadManager.tsx         # File upload component with camera integration
+├── CompanyRegistrationForm.tsx   # Company registration for admins
+├── CompanySelector.tsx           # Company context switching component
+├── CompanyManagement.tsx         # Company management interface
+└── CompanyUserRelationshipManager.tsx # Multi-tenant user relationship management
 ```
 
 #### Data Display Components (Tables & Views)
@@ -85,15 +90,15 @@ components/
 ##### Multi-step Form Sections (`components/livestock-listing-form/`)
 ```
 livestock-listing-form/
-├── FormStepper.tsx           # Step navigation component
-├── LivestockDetailsSection.tsx    # Basic livestock information
+├── FormStepper.tsx                # Mobile-responsive step navigation component
+├── LivestockDetailsSection.tsx    # Basic livestock information with field visibility control
 ├── BiosecuritySection.tsx         # Farm and biosecurity details
-├── LoadingPointsSection.tsx       # Multiple loading locations
-├── LoadingDetailsSection.tsx      # Transportation details
+├── LoadingPointsSection.tsx       # Multiple loading locations with enhanced address management
 ├── VetSelectionSection.tsx        # Veterinarian assignment
-├── DeclarationsSection.tsx        # Legal compliance declarations
+├── DeclarationsSection.tsx        # Legal compliance declarations with file uploads
 ├── OfferTermsSection.tsx          # Pricing and terms
-└── SignatureSection.tsx           # Digital signature capture
+├── SignatureSection.tsx           # Digital signature capture with geolocation
+└── LivestockLocationManager.tsx   # Enhanced location management for multiple herds
 ```
 
 ##### UI Components (`components/ui/`)
@@ -127,7 +132,7 @@ pages/
 ├── SellerDashboard.tsx     # Seller livestock and offers management
 ├── AgentDashboard.tsx      # Agent marketplace and offer tools
 ├── VetDashboard.tsx        # Veterinarian declaration tools
-└── DriverDashboard.tsx     # Transportation coordination
+└── LoadMasterDashboard.tsx # Load Master coordination and loading management
 ```
 
 #### Feature Pages
@@ -155,6 +160,7 @@ integrations/supabase/
 ```
 types/
 ├── livestock.ts            # Livestock-specific type definitions
+├── location.ts             # Enhanced location data models for multi-herd management
 └── supabase.ts             # Extended Supabase type utilities
 ```
 
@@ -165,10 +171,12 @@ lib/schemas/
 └── veterinaryDeclarationSchema.ts # Veterinary form validation
 ```
 
-#### State Management (`src/contexts/`, `src/hooks/`, `src/providers/`)
+#### State Management (`src/contexts/`, `src/hooks/`, `src/providers/`, `src/services/`)
 ```
 contexts/
-└── auth.ts                 # Authentication context definition
+├── auth.ts                 # Authentication context definition
+├── companyContext.tsx      # Company context for multi-tenant switching
+└── languageContext.tsx     # Language preference management
 
 hooks/
 ├── use-mobile.tsx          # Mobile device detection
@@ -176,13 +184,23 @@ hooks/
 └── useUserProfile.ts       # User profile data management
 
 providers/
-└── AuthProvider.tsx        # Authentication state provider
+└── AuthProvider.tsx        # Authentication state provider with multi-tenant support
+
+services/
+├── companyService.ts       # Company management and user relationships
+├── invitationManager.ts    # Multi-tenant invitation system
+└── multiTenantDashboardController.ts # Role-based dashboard data management
 ```
 
 #### Utilities (`src/lib/`)
 ```
 lib/
-└── utils.ts                # Utility functions (cn, clsx, etc.)
+├── utils.ts                      # Utility functions (cn, clsx, etc.)
+├── fieldVisibility.ts            # Field visibility controller for modular features
+├── calculationEngine.ts          # Automated calculations for livestock requirements
+├── signaturePadController.ts     # Mobile signature pad calibration and accuracy
+└── __tests__/
+    └── calculationEngine.test.ts # Unit tests for calculation engine
 ```
 
 ### Layout System (`src/layouts/`)

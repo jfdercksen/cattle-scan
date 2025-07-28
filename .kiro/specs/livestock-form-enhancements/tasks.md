@@ -2,14 +2,14 @@
 
 ## FOUNDATIONAL ARCHITECTURE TASKS (Must be completed first)
 
-- [-] 0. Implement Multi-Tenant Company-Based Architecture (FOUNDATIONAL)
+- [x] 0. Implement Multi-Tenant Company-Based Architecture (FOUNDATIONAL)
   - Create company-based multi-tenancy system
   - Implement company-user relationship management
   - Update invitation system for multi-company support
   - Add data isolation and access controls
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10_
 
-- [ ] 0.1 Create Multi-Tenant Database Schema (FOUNDATIONAL)
+- [x] 0.1 Create Multi-Tenant Database Schema (FOUNDATIONAL)
   - Create companies table with admin_user_id and company settings
   - Create company_user_relationships table for many-to-many relationships
   - Add company_id to livestock_listings table
@@ -17,35 +17,35 @@
   - Add database constraints and indexes for multi-tenancy
   - _Requirements: 1.1, 1.2, 1.3, 1.9_
 
-- [ ] 0.2 Implement Company Registration and Management (FOUNDATIONAL)
+- [x] 0.2 Implement Company Registration and Management (FOUNDATIONAL)
   - Create company registration flow for first-time super_admin
   - Implement admin registration with company association
   - Build company management interface for super_admin
   - Add company settings and configuration options
   - _Requirements: 1.1, 1.2_
 
-- [ ] 0.3 Build Multi-Company Invitation System (FOUNDATIONAL)
+- [x] 0.3 Build Multi-Company Invitation System (FOUNDATIONAL)
   - Create InvitationManager with checkUserExists() method
   - Implement separate email templates for new users vs existing users
   - Build invitation workflow for existing user company relationships
   - Add invitation status tracking and management
   - _Requirements: 7.1, 7.2, 7.3, 7.10_
 
-- [ ] 0.4 Implement Company-User Relationship Management (FOUNDATIONAL)
+- [x] 0.4 Implement Company-User Relationship Management (FOUNDATIONAL)
   - Create CompanyUserRelationship model and database operations
   - Implement relationship creation, activation, and deactivation
   - Build user interface for managing company relationships
   - Add relationship status tracking and notifications
   - _Requirements: 1.4, 1.5, 1.6, 7.4, 7.5, 7.6_
 
-- [ ] 0.5 Add Multi-Tenant Data Access Controls (FOUNDATIONAL)
+- [x] 0.5 Add Multi-Tenant Data Access Controls (FOUNDATIONAL)
   - Implement company-based data filtering for all queries
   - Create MultiTenantDashboardController for role-specific data access
   - Add company context switching for users with multiple relationships
   - Implement data isolation validation and security checks
   - _Requirements: 1.5, 1.6, 1.9_
 
-- [ ] 0.6 Update Dashboards for Multi-Tenancy (FOUNDATIONAL)
+- [x] 0.6 Update Dashboards for Multi-Tenancy (FOUNDATIONAL)
   - Update AdminDashboard to show only company-specific data
   - Modify SellerDashboard to display multiple company relationships
   - Add company context selector for users with multiple relationships
@@ -81,32 +81,51 @@
   - Implement section-level disable/enable functionality
   - _Requirements: 2.5_
 
-- [ ] 2. Add Load Master Role and Dashboard
-  - Create Load Master role in user_role enum
+- [-] 2. Add Load Master Role and Dashboard
+  - Replace Driver with Load Master role in user_role enum
   - Build LoadMasterDashboard component with loading-specific functionality
-  - Implement loading details management restricted to Load Master role
+  - Move LoadingDetailsSection from seller form to Load Master workflow
+  - Implement admin assignment of Load Masters to listings after vet completion
   - Add loading completion workflow with geolocation capture
   - _Requirements: 1.2, 1.3, 1.4_
 
-- [ ] 2.1 Create Load Master Role Infrastructure
-  - Add 'load_master' to user_role enum in database
+- [x] 2.1 Replace Driver Role with Load Master Role Infrastructure
+  - Replace 'driver' with 'load_master' in user_role enum in database
   - Update role-based routing to include Load Master dashboard
-  - Create LoadMasterDashboard page component
+  - Rename DriverDashboard.tsx to LoadMasterDashboard.tsx
   - Add Load Master specific navigation and permissions
+  - Update all references from driver to load_master in codebase
   - _Requirements: 1.2, 1.3_
 
-- [ ] 2.2 Build Loading Management Interface
-  - Create LoadingSchedule and LoadingRecord interfaces
-  - Implement pendingLoadings and completedLoadings data fetching
-  - Build loading details form with vehicle information
-  - Add loading status tracking and updates
+- [x] 2.2 Move Loading Details to Load Master Workflow
+  - Move LoadingDetailsSection.tsx from livestock-listing-form to Load Master workflow
+  - Remove loading details from seller form (LivestockListingForm.tsx)
+  - Create Load Master specific loading details form component
+  - Update LoadingDetailsSection to work independently of seller form
   - _Requirements: 1.4_
 
-- [ ] 2.3 Implement Loading Completion Workflow
-  - Create updateLoadingDetails method with geolocation capture
+- [x] 2.3 Implement Admin Load Master Assignment
+  - Add Load Master assignment interface to AdminViewListingPage.tsx
+  - Create Load Master invitation/assignment functionality for admins
+  - Implement workflow: Seller submits → Vet completes → Admin assigns Load Master → Load Master completes
+  - Add Load Master assignment only after vet declaration is submitted
+  - Create Load Master invitation system similar to seller/vet invitations
+  - _Requirements: 1.4, 7.1, 7.2_
+
+- [x] 2.4 Build Load Master Dashboard and Workflow
+  - Create LoadMasterDashboard with assigned listings
+  - Show listings available for loading (vet completed, Load Master assigned)
+  - Implement loading details form with vehicle information
   - Add loading completion validation and state transitions
-  - Implement loading notes and livestock condition tracking
   - Create loading completion notifications
+  - _Requirements: 1.4, 8.1, 8.2_
+
+- [ ] 2.5 Implement Loading Completion Workflow
+  - Create updateLoadingDetails method with geolocation capture
+  - Add loading status tracking and updates
+  - Implement loading notes and livestock condition tracking
+  - Update listing status to 'loading_completed' when Load Master finishes
+  - Create loading completion notifications to relevant parties
   - _Requirements: 1.4, 8.1, 8.2_
 
 - [x] 3. Enhanced Livestock Location Management
@@ -192,21 +211,21 @@
   - Update form validation to only validate visible fields
   - _Requirements: 6.5_
 
-- [ ] 6. Enhanced Multi-Company Invitation System (Depends on 0.3, 0.4)
+- [x] 6. Enhanced Multi-Company Invitation System (Depends on 0.3, 0.4)
   - Integrate multi-tenant invitation system with livestock listing workflow
   - Add company-specific invitation templates and branding
   - Implement cross-company seller/vet sharing functionality
   - Create invitation acceptance workflow for existing users
   - _Requirements: 7.7, 7.8, 7.9_
 
-- [ ] 6.1 Integrate Multi-Tenant Invitations with Livestock Workflow
+- [x] 6.1 Integrate Multi-Tenant Invitations with Livestock Workflow
   - Update ListingInvitationForm to use multi-tenant invitation system
   - Add company context to all invitation-related operations
   - Implement invitation acceptance for existing users
   - Create notification system for new company relationships
   - _Requirements: 7.7, 7.8_
 
-- [ ] 6.2 Enhance Cross-Company User Sharing
+- [x] 6.2 Enhance Cross-Company User Sharing
   - Implement seller/vet sharing across multiple companies
   - Add user interface for managing multiple company relationships
   - Create company-specific user lists and filtering
@@ -269,27 +288,6 @@
   - Create audit trail display for administrators
   - _Requirements: 9.4_
 
-- [ ] 9. Implement Responsible Person Validation
-  - Add age validation (18+ years) for responsible persons
-  - Create management role confirmation requirements
-  - Support multiple responsible persons for different herds
-  - Implement responsible person data persistence throughout transaction lifecycle
-  - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
-
-- [ ] 9.1 Create Responsible Person Data Models
-  - Build ResponsiblePerson interface with age and role validation
-  - Add responsible person fields to livestock listings
-  - Create validation schemas for responsible person data
-  - Implement responsible person relationship to herds
-  - _Requirements: 10.1, 10.2, 10.3_
-
-- [ ] 9.2 Add Responsible Person Validation
-  - Implement age validation (18+ years) in form validation
-  - Add management role confirmation checkboxes
-  - Create responsible person data persistence logic
-  - Add validation error handling and user feedback
-  - _Requirements: 10.1, 10.2, 10.4, 10.5_
-
 - [x] 10. Enhanced Form Structure and User Experience (HIGH PRIORITY)
   - Hide advanced livestock detail fields for initial launch (modular approach)
   - Create dedicated "Livestock Location" tab separate from other sections
@@ -327,8 +325,34 @@
   - _Requirements: 4.3, 4.7_
 
 - [x] 10.1 Simplify Form Fields for Initial Launch (CRITICAL)
+  - Implemented FieldVisibilityController with modular field hiding
+  - Hidden advanced fields: weaning status, grain feeding, growth implants, breed details, estimated weight
+  - Removed redundant weighing location field
+  - Maintained database schema for future feature activation
+  - _Requirements: 4.6, 4.7, 3.6_
+
 - [x] 10.2 Fix Mobile Responsiveness Issues (CRITICAL) 
+  - Implemented responsive FormStepper with mobile-specific navigation
+  - Added vertical progress bar and step indicators for mobile
+  - Fixed horizontal scrolling issues with proper responsive design
+  - Tested across different mobile screen sizes
+  - _Requirements: 11.1, 11.3, 11.5, 11.6_
+
 - [x] 10.3 Fix Signature Pad Accuracy (CRITICAL)
+  - Implemented SignaturePadController with device-specific touch calibration
+  - Added touch offset calculations for iOS and Android devices
+  - Implemented responsive canvas sizing and touch accuracy improvements
+  - Added signature validation and quality metrics
+  - _Requirements: 11.2, 11.4, 11.6_
+
+- [x] 10.4 Implement Conditional Field Visibility (COMPLETED)
+  - Implemented livestock type-based field visibility in VeterinaryDeclarationForm
+  - Hide cattle-related fields when only sheep are loaded
+  - Hide sheep-related fields when only cattle are loaded
+  - Show all fields when both cattle and sheep are loaded
+  - Added LivestockCalculations utility for type determination
+  - _Requirements: 4.3, 4.7_
+
 - [ ] 11. Update Declaration Content and Wording (HIGH PRIORITY)
 - [ ] 11.1 Update Declaration Content and Wording (HIGH PRIORITY)
   - Update declaration text based on client-provided corrected wording
