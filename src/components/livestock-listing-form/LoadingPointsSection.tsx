@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { YesNoSwitch } from '@/components/ui/YesNoSwitch';
 import { useLivestockLocationManager } from './LivestockLocationManager';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface LoadingPointsSectionProps {
   fields: FieldArrayWithId<LivestockListingFormData, 'loading_points', 'id'>[];
@@ -45,8 +46,22 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
       },
       is_current_same_as_birth: false,
       is_loading_same_as_current: false,
-      number_of_cattle: 0,
-      number_of_sheep: 0,
+      details: {
+        livestock_type: undefined,
+        bred_or_bought: undefined,
+        number_of_males: 0,
+        number_of_females: 0,
+        males_castrated: false,
+      },
+      biosecurity: {
+        is_breeder_seller: false,
+        breeder_name: undefined,
+        livestock_moved_out_of_boundaries: false,
+        livestock_moved_location: undefined,
+        livestock_moved_location_to: undefined,
+        livestock_moved_year: undefined,
+        livestock_moved_month: undefined,
+      },
     });
   };
 
@@ -87,6 +102,140 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Per-Herd Livestock Details */}
+              <div>
+                <h4 className="text-base font-medium">Herd Livestock Details</h4>
+                <div className="grid grid-cols-1 gap-4 mt-2">
+                  <FormField
+                    control={form.control}
+                    name={`loading_points.${index}.details.livestock_type`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Herd livestock type</FormLabel>
+                        <FormControl>
+                          <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-row space-x-4">
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="CATTLE" id={`herd-cattle-${index}`} />
+                              <Label htmlFor={`herd-cattle-${index}`}>Cattle</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="SHEEP" id={`herd-sheep-${index}`} />
+                              <Label htmlFor={`herd-sheep-${index}`}>Sheep</Label>
+                            </div>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name={`loading_points.${index}.details.bred_or_bought`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Did you breed or buy in?</FormLabel>
+                        <FormControl>
+                          <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-row space-x-4">
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="BRED" id={`bred-${index}`} />
+                              <Label htmlFor={`bred-${index}`}>Bred</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="BOUGHT IN" id={`bought-${index}`} />
+                              <Label htmlFor={`bought-${index}`}>Bought in</Label>
+                            </div>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  
+                  <FormField
+                    control={form.control}
+                    name={`loading_points.${index}.biosecurity.is_breeder_seller`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center justify-between rounded-md border p-2 h-full">
+                          <FormLabel>Is the breeder the seller?</FormLabel>
+                          <FormControl>
+                            <YesNoSwitch value={field.value} onChange={field.onChange} />
+                          </FormControl>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {!form.watch(`loading_points.${index}.biosecurity.is_breeder_seller`) && (
+                    <FormField
+                      control={form.control}
+                      name={`loading_points.${index}.biosecurity.breeder_name`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Breeder Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter breeder name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  <FormField
+                    control={form.control}
+                    name={`loading_points.${index}.details.number_of_males`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Number of males</FormLabel>
+                        <FormControl>
+                          <Input type="number" min="0" value={field.value} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name={`loading_points.${index}.details.number_of_females`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Number of females</FormLabel>
+                        <FormControl>
+                          <Input type="number" min="0" value={field.value} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-4 mt-4">
+                  {(livestockType === 'CATTLE' || livestockType === 'CATTLE AND SHEEP') && (
+                    <FormField
+                      control={form.control}
+                      name={`loading_points.${index}.details.males_castrated`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center justify-between py-2 border-b">
+                            <FormLabel>Have the males been castrated?</FormLabel>
+                            <FormControl>
+                              <YesNoSwitch value={field.value} onChange={field.onChange} />
+                            </FormControl>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              </div>
+
+
               {/* Birth Address Section */}
               <div>
                 <Label className="text-base font-medium">Birth Address - Where was the livestock born?</Label>
@@ -267,41 +416,150 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
 
               <Separator />
 
-              {/* Livestock Numbers Section */}
+              {/* Per-Herd Biosecurity Details */}
               <div>
-                <Label className="text-base font-medium">Number of livestock to be loaded from this location</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                  {(livestockType === 'CATTLE' || livestockType === 'CATTLE AND SHEEP') && (
-                    <FormField
-                      control={form.control}
-                      name={`loading_points.${index}.number_of_cattle`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Number of Cattle</FormLabel>
+                <h4 className="text-base font-medium">Herd Biosecurity</h4>
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name={`loading_points.${index}.biosecurity.livestock_moved_out_of_boundaries`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center justify-between rounded-md border p-2 h-full">
+                          <FormLabel>Moved out of property boundaries?</FormLabel>
                           <FormControl>
-                            <Input type="number" min="0" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)} />
+                            <YesNoSwitch value={field.value} onChange={field.onChange} />
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-                  {(livestockType === 'SHEEP' || livestockType === 'CATTLE AND SHEEP') && (
-                    <FormField
-                      control={form.control}
-                      name={`loading_points.${index}.number_of_sheep`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Number of Sheep</FormLabel>
-                          <FormControl>
-                            <Input type="number" min="0" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 0)} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
+
+                {form.watch(`loading_points.${index}.biosecurity.livestock_moved_out_of_boundaries`) && (
+                  <div className="mt-4">
+                    <Label>Location where livestock was moved from</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                      <FormField
+                        control={form.control}
+                        name={`loading_points.${index}.biosecurity.livestock_moved_location.farm_name`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Farm Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter farm name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`loading_points.${index}.biosecurity.livestock_moved_location.district`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">District</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter district" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`loading_points.${index}.biosecurity.livestock_moved_location.province`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Province</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter province" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="mt-4">
+                      <Label>Location where livestock was moved to</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                        <FormField
+                          control={form.control}
+                          name={`loading_points.${index}.biosecurity.livestock_moved_location_to.farm_name`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Farm Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Enter farm name" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`loading_points.${index}.biosecurity.livestock_moved_location_to.district`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">District</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Enter district" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`loading_points.${index}.biosecurity.livestock_moved_location_to.province`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Province</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Enter province" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <Label>When was the livestock moved there?</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        <FormField
+                          control={form.control}
+                          name={`loading_points.${index}.biosecurity.livestock_moved_year`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Year</FormLabel>
+                              <FormControl>
+                                <Input type="number" placeholder="Enter year" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`loading_points.${index}.biosecurity.livestock_moved_month`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Month</FormLabel>
+                              <FormControl>
+                                <Input type="number" placeholder="Enter month" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
 

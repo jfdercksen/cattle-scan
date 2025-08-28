@@ -201,6 +201,7 @@ export type Database = {
           invited_vet_email: string | null
           is_breeder_seller: boolean | null
           livestock_moved_location: string | null
+          livestock_moved_location_to: string | null
           livestock_moved_month: number | null
           livestock_moved_out_of_boundaries: boolean | null
           livestock_moved_year: number | null
@@ -256,6 +257,7 @@ export type Database = {
           invited_vet_email?: string | null
           is_breeder_seller?: boolean | null
           livestock_moved_location?: string | null
+          livestock_moved_location_to?: string | null
           livestock_moved_month?: number | null
           livestock_moved_out_of_boundaries?: boolean | null
           livestock_moved_year?: number | null
@@ -311,6 +313,7 @@ export type Database = {
           invited_vet_email?: string | null
           is_breeder_seller?: boolean | null
           livestock_moved_location?: string | null
+          livestock_moved_location_to?: string | null
           livestock_moved_month?: number | null
           livestock_moved_out_of_boundaries?: boolean | null
           livestock_moved_year?: number | null

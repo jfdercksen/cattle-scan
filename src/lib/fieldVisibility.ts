@@ -151,6 +151,7 @@ export class FieldVisibilityController {
           'farm_loading_address',
           'livestock_moved_out_of_boundaries',
           'livestock_moved_location',
+          'livestock_moved_location_to',
           'livestock_moved_year',
           'livestock_moved_month',
         ];

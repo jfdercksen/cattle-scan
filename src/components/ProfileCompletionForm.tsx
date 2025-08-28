@@ -257,14 +257,14 @@ const ProfileCompletion = () => {
 
   if (authLoading || profileLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">Loading...</div>
       </div>
     );
   }
 
   if (!profile) return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 flex items-center justify-center">
+    <div className="min-h-screen bg-white flex items-center justify-center">
       <div className="text-center">Could not load profile. Please try again.</div>
     </div>
   );
@@ -515,11 +515,11 @@ const ProfileCompletion = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader className="space-y-4">
           <div className="text-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-emerald-600 to-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
               <Shield className="w-6 h-6 text-white" />
             </div>
             <CardTitle className="text-2xl font-bold">

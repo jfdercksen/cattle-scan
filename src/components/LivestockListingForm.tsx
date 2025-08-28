@@ -52,6 +52,22 @@ interface LoadingPoint {
   is_loading_same_as_current: boolean;
   number_of_cattle: number;
   number_of_sheep: number;
+  details?: {
+    livestock_type?: 'CATTLE' | 'SHEEP';
+    bred_or_bought?: 'BRED' | 'BOUGHT IN';
+    number_of_males: number;
+    number_of_females: number;
+    males_castrated: boolean;
+  };
+  biosecurity?: {
+    is_breeder_seller: boolean;
+    breeder_name?: string;
+    livestock_moved_out_of_boundaries: boolean;
+    livestock_moved_location?: Address;
+    livestock_moved_location_to?: Address;
+    livestock_moved_year?: number;
+    livestock_moved_month?: number;
+  };
 }
 
 const safeJsonParse = (str: string | Address | null | undefined, fallback: Address): Address => {
@@ -68,19 +84,19 @@ const safeJsonParse = (str: string | Address | null | undefined, fallback: Addre
   }
 };
 
-const safeJsonParseArray = (data: unknown, fallback: LoadingPoint[]): any[] => {
+const safeJsonParseArray = (data: unknown, fallback: LoadingPoint[]): unknown[] => {
   if (Array.isArray(data)) {
-    return data;
+    return data as unknown[];
   }
   if (typeof data === 'string') {
     try {
       const parsed = JSON.parse(data);
-      return Array.isArray(parsed) ? parsed : fallback;
+      return Array.isArray(parsed) ? (parsed as unknown[]) : (fallback as unknown[]);
     } catch (e) {
-      return fallback;
+      return fallback as unknown[];
     }
   }
-  return fallback;
+  return fallback as unknown[];
 };
 
 interface LivestockListingFormProps {
@@ -93,7 +109,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Database['public']['Tables']['profiles']['Row'] | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
@@ -127,12 +143,18 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
       farm_loading_address: { farm_name: '', district: '', province: '' },
       livestock_moved_out_of_boundaries: false,
       livestock_moved_location: { farm_name: '', district: '', province: '' },
+      livestock_moved_location_to: { farm_name: '', district: '', province: '' },
+      livestock_moved_year: undefined,
+      livestock_moved_month: undefined,
       declaration_no_cloven_hooved_animals: false,
       declaration_livestock_kept_away: false,
+      declaration_no_contact_with_non_resident_livestock: false,
       declaration_no_animal_origin_feed: false,
       declaration_veterinary_products_registered: false,
       declaration_no_foot_mouth_disease: false,
+      declaration_never_vaccinated_against_fmd: false,
       declaration_no_foot_mouth_disease_farm: false,
+      declaration_no_rift_valley_fever_10km_12_months: false,
       declaration_livestock_south_africa: false,
       declaration_no_gene_editing: false,
       number_cattle_loaded: 0,
@@ -153,8 +175,11 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
   });
 
   const loadingPointsValues = watch('loading_points');
-  const totalCattle = loadingPointsValues?.reduce((sum, point) => sum + (Number(point.number_of_cattle) || 0), 0) ?? 0;
-  const totalSheep = loadingPointsValues?.reduce((sum, point) => sum + (Number(point.number_of_sheep) || 0), 0) ?? 0;
+  const typedLoadingPoints: Array<{ number_of_cattle?: number; number_of_sheep?: number }> = Array.isArray(loadingPointsValues)
+    ? (loadingPointsValues as unknown as Array<{ number_of_cattle?: number; number_of_sheep?: number }>)
+    : [];
+  const totalCattle = typedLoadingPoints.reduce((sum, point) => sum + (Number(point.number_of_cattle) || 0), 0);
+  const totalSheep = typedLoadingPoints.reduce((sum, point) => sum + (Number(point.number_of_sheep) || 0), 0);
 
   useEffect(() => {
     if (getValues('number_cattle_loaded') !== totalCattle) {
@@ -174,7 +199,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         .select('*')
         .eq('id', user.id)
         .single()
-        .then(({ data, error }: { data: any; error: any }) => {
+        .then(({ data, error }) => {
           if (error) {
             console.error('Error fetching profile:', error);
             toast({ title: 'Error', description: 'Could not load your profile.', variant: 'destructive' });
@@ -190,9 +215,9 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
   }, [user, authLoading, toast]);
 
   const formSections = [
-    { title: "Livestock Details", component: <LivestockDetailsSection /> },
-    { title: "Biosecurity", component: <BiosecuritySection /> },
-    { title: "Loading Points", component: <LoadingPointsSection fields={fields} append={append} remove={remove} /> },
+    // { title: "Livestock Details", component: <LivestockDetailsSection /> },
+    // { title: "Biosecurity", component: <BiosecuritySection /> },
+    { title: "Movement Tracker", component: <LoadingPointsSection fields={fields} append={append} remove={remove} /> },
 
     { title: "Veterinarian", component: <VetSelectionSection /> },
     { title: "Offer Terms", component: <OfferTermsSection /> },
@@ -305,42 +330,120 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
             farm_loading_address: safeJsonParse(getJsonValue(listingData.farm_loading_address), { farm_name: '', district: '', province: '' }),
             livestock_moved_out_of_boundaries: getBoolean(listingData.livestock_moved_out_of_boundaries),
             livestock_moved_location: safeJsonParse(getJsonValue(listingData.livestock_moved_location), { farm_name: '', district: '', province: '' }),
+            livestock_moved_location_to: safeJsonParse(getJsonValue(listingData.livestock_moved_location_to), { farm_name: '', district: '', province: '' }),
+            livestock_moved_year: getNumber(listingData.livestock_moved_year) || undefined,
+            livestock_moved_month: getNumber(listingData.livestock_moved_month) || undefined,
             declaration_no_cloven_hooved_animals: getBoolean(listingData.declaration_no_cloven_hooved_animals),
             declaration_livestock_kept_away: getBoolean(listingData.declaration_livestock_kept_away),
+            declaration_no_contact_with_non_resident_livestock: getBoolean(listingData.declaration_no_contact_with_non_resident_livestock),
             declaration_no_animal_origin_feed: getBoolean(listingData.declaration_no_animal_origin_feed),
             declaration_veterinary_products_registered: getBoolean(listingData.declaration_veterinary_products_registered),
             declaration_no_foot_mouth_disease: getBoolean(listingData.declaration_no_foot_mouth_disease),
+            declaration_never_vaccinated_against_fmd: getBoolean(listingData.declaration_never_vaccinated_against_fmd),
             declaration_no_foot_mouth_disease_farm: getBoolean(listingData.declaration_no_foot_mouth_disease_farm),
+            declaration_no_rift_valley_fever_10km_12_months: getBoolean(listingData.declaration_no_rift_valley_fever_10km_12_months),
             declaration_livestock_south_africa: getBoolean(listingData.declaration_livestock_south_africa),
             declaration_no_gene_editing: getBoolean(listingData.declaration_no_gene_editing),
-            loading_points: safeJsonParseArray(listingData.loading_points, []).map(point => {
-              // Handle legacy format conversion
-              if ('is_loading_at_birth_farm' in point) {
-                // Convert old format to new format
-                const legacyPoint = point as any;
-                return {
-                  birth_address: legacyPoint.birth_address || { farm_name: '', district: '', province: '', postal_code: '' },
-                  current_address: legacyPoint.birth_address || { farm_name: '', district: '', province: '', postal_code: '' },
-                  loading_address: legacyPoint.is_loading_at_birth_farm
-                    ? legacyPoint.birth_address
-                    : (legacyPoint.loading_address || { farm_name: '', district: '', province: '', postal_code: '' }),
-                  is_current_same_as_birth: true,
-                  is_loading_same_as_current: legacyPoint.is_loading_at_birth_farm || false,
-                  number_of_cattle: legacyPoint.number_of_cattle || 0,
-                  number_of_sheep: legacyPoint.number_of_sheep || 0,
-                };
-              }
-              // New format - ensure all fields exist
-              return {
-                birth_address: point.birth_address || { farm_name: '', district: '', province: '', postal_code: '' },
-                current_address: point.current_address || { farm_name: '', district: '', province: '', postal_code: '' },
-                loading_address: point.loading_address || { farm_name: '', district: '', province: '', postal_code: '' },
-                is_current_same_as_birth: point.is_current_same_as_birth || false,
-                is_loading_same_as_current: point.is_loading_same_as_current || false,
-                number_of_cattle: point.number_of_cattle || 0,
-                number_of_sheep: point.number_of_sheep || 0,
+            loading_points: (() => {
+              const points = safeJsonParseArray(listingData.loading_points, []);
+              type LegacyPoint = {
+                birth_address?: Address;
+                loading_address?: Address;
+                is_loading_at_birth_farm?: boolean;
+                number_of_cattle?: number;
+                number_of_sheep?: number;
               };
-            }),
+              type NewPoint = {
+                birth_address?: Address;
+                current_address?: Address;
+                loading_address?: Address;
+                is_current_same_as_birth?: boolean;
+                is_loading_same_as_current?: boolean;
+                number_of_cattle?: number;
+                number_of_sheep?: number;
+                details?: {
+                  livestock_type?: 'CATTLE' | 'SHEEP';
+                  bred_or_bought?: 'BRED' | 'BOUGHT IN';
+                  number_of_males?: number;
+                  number_of_females?: number;
+                  males_castrated?: boolean;
+                };
+                biosecurity?: {
+                  is_breeder_seller?: boolean;
+                  breeder_name?: string;
+                  livestock_moved_out_of_boundaries?: boolean;
+                  livestock_moved_location?: Address;
+                  livestock_moved_location_to?: Address;
+                  livestock_moved_year?: number;
+                  livestock_moved_month?: number;
+                };
+              };
+              const isLegacyPoint = (p: unknown): p is LegacyPoint =>
+                typeof p === 'object' && p !== null && 'is_loading_at_birth_farm' in p;
+
+              const fallbackAddress: Address = { farm_name: '', district: '', province: '', postal_code: '' };
+
+              return points.map((point) => {
+                if (isLegacyPoint(point)) {
+                  const legacyPoint = point;
+                  return {
+                    birth_address: legacyPoint.birth_address || fallbackAddress,
+                    current_address: legacyPoint.birth_address || fallbackAddress,
+                    loading_address: legacyPoint.is_loading_at_birth_farm
+                      ? (legacyPoint.birth_address || fallbackAddress)
+                      : (legacyPoint.loading_address || fallbackAddress),
+                    is_current_same_as_birth: true,
+                    is_loading_same_as_current: legacyPoint.is_loading_at_birth_farm || false,
+                    number_of_cattle: legacyPoint.number_of_cattle || 0,
+                    number_of_sheep: legacyPoint.number_of_sheep || 0,
+                    details: {
+                      livestock_type: undefined,
+                      bred_or_bought: undefined,
+                      number_of_males: 0,
+                      number_of_females: 0,
+                      males_castrated: false,
+                    },
+                    biosecurity: {
+                      is_breeder_seller: true,
+                      breeder_name: undefined,
+                      livestock_moved_out_of_boundaries: false,
+                      livestock_moved_location: undefined,
+                      livestock_moved_location_to: undefined,
+                      livestock_moved_year: undefined,
+                      livestock_moved_month: undefined,
+                    },
+                  };
+                }
+                const p = point as NewPoint;
+                const rawDetails = p.details || {};
+                const rawBiosecurity = p.biosecurity || {};
+                return {
+                  birth_address: p.birth_address || fallbackAddress,
+                  current_address: p.current_address || fallbackAddress,
+                  loading_address: p.loading_address || fallbackAddress,
+                  is_current_same_as_birth: p.is_current_same_as_birth || false,
+                  is_loading_same_as_current: p.is_loading_same_as_current || false,
+                  number_of_cattle: p.number_of_cattle || 0,
+                  number_of_sheep: p.number_of_sheep || 0,
+                  details: {
+                    livestock_type: rawDetails.livestock_type,
+                    bred_or_bought: rawDetails.bred_or_bought,
+                    number_of_males: rawDetails.number_of_males ?? 0,
+                    number_of_females: rawDetails.number_of_females ?? 0,
+                    males_castrated: rawDetails.males_castrated ?? false,
+                  },
+                  biosecurity: {
+                    is_breeder_seller: rawBiosecurity.is_breeder_seller ?? true,
+                    breeder_name: rawBiosecurity.breeder_name,
+                    livestock_moved_out_of_boundaries: rawBiosecurity.livestock_moved_out_of_boundaries ?? false,
+                    livestock_moved_location: rawBiosecurity.livestock_moved_location || undefined,
+                    livestock_moved_location_to: rawBiosecurity.livestock_moved_location_to || undefined,
+                    livestock_moved_year: rawBiosecurity.livestock_moved_year ?? undefined,
+                    livestock_moved_month: rawBiosecurity.livestock_moved_month ?? undefined,
+                  },
+                };
+              });
+            })(),
             number_cattle_loaded: getNumber(listingData.number_cattle_loaded) || undefined,
             number_sheep_loaded: getNumber(listingData.number_sheep_loaded) || undefined,
             truck_registration_number: getString(listingData.truck_registration_number),
@@ -365,6 +468,22 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
             is_loading_same_as_current: false,
             number_of_cattle: 0,
             number_of_sheep: 0,
+            details: {
+              livestock_type: undefined,
+              bred_or_bought: undefined,
+              number_of_males: 0,
+              number_of_females: 0,
+              males_castrated: false,
+            },
+            biosecurity: {
+              is_breeder_seller: true,
+              breeder_name: undefined,
+              livestock_moved_out_of_boundaries: false,
+              livestock_moved_location: undefined,
+              livestock_moved_location_to: undefined,
+              livestock_moved_year: undefined,
+              livestock_moved_month: undefined,
+            },
           };
           form.reset({
             ...form.getValues(),
@@ -471,11 +590,15 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         declaration_no_foot_mouth_disease_farm: data.declaration_no_foot_mouth_disease_farm,
         declaration_livestock_south_africa: data.declaration_livestock_south_africa,
         declaration_no_gene_editing: data.declaration_no_gene_editing,
+        declaration_no_rift_valley_fever_10km_12_months: data.declaration_no_rift_valley_fever_10km_12_months,
+        declaration_never_vaccinated_against_fmd: data.declaration_never_vaccinated_against_fmd,
+        declaration_no_contact_with_non_resident_livestock: data.declaration_no_contact_with_non_resident_livestock,
         farm_birth_address: JSON.stringify(data.loading_points?.[0]?.birth_address || data.farm_birth_address),
         farm_loading_address: data.loading_points?.[0]?.is_loading_same_as_current ?
           JSON.stringify(data.loading_points[0].current_address) :
           JSON.stringify(data.loading_points?.[0]?.loading_address || data.farm_loading_address),
         livestock_moved_location: data.livestock_moved_out_of_boundaries ? JSON.stringify(data.livestock_moved_location) : null,
+        livestock_moved_location_to: data.livestock_moved_out_of_boundaries ? JSON.stringify(data.livestock_moved_location_to) : null,
         loading_points: JSON.stringify(data.loading_points),
       };
 

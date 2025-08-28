@@ -5,12 +5,12 @@ export const livestockListingSchema = z.object({
   reference_id: z.string().optional(),
   owner_name: z.string().min(1, 'Owner name is required'),
   livestock_type: z.enum(['CATTLE AND SHEEP', 'CATTLE', 'SHEEP']).optional(),
-  bred_or_bought: z.enum(['BRED', 'BOUGHT IN']),
+  bred_or_bought: z.enum(['BRED', 'BOUGHT IN']).optional(),
   location: z.string().optional(), // Now handled by loading_points
   // Weighing location - Made optional for initial launch (redundant with loading points)
   weighing_location: z.string().optional(),
 
-  total_livestock_offered: z.number().min(1, 'Must offer at least 1 livestock'),
+  total_livestock_offered: z.number().min(0).default(0),
   number_of_heifers: z.number().min(0).default(0),
   males_castrated: z.boolean().default(false),
   mothers_status: z.enum(['WITH MOTHERS', 'ALREADY WEANED']).optional(),
@@ -28,7 +28,7 @@ export const livestockListingSchema = z.object({
   affidavit_file: z.any().optional(),
   
   // New biosecurity fields
-  breeder_name: z.string().min(1, 'Breeder name is required'),
+  breeder_name: z.string().optional(),
   is_breeder_seller: z.boolean().default(false),
   farm_birth_address: z.object({
     farm_name: z.string(),
@@ -47,16 +47,25 @@ export const livestockListingSchema = z.object({
     district: z.string(),
     province: z.string(),
   }).optional(),
+  livestock_moved_location_to: z.object({
+    farm_name: z.string(),
+    district: z.string(),
+    province: z.string(),
+  }).optional(),
   livestock_moved_year: z.coerce.number().optional(),
   livestock_moved_month: z.coerce.number().optional(),
   
   // Responsible person declarations
   declaration_no_cloven_hooved_animals: z.boolean().refine(val => val === true, 'This declaration must be accepted'),
   declaration_livestock_kept_away: z.boolean().refine(val => val === true, 'This declaration must be accepted'),
+  // New declarations (UI added; DB columns to be added later)
+  declaration_no_contact_with_non_resident_livestock: z.boolean().refine(val => val === true, 'This declaration must be accepted'),
   declaration_no_animal_origin_feed: z.boolean().refine(val => val === true, 'This declaration must be accepted'),
   declaration_veterinary_products_registered: z.boolean().refine(val => val === true, 'This declaration must be accepted'),
   declaration_no_foot_mouth_disease: z.boolean().refine(val => val === true, 'This declaration must be accepted'),
+  declaration_never_vaccinated_against_fmd: z.boolean().refine(val => val === true, 'This declaration must be accepted'),
   declaration_no_foot_mouth_disease_farm: z.boolean().refine(val => val === true, 'This declaration must be accepted'),
+  declaration_no_rift_valley_fever_10km_12_months: z.boolean().refine(val => val === true, 'This declaration must be accepted'),
   declaration_livestock_south_africa: z.boolean().refine(val => val === true, 'This declaration must be accepted'),
   declaration_no_gene_editing: z.boolean().refine(val => val === true, 'This declaration must be accepted'),
   // declaration_not_fed_antibiotics: z.boolean().refine(val => val === true, 'This declaration must be accepted'),
@@ -92,8 +101,33 @@ export const livestockListingSchema = z.object({
     }),
     is_current_same_as_birth: z.boolean().default(false),
     is_loading_same_as_current: z.boolean().default(false),
-    number_of_cattle: z.number().min(0).default(0),
-    number_of_sheep: z.number().min(0).default(0),
+    // Per-herd livestock details (moved from LivestockDetailsSection)
+    details: z.object({
+      livestock_type: z.enum(['CATTLE', 'SHEEP']).optional(),
+      bred_or_bought: z.enum(['BRED', 'BOUGHT IN']).optional(),
+      number_of_males: z.number().min(0).default(0),
+      number_of_females: z.number().min(0).default(0),
+      males_castrated: z.boolean().default(false),
+    }).optional(),
+
+    // Per-herd biosecurity details (moved from BiosecuritySection)
+    biosecurity: z.object({
+      is_breeder_seller: z.boolean().default(true),
+      breeder_name: z.string().optional(),
+      livestock_moved_out_of_boundaries: z.boolean().default(false),
+      livestock_moved_location: z.object({
+        farm_name: z.string(),
+        district: z.string(),
+        province: z.string(),
+      }).optional(),
+      livestock_moved_location_to: z.object({
+        farm_name: z.string(),
+        district: z.string(),
+        province: z.string(),
+      }).optional(),
+      livestock_moved_year: z.coerce.number().optional(),
+      livestock_moved_month: z.coerce.number().optional(),
+    }).optional(),
   })).min(1, "At least one loading point is required"),
 
   // Vet selection
@@ -178,8 +212,14 @@ export const livestockListingSchema = z.object({
     }
   });
 
-  // Conditional validation for livestock_moved_location
-  if (data.livestock_moved_out_of_boundaries) {
+  // Conditional validation for livestock_moved_location: only enforce when any related field is provided
+  if (
+    data.livestock_moved_out_of_boundaries &&
+    (data.livestock_moved_location ||
+      data.livestock_moved_location_to ||
+      data.livestock_moved_year !== undefined ||
+      data.livestock_moved_month !== undefined)
+  ) {
     if (!data.livestock_moved_location?.farm_name) {
       ctx.addIssue({ path: ['livestock_moved_location.farm_name'], message: 'Farm name is required', code: 'custom' });
     }
@@ -188,6 +228,15 @@ export const livestockListingSchema = z.object({
     }
     if (!data.livestock_moved_location?.province) {
       ctx.addIssue({ path: ['livestock_moved_location.province'], message: 'Province is required', code: 'custom' });
+    }
+    if (!data.livestock_moved_location_to?.farm_name) {
+      ctx.addIssue({ path: ['livestock_moved_location_to.farm_name'], message: 'Farm name is required', code: 'custom' });
+    }
+    if (!data.livestock_moved_location_to?.district) {
+      ctx.addIssue({ path: ['livestock_moved_location_to.district'], message: 'District is required', code: 'custom' });
+    }
+    if (!data.livestock_moved_location_to?.province) {
+      ctx.addIssue({ path: ['livestock_moved_location_to.province'], message: 'Province is required', code: 'custom' });
     }
     if (data.livestock_moved_year === undefined || data.livestock_moved_year === null || Number.isNaN(data.livestock_moved_year)) {
       ctx.addIssue({

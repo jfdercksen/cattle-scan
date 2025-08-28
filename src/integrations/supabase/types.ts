@@ -282,6 +282,9 @@ export type Database = {
           declaration_no_foot_mouth_disease_farm: boolean | null
           declaration_no_gene_editing: boolean | null
           declaration_veterinary_products_registered: boolean | null
+          declaration_no_rift_valley_fever_10km_12_months: boolean | null
+          declaration_no_contact_with_non_resident_livestock: boolean | null
+          declaration_never_vaccinated_against_fmd: boolean | null
           estimated_average_weight: number | null
           farm_birth_address: string | null
           farm_loading_address: string | null
@@ -294,6 +297,7 @@ export type Database = {
           is_breeder_seller: boolean | null
           is_loading_at_birth_farm: boolean | null
           livestock_moved_location: string | null
+          livestock_moved_location_to: string | null
           livestock_moved_month: number | null
           livestock_moved_out_of_boundaries: boolean | null
           livestock_moved_year: number | null
@@ -346,6 +350,9 @@ export type Database = {
           declaration_no_foot_mouth_disease_farm?: boolean | null
           declaration_no_gene_editing?: boolean | null
           declaration_veterinary_products_registered?: boolean | null
+          declaration_no_rift_valley_fever_10km_12_months?: boolean | null
+          declaration_no_contact_with_non_resident_livestock?: boolean | null
+          declaration_never_vaccinated_against_fmd?: boolean | null
           estimated_average_weight?: number | null
           farm_birth_address?: string | null
           farm_loading_address?: string | null
@@ -358,6 +365,7 @@ export type Database = {
           is_breeder_seller?: boolean | null
           is_loading_at_birth_farm?: boolean | null
           livestock_moved_location?: string | null
+          livestock_moved_location_to?: string | null
           livestock_moved_month?: number | null
           livestock_moved_out_of_boundaries?: boolean | null
           livestock_moved_year?: number | null
@@ -410,6 +418,9 @@ export type Database = {
           declaration_no_foot_mouth_disease_farm?: boolean | null
           declaration_no_gene_editing?: boolean | null
           declaration_veterinary_products_registered?: boolean | null
+          declaration_no_rift_valley_fever_10km_12_months?: boolean | null
+          declaration_no_contact_with_non_resident_livestock?: boolean | null
+          declaration_never_vaccinated_against_fmd?: boolean | null
           estimated_average_weight?: number | null
           farm_birth_address?: string | null
           farm_loading_address?: string | null
@@ -422,6 +433,7 @@ export type Database = {
           is_breeder_seller?: boolean | null
           is_loading_at_birth_farm?: boolean | null
           livestock_moved_location?: string | null
+          livestock_moved_location_to?: string | null
           livestock_moved_month?: number | null
           livestock_moved_out_of_boundaries?: boolean | null
           livestock_moved_year?: number | null

@@ -10,6 +10,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AppLayout } from "./layouts/AppLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import InviteSignup from "./pages/InviteSignup";
 import Admin from "./pages/Admin";
 import AdminDashboard from "./pages/AdminDashboard";
 import SellerDashboard from "./pages/SellerDashboard";
@@ -38,6 +39,7 @@ const App = () => (
                 <Route element={<AppLayout />}>
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/invite-signup" element={<InviteSignup />} />
                   <Route path="/admin" element={<Admin />} />
                   <Route path="/admin-dashboard" element={<AdminDashboard />} />
                   <Route path="/seller-dashboard" element={<SellerDashboard />} />

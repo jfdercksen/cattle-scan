@@ -87,7 +87,7 @@ export const BiosecuritySection = () => {
 
         {form.watch('livestock_moved_out_of_boundaries') && (
           <div className="md:col-span-2">
-            <Label>Location where livestock was moved</Label>
+            <Label>Location where livestock was moved from</Label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
                 <FormField
                   control={form.control}
@@ -128,6 +128,51 @@ export const BiosecuritySection = () => {
                     </FormItem>
                   )}
                 />
+            </div>
+
+            <div className="mt-4">
+            <Label>Location where livestock was moved to</Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                <FormField
+                  control={form.control}
+                  name="livestock_moved_location_to.farm_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Farm Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter farm name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="livestock_moved_location_to.district"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">District</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter district" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="livestock_moved_location_to.province"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Province</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter province" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+            </div>
             </div>
 
             <div className="mt-4">

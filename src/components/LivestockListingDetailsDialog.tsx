@@ -152,7 +152,12 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
                   </div>
                   {listing.livestock_moved_location && (
                     <div>
-                      <span className="font-medium">Location Where Moved:</span> {listing.livestock_moved_location}
+                      <span className="font-medium">Location Where Moved From:</span> {listing.livestock_moved_location}
+                    </div>
+                  )}
+                  {listing.livestock_moved_location_to && (
+                    <div>
+                      <span className="font-medium">Location Where Moved To:</span> {listing.livestock_moved_location_to}
                     </div>
                   )}
                 </div>

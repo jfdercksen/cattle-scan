@@ -175,7 +175,12 @@ export const AdminViewListingPage = () => {
                   <div className="space-y-2">
                     <DetailItem label="Location" value={listing.location} />
                     <DetailItem label="Livestock Moved Out of Boundaries" value={<BooleanDisplay value={listing.livestock_moved_out_of_boundaries} />} />
-                    {listing.livestock_moved_out_of_boundaries && <DetailItem label="Moved Location" value={<AddressDisplay address={listing.livestock_moved_location} />} />}
+                    {listing.livestock_moved_out_of_boundaries && 
+                        <>
+                            <DetailItem label="Moved Location From" value={<AddressDisplay address={listing.livestock_moved_location} />} /> 
+                            <DetailItem label="Moved Location To" value={<AddressDisplay address={listing.livestock_moved_location_to} />} />
+                        </>
+                    }
                   </div>
 
                   {/* Loading Summary */}

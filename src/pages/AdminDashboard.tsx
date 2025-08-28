@@ -14,11 +14,9 @@ import { MultiTenantDashboardController, type DashboardData } from "@/services/m
 import type { Tables } from "@/integrations/supabase/types";
 import { AdminOfferDetailsDialog } from "@/components/AdminOfferDetailsDialog";
 import { ListingInvitationForm } from '@/components/ListingInvitationForm';
-import { ListingInvitationsTable, ListingInvitation } from '@/components/ListingInvitationsTable';
+import { ListingInvitationsTable } from '@/components/ListingInvitationsTable';
 import ProfileSection from "@/components/ProfileSection";
-import { LivestockListingsTable } from "@/components/LivestockListingsTable";
 import { LivestockListingDetailsDialog } from "@/components/LivestockListingDetailsDialog";
-import { AdminOffersTable } from "@/components/AdminOffersTable";
 import { CompanySelector } from "@/components/CompanySelector";
 import { CompanyManagement } from "@/components/CompanyManagement";
 import { CompanyRegistrationForm } from '@/components/CompanyRegistrationForm';
@@ -157,9 +155,9 @@ const AdminDashboard = () => {
 
   if (authLoading || companyLoading || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 bg-gradient-to-br from-emerald-600 to-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
             <Shield className="w-5 h-5 text-white animate-pulse" />
           </div>
           <p className="text-slate-600">Loading dashboard...</p>
@@ -176,7 +174,7 @@ const AdminDashboard = () => {
   // Show company setup for users without companies
   if (!isSuperAdmin && userCompanies.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
           <CardHeader className="text-center">
             <CardTitle className="flex items-center justify-center">
@@ -210,7 +208,7 @@ const AdminDashboard = () => {
   const recentProfiles = dashboardData?.profiles?.slice(0, 5) || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-white">
       <div className="bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">

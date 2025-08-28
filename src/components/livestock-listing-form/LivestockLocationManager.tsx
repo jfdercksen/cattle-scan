@@ -1,11 +1,11 @@
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, type UseFormReturn } from 'react-hook-form';
 import { LivestockListingFormData } from '@/lib/schemas/livestockListingSchema';
 import { HerdLocation, FarmAddress, LocationCopyOptions } from '@/types/location';
 
 export class LivestockLocationManager {
-  private form: any;
+  private form: UseFormReturn<LivestockListingFormData>;
 
-  constructor(form: any) {
+  constructor(form: UseFormReturn<LivestockListingFormData>) {
     this.form = form;
   }
 
@@ -34,6 +34,22 @@ export class LivestockLocationManager {
       is_loading_same_as_current: false,
       number_of_cattle: 0,
       number_of_sheep: 0,
+      details: {
+        livestock_type: undefined,
+        bred_or_bought: undefined,
+        number_of_males: 0,
+        number_of_females: 0,
+        males_castrated: false,
+      },
+      biosecurity: {
+        is_breeder_seller: false,
+        breeder_name: undefined,
+        livestock_moved_out_of_boundaries: false,
+        livestock_moved_location: undefined,
+        livestock_moved_location_to: undefined,
+        livestock_moved_year: undefined,
+        livestock_moved_month: undefined,
+      },
     };
 
     this.form.setValue('loading_points', [...currentHerds, newHerd]);
@@ -93,7 +109,11 @@ export class LivestockLocationManager {
   /**
    * Copy address from one field to another within the same herd
    */
-  private copyAddress(herdIndex: number, sourceField: keyof HerdLocation, targetField: keyof HerdLocation): void {
+  private copyAddress(
+    herdIndex: number,
+    sourceField: 'birth_address' | 'current_address' | 'loading_address',
+    targetField: 'birth_address' | 'current_address' | 'loading_address'
+  ): void {
     const sourceAddress = this.form.getValues(`loading_points.${herdIndex}.${sourceField}`) as FarmAddress;
     
     if (sourceAddress) {

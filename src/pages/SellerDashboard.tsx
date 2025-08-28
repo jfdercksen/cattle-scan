@@ -28,7 +28,6 @@ const SellerDashboard = () => {
   const { user, profile, loading: authLoading, needsProfileCompletion } = useAuth();
   const { currentCompany, userCompanies } = useCompany();
   const { toast } = useToast();
-  const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,7 +40,6 @@ const SellerDashboard = () => {
         if (result.error) {
           throw result.error;
         }
-        setDashboardData(result.data);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         toast({
@@ -71,7 +69,7 @@ const SellerDashboard = () => {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">Loading...</div>
       </div>
     );
@@ -89,7 +87,7 @@ const SellerDashboard = () => {
   // };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8">
         {/* Header with Company Selector */}
         <div className="flex justify-between items-center mb-8">

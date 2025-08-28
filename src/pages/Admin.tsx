@@ -294,10 +294,6 @@ const Admin = () => {
         return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Seller</Badge>;
       case 'vet':
         return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Vet</Badge>;
-      case 'agent':
-        return <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">Agent</Badge>;
-      case 'driver':
-        return <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">Driver</Badge>;
       case 'load_master':
         return <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">Load Master</Badge>;
       default:
@@ -307,14 +303,14 @@ const Admin = () => {
 
   if (loading || !profile || loadingUsers) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
@@ -478,8 +474,7 @@ const Admin = () => {
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="seller">Seller</SelectItem>
                     <SelectItem value="vet">Veterinarian</SelectItem>
-                    <SelectItem value="agent">Agent</SelectItem>
-                    <SelectItem value="driver">Driver</SelectItem>
+                    <SelectItem value="load_master">Load Master</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
