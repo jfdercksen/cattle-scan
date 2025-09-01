@@ -1,8 +1,23 @@
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
- import { ChevronRight, Shield } from "lucide-react";
+import { ChevronRight, Shield } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { useLanguage } from "@/contexts/languageContext";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 interface ContentStructure {
   hero: {
@@ -13,39 +28,72 @@ interface ContentStructure {
     company: string;
     privacy: string;
     terms: string;
+    contact: string;
   };
 }
 
 const Index = () => {
   const { language } = useLanguage();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [contactOpen, setContactOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
 
   const content: Record<'en' | 'af', ContentStructure> = {
     en: {
       hero: {
-        title: "Cattle Scan",
+        title: "Cattle Scan & Biosecurity Tracking",
         cta: "Sign In",
       },
       footer: {
         company: "Powered By Workbalance",
         privacy: "Privacy Policy",
         terms: "Terms of Service",
+        contact: "Contact Us",
       },
     },
     af: {
       hero: {
-        title: "Cattle Scan",
+        title: "Cattle Scan & Biosecurity Tracking",
         cta: "Teken In",
       },
       footer: {
         company: "Powered By Workbalance",
         privacy: "Privaatheid Beleid",
         terms: "Terme van Diens",
+        contact: "Kontak Ons",
       },
     },
   };
 
   const t = content[language];
+  const titleParts = t.hero.title.split("&");
+  const titleTop = (titleParts[0] || "").trim() || t.hero.title;
+  const titleBottom = (titleParts[1] || "").trim();
+
+  const handleContactSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim() || !message.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in your name, email, and message.",
+      });
+      return;
+    }
+
+    // In a future iteration, send this to a backend or email service.
+    // For now, show a success toast and close the dialog.
+    toast({
+      title: "Message sent",
+      description: "Thanks for reaching out. We'll get back to you soon.",
+    });
+    setContactOpen(false);
+    setName("");
+    setEmail("");
+    setMessage("");
+  };
 
   if (user) {
     return <Navigate to="/auth" replace />;
@@ -57,8 +105,10 @@ const Index = () => {
       {/* Minimal Hero */}
       <main className="flex-1 flex items-start justify-center pt-16 md:pt-24">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-8 bg-gradient-to-r from-slate-900 via-blue-800 to-emerald-800 bg-clip-text text-transparent">
-            {t.hero.title}
+          <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-8 bg-blue-600 bg-clip-text text-transparent leading-[1.25] md:leading-[1.2] overflow-visible pb-1">
+            <span className="block">{titleTop}</span>
+            {titleBottom && <span className="block">&</span>}
+            {titleBottom && <span className="block pb-[0.3em]">{titleBottom}</span>}
           </h1>
           <div className="flex justify-center">
             <Link to="/auth">
@@ -92,6 +142,41 @@ const Index = () => {
             <div className="flex space-x-6 text-sm">
               <a href="#" className="text-slate-400 hover:text-white transition-colors">{t.footer.privacy}</a>
               <a href="#" className="text-slate-400 hover:text-white transition-colors">{t.footer.terms}</a>
+              <Dialog open={contactOpen} onOpenChange={setContactOpen}>
+                <DialogTrigger asChild>
+                  <button type="button" className="text-slate-400 hover:text-white transition-colors">
+                    {t.footer.contact}
+                  </button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Contact Us</DialogTitle>
+                    <DialogDescription>
+                      We'd love to hear from you. Please fill in the form below and we'll get back to you.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleContactSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="contact-name">Name</Label>
+                      <Input id="contact-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contact-email">Email</Label>
+                      <Input id="contact-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contact-message">Message</Label>
+                      <Textarea id="contact-message" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="How can we help?" rows={5} />
+                    </div>
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button type="button" variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">Send</Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>

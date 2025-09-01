@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { LoadMasterLoadingDetailsForm } from "@/components/load-master/LoadMasterLoadingDetailsForm";
-import { LivestockCalculations } from "@/lib/calculationEngine";
+// Using local derived totals from loading_points.details
 import ProfileCompletion from '@/components/ProfileCompletionForm';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -23,6 +23,45 @@ type LivestockListing = Tables<'livestock_listings'> & {
     companies?: {
         name: string;
     } | null;
+};
+
+// Helpers to parse new loading_points structure and compute totals consistently
+type LoadingPointDetails = {
+    livestock_type?: 'CATTLE' | 'SHEEP';
+    number_of_males?: number;
+    number_of_females?: number;
+};
+type LoadingPoint = { details?: LoadingPointDetails };
+const parseLoadingPoints = (lp: unknown): LoadingPoint[] => {
+    if (!lp) return [];
+    let raw: unknown = lp;
+    if (typeof lp === 'string') {
+        try { raw = JSON.parse(lp); } catch { return []; }
+    }
+    if (!Array.isArray(raw)) return [];
+    return (raw as unknown[]).map((p): LoadingPoint => {
+        const obj = (p && typeof p === 'object') ? (p as Record<string, unknown>) : {};
+        const details = (obj.details && typeof obj.details === 'object') ? (obj.details as Record<string, unknown>) : undefined;
+        return {
+            details: details ? {
+                livestock_type: details.livestock_type === 'CATTLE' || details.livestock_type === 'SHEEP' ? details.livestock_type as 'CATTLE' | 'SHEEP' : undefined,
+                number_of_males: typeof details.number_of_males === 'number' ? details.number_of_males as number : Number(details.number_of_males ?? 0) || 0,
+                number_of_females: typeof details.number_of_females === 'number' ? details.number_of_females as number : Number(details.number_of_females ?? 0) || 0,
+            } : undefined,
+        };
+    });
+};
+const computeTotalsFromLoadingPoints = (lp: unknown): { totalCattle: number; totalSheep: number } => {
+    const points = parseLoadingPoints(lp);
+    return points.reduce((acc, p) => {
+        const d = p.details;
+        const males = d?.number_of_males ?? 0;
+        const females = d?.number_of_females ?? 0;
+        const count = males + females;
+        if (d?.livestock_type === 'CATTLE') acc.totalCattle += count;
+        if (d?.livestock_type === 'SHEEP') acc.totalSheep += count;
+        return acc;
+    }, { totalCattle: 0, totalSheep: 0 });
 };
 
 const LoadMasterDashboard = () => {
@@ -157,11 +196,14 @@ const LoadMasterDashboard = () => {
 
     const formatLoadingPoints = (loadingPoints: any) => {
         try {
-            const points = typeof loadingPoints === 'string' ? JSON.parse(loadingPoints) : loadingPoints;
-            if (Array.isArray(points) && points.length > 0) {
-                return points.map((point: any, index: number) => {
-                    const { totalCattle, totalSheep } = LivestockCalculations.calculateTotalLivestock([point]);
-                    return `Point ${index + 1}: ${totalCattle} cattle, ${totalSheep} sheep`;
+            const parsed = parseLoadingPoints(loadingPoints);
+            if (parsed.length > 0) {
+                return parsed.map((point, index) => {
+                    const d = point.details;
+                    const total = (d?.number_of_males ?? 0) + (d?.number_of_females ?? 0);
+                    if (!d?.livestock_type || total <= 0) return `Point ${index + 1}: 0`;
+                    const label = d.livestock_type === 'CATTLE' ? 'cattle' : 'sheep';
+                    return `Point ${index + 1}: ${total} ${label}`;
                 }).join('; ');
             }
         } catch (error) {
@@ -289,24 +331,7 @@ const LoadMasterDashboard = () => {
                                 </TableHeader>
                                 <TableBody>
                                     {assignedListings.map((listing) => {
-                                        const { totalCattle, totalSheep } = (() => {
-                                            try {
-                                                const loadingPoints = typeof listing.loading_points === 'string'
-                                                    ? JSON.parse(listing.loading_points)
-                                                    : listing.loading_points;
-
-                                                if (Array.isArray(loadingPoints)) {
-                                                    return LivestockCalculations.calculateTotalLivestock(loadingPoints);
-                                                }
-                                            } catch (error) {
-                                                console.error('Error parsing loading points:', error);
-                                            }
-
-                                            return {
-                                                totalCattle: 0,
-                                                totalSheep: 0,
-                                            };
-                                        })();
+                                        const { totalCattle, totalSheep } = computeTotalsFromLoadingPoints(listing.loading_points);
 
                                         return (
                                             <TableRow key={listing.id}>
@@ -380,24 +405,7 @@ const LoadMasterDashboard = () => {
                                 </TableHeader>
                                 <TableBody>
                                     {completedListings.map((listing) => {
-                                        const { totalCattle, totalSheep } = (() => {
-                                            try {
-                                                const loadingPoints = typeof listing.loading_points === 'string'
-                                                    ? JSON.parse(listing.loading_points)
-                                                    : listing.loading_points;
-
-                                                if (Array.isArray(loadingPoints)) {
-                                                    return LivestockCalculations.calculateTotalLivestock(loadingPoints);
-                                                }
-                                            } catch (error) {
-                                                console.error('Error parsing loading points:', error);
-                                            }
-
-                                            return {
-                                                totalCattle: 0,
-                                                totalSheep: 0,
-                                            };
-                                        })();
+                                        const { totalCattle, totalSheep } = computeTotalsFromLoadingPoints(listing.loading_points);
 
                                         return (
                                             <TableRow key={listing.id}>

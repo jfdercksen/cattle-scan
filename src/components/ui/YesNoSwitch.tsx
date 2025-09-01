@@ -4,9 +4,11 @@ import { cn } from "@/lib/utils";
 interface YesNoSwitchProps {
   value: boolean | null | undefined;
   onChange: (value: boolean) => void;
+  trueLabel?: string;
+  falseLabel?: string;
 }
 
-export const YesNoSwitch = ({ value, onChange }: YesNoSwitchProps) => {
+export const YesNoSwitch = ({ value, onChange, trueLabel = 'Yes', falseLabel = 'No' }: YesNoSwitchProps) => {
   return (
     <div className="flex items-center space-x-2">
       <Button
@@ -19,7 +21,7 @@ export const YesNoSwitch = ({ value, onChange }: YesNoSwitchProps) => {
             : "bg-gray-200 hover:bg-gray-300 text-gray-800"
         )}
       >
-        Yes
+        {trueLabel}
       </Button>
       <Button
         type="button"
@@ -31,7 +33,7 @@ export const YesNoSwitch = ({ value, onChange }: YesNoSwitchProps) => {
             : "bg-gray-200 hover:bg-gray-300 text-gray-800"
         )}
       >
-        No
+        {falseLabel}
       </Button>
     </div>
   );

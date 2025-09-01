@@ -29,7 +29,7 @@ const InviteSignup = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
-  const [companyName, setCompanyName] = useState('');
+  
 
   // Pending invitation state
   const [pendingInvitation, setPendingInvitation] = useState<{
@@ -37,7 +37,7 @@ const InviteSignup = () => {
     relationship_type: string;
     companies: { id: string; name: string };
   } | null>(null);
-  const [isCompanyNameLocked, setIsCompanyNameLocked] = useState(false);
+  
 
   // Only allow special buyer flow via explicit link param
   const isBuyerSignup = searchParams.get('buyer') === 'true';
@@ -70,8 +70,6 @@ const InviteSignup = () => {
     const checkPendingInvitation = async () => {
       if (!email.trim() || !validateEmail(email.trim())) {
         setPendingInvitation(null);
-        setIsCompanyNameLocked(false);
-        setCompanyName('');
         return;
       }
       try {
@@ -87,21 +85,12 @@ const InviteSignup = () => {
             companies: { id: invitationInfo.company_id, name: invitationInfo.company_name }
           };
           setPendingInvitation(invitation);
-          if (invitationInfo.relationship_type === 'admin') {
-            setCompanyName(invitationInfo.company_name);
-            setIsCompanyNameLocked(true);
-          } else {
-            setIsCompanyNameLocked(false);
-          }
         } else {
           setPendingInvitation(null);
-          setIsCompanyNameLocked(false);
-          setCompanyName('');
         }
       } catch (e) {
         console.error('Error checking pending invitations:', e);
         setPendingInvitation(null);
-        setIsCompanyNameLocked(false);
       }
     };
 
@@ -182,10 +171,6 @@ const InviteSignup = () => {
         phone: phone.trim() || null,
       };
 
-      if (!pendingInvitation && isBuyerSignup) {
-        signupData.company_name = companyName.trim() || null;
-      }
-
       const { error } = await signUp(email, password, signupData);
       if (error) {
         toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -256,27 +241,14 @@ const InviteSignup = () => {
               <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={20} />
             </div>
 
-            <div>
-              <Label htmlFor="companyName">{t.companyName}</Label>
-              {pendingInvitation && (
-                <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
-                  <p className="text-sm text-blue-800">
-                    <Mail className="w-4 h-4 inline mr-1" />
-                    You've been invited to join <strong>{pendingInvitation.companies.name}</strong> as a <strong>{pendingInvitation.relationship_type}</strong>
-                  </p>
-                </div>
-              )}
-              <Input
-                id="companyName"
-                type="text"
-                value={companyName}
-                onChange={(e) => !isCompanyNameLocked && setCompanyName(e.target.value)}
-                maxLength={100}
-                disabled={isCompanyNameLocked}
-                className={isCompanyNameLocked ? 'bg-gray-100 cursor-not-allowed' : ''}
-                placeholder={isCompanyNameLocked ? 'Company set by invitation' : 'Enter company name'}
-              />
-            </div>
+            {pendingInvitation && (
+              <div className="p-2 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-sm text-blue-800">
+                  <Mail className="w-4 h-4 inline mr-1" />
+                  You've been invited to join <strong>{pendingInvitation.companies.name}</strong> as a <strong>{pendingInvitation.relationship_type}</strong>
+                </p>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="password">{t.password}</Label>

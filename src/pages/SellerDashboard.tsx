@@ -16,6 +16,7 @@ import ProfileSection from "@/components/ProfileSection";
 import { CompanySelector } from '@/components/CompanySelector';
 import { MultiTenantDashboardController } from '@/services/multiTenantDashboardController';
 import { supabase } from '@/integrations/supabase/client';
+import SellerFarms from '@/components/SellerFarms';
 
 type Profile = Tables<'profiles'>;
 
@@ -111,8 +112,9 @@ const SellerDashboard = () => {
         </div>
 
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="farms">Farms</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
           
@@ -176,6 +178,10 @@ const SellerDashboard = () => {
             <div className="space-y-6">
               <SellerInvitationsTable />
             </div>
+          </TabsContent>
+          
+          <TabsContent value="farms">
+            <SellerFarms />
           </TabsContent>
           
           <TabsContent value="profile">

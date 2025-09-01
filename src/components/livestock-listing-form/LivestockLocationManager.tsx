@@ -143,6 +143,16 @@ export class LivestockLocationManager {
       // Copy same-as flags
       this.form.setValue(`loading_points.${targetHerdIndex}.is_current_same_as_birth`, sourceHerd.is_current_same_as_birth);
       this.form.setValue(`loading_points.${targetHerdIndex}.is_loading_same_as_current`, sourceHerd.is_loading_same_as_current);
+
+      // Copy per-herd details (including breed)
+      if (sourceHerd.details) {
+        this.form.setValue(`loading_points.${targetHerdIndex}.details`, { ...sourceHerd.details });
+      }
+
+      // Copy per-herd biosecurity
+      if (sourceHerd.biosecurity) {
+        this.form.setValue(`loading_points.${targetHerdIndex}.biosecurity`, { ...sourceHerd.biosecurity });
+      }
     }
   }
 

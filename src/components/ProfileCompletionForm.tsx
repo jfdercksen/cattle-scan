@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { SignaturePad } from "@/components/SignaturePad";
 import FileUploadManager, { type UploadResult } from "@/components/FileUploadManager";
-import type { Tables } from '@/integrations/supabase/types';
+import type { Tables, TablesUpdate, Enums } from '@/integrations/supabase/types';
 
 type Profile = Tables<'profiles'>;
 
@@ -27,14 +27,6 @@ interface FormData {
   responsible_person_title: string;
   brand_mark_url: string | null;
   declaration_responsible_person_definition: boolean;
-  declaration_no_cloven_hooved_animals: boolean;
-  declaration_livestock_kept_away: boolean;
-  declaration_no_animal_origin_feed: boolean;
-  declaration_veterinary_products_registered: boolean;
-  declaration_no_foot_mouth_disease: boolean;
-  declaration_no_foot_mouth_disease_farm: boolean;
-  declaration_livestock_south_africa: boolean;
-  declaration_no_gene_editing: boolean;
   agency_represented: string;
   appointment_letter_url: string | null;
   apac_registration_url: string | null;
@@ -51,7 +43,6 @@ const ProfileCompletion = () => {
   const [profileLoading, setProfileLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
-  const [signedLocation, setSignedLocation] = useState('');
   const [formData, setFormData] = useState<FormData>({
     id_document_url: null,
     ownership_type: '',
@@ -59,14 +50,6 @@ const ProfileCompletion = () => {
     responsible_person_title: '',
     brand_mark_url: null,
     declaration_responsible_person_definition: false,
-    declaration_no_cloven_hooved_animals: false,
-    declaration_livestock_kept_away: false,
-    declaration_no_animal_origin_feed: false,
-    declaration_veterinary_products_registered: false,
-    declaration_no_foot_mouth_disease: false,
-    declaration_no_foot_mouth_disease_farm: false,
-    declaration_livestock_south_africa: false,
-    declaration_no_gene_editing: false,
     agency_represented: '',
     appointment_letter_url: null,
     apac_registration_url: null,
@@ -189,37 +172,37 @@ const ProfileCompletion = () => {
       }
 
       // Update profile with collected information and mark as completed
-      const updates = {
+      const updates: TablesUpdate<'profiles'> = {
         profile_completed: true,
         profile_completed_at: new Date().toISOString(),
+        status: 'approved' as Enums<'user_status'>,
+        approved_at: new Date().toISOString(),
+        approved_by: user.id,
         id_document_url: formData.id_document_url,
-        ...(profile.role === 'seller' && {
-          seller_ownership_type: formData.ownership_type,
-          seller_entity_name: formData.entity_name,
-          responsible_person_designation: formData.responsible_person_title,
-          brand_mark_url: formData.brand_mark_url,
-          declaration_responsible_person_definition: formData.declaration_responsible_person_definition,
-          declaration_no_cloven_hooved_animals: formData.declaration_no_cloven_hooved_animals,
-          declaration_livestock_kept_away: formData.declaration_livestock_kept_away,
-          declaration_no_animal_origin_feed: formData.declaration_no_animal_origin_feed,
-          declaration_veterinary_products_registered: formData.declaration_veterinary_products_registered,
-          declaration_no_foot_mouth_disease: formData.declaration_no_foot_mouth_disease,
-          declaration_no_foot_mouth_disease_farm: formData.declaration_no_foot_mouth_disease_farm,
-          declaration_livestock_south_africa: formData.declaration_livestock_south_africa,
-          declaration_no_gene_editing: formData.declaration_no_gene_editing,
-          signature_data: signature,
-          signature_date: new Date().toISOString(),
-          signed_location: signedLocation
-        }),
-        ...(profile.role === 'agent' && {
-          agency_represented: formData.agency_represented,
-          appointment_letter_url: formData.appointment_letter_url,
-          apac_registration_url: formData.apac_registration_url,
-        }),
-        ...(profile.role === 'vet' && {
-          registration_number: formData.registration_number,
-          practice_letter_head_url: formData.practice_letter_head_url,
-        }),
+        ...(profile.role === 'seller'
+          ? {
+              seller_ownership_type: formData.ownership_type,
+              seller_entity_name: formData.entity_name,
+              responsible_person_designation: formData.responsible_person_title,
+              brand_mark_url: formData.brand_mark_url,
+              declaration_responsible_person_definition: formData.declaration_responsible_person_definition,
+              signature_data: signature,
+              signature_date: new Date().toISOString(),
+            }
+          : {}),
+        ...(profile.role === 'agent'
+          ? {
+              agency_represented: formData.agency_represented,
+              appointment_letter_url: formData.appointment_letter_url,
+              apac_registration_url: formData.apac_registration_url,
+            }
+          : {}),
+        ...(profile.role === 'vet'
+          ? {
+              registration_number: formData.registration_number,
+              practice_letter_head_url: formData.practice_letter_head_url,
+            }
+          : {}),
       };
 
       const { error } = await supabase
@@ -297,33 +280,9 @@ const ProfileCompletion = () => {
 
       <div className="space-y-3">
         {renderDeclaration("declaration_responsible_person_definition", "The responsible person is a person who is directly part of the management of daily operations of the farming enterprise and whom can attest to information as required. The responsible person must be 18 years and older.")}
-
-        <h4 className="font-medium pt-4">I hereby declare that:</h4>
-
-        <div className="space-y-2">
-          {renderDeclaration("declaration_no_cloven_hooved_animals", "No cloven hooved animals (cattle, sheep, goats, pigs) other than those offered for sale have been on the farm for the past 21 days")}
-          {renderDeclaration("declaration_livestock_kept_away", "The livestock offered for sale have been kept away from all other livestock for the past 21 days")}
-          {renderDeclaration("declaration_no_animal_origin_feed", "No feed of animal origin has been fed to the livestock offered for sale")}
-          {renderDeclaration("declaration_veterinary_products_registered", "All veterinary products used on the livestock offered for sale are registered")}
-          {renderDeclaration("declaration_no_foot_mouth_disease", "No foot and mouth disease has occurred on the farm for the past 12 months")}
-          {renderDeclaration("declaration_no_foot_mouth_disease_farm", "No foot and mouth disease has occurred on neighbouring farms for the past 3 months")}
-          {renderDeclaration("declaration_livestock_south_africa", "The livestock offered for sale have been in South Africa for at least 21 days")}
-          {renderDeclaration("declaration_no_gene_editing", "No gene editing technology has been used on the livestock offered for sale")}
-        </div>
       </div>
 
       <div className="space-y-4">
-        <div>
-          <Label htmlFor="signedLocation">Location where signed *</Label>
-          <Input
-            id="signedLocation"
-            value={signedLocation}
-            onChange={(e) => setSignedLocation(e.target.value)}
-            placeholder="Enter location"
-            required
-          />
-        </div>
-
         <SignaturePad
           onSignatureChange={setSignature}
           signature={signature}

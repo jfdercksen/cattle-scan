@@ -20,6 +20,60 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
 
+ // Types and helpers for parsing/loading points (aligned with View/Admin pages)
+ type AddressLike = {
+   farm_name?: string;
+   district?: string;
+   province?: string;
+ };
+
+ type LoadingPointDetails = {
+   livestock_type?: 'CATTLE' | 'SHEEP';
+   bred_or_bought?: 'BRED' | 'BOUGHT IN';
+   number_of_males?: number;
+   number_of_females?: number;
+   males_castrated?: boolean;
+ };
+
+ type LoadingPoint = {
+   details?: LoadingPointDetails;
+   biosecurity?: {
+     breeder_name?: string;
+     is_breeder_seller?: boolean;
+   };
+   loading_address?: AddressLike;
+   is_loading_same_as_current?: boolean;
+ };
+
+ const parseLoadingPoints = (lp: unknown): LoadingPoint[] => {
+   if (!lp) return [];
+   let raw: unknown = lp;
+   if (typeof lp === 'string') {
+     try { raw = JSON.parse(lp); } catch { return []; }
+   }
+   if (!Array.isArray(raw)) return [];
+   return (raw as unknown[]).map((p): LoadingPoint => {
+     const obj = (p && typeof p === 'object') ? (p as Record<string, unknown>) : {};
+     const details = (obj.details && typeof obj.details === 'object') ? (obj.details as Record<string, unknown>) : undefined;
+     const biosecurity = (obj.biosecurity && typeof obj.biosecurity === 'object') ? (obj.biosecurity as Record<string, unknown>) : undefined;
+     return {
+       details: details ? {
+         livestock_type: details.livestock_type === 'CATTLE' || details.livestock_type === 'SHEEP' ? details.livestock_type as 'CATTLE' | 'SHEEP' : undefined,
+         bred_or_bought: details.bred_or_bought === 'BRED' || details.bred_or_bought === 'BOUGHT IN' ? details.bred_or_bought as 'BRED' | 'BOUGHT IN' : undefined,
+         number_of_males: typeof details.number_of_males === 'number' ? details.number_of_males as number : Number(details.number_of_males ?? 0) || 0,
+         number_of_females: typeof details.number_of_females === 'number' ? details.number_of_females as number : Number(details.number_of_females ?? 0) || 0,
+         males_castrated: typeof details.males_castrated === 'boolean' ? details.males_castrated as boolean : false,
+       } : undefined,
+       biosecurity: biosecurity ? {
+         breeder_name: typeof biosecurity.breeder_name === 'string' ? biosecurity.breeder_name as string : undefined,
+         is_breeder_seller: typeof biosecurity.is_breeder_seller === 'boolean' ? biosecurity.is_breeder_seller as boolean : undefined,
+       } : undefined,
+       loading_address: obj.loading_address as AddressLike | undefined,
+       is_loading_same_as_current: typeof obj.is_loading_same_as_current === 'boolean' ? obj.is_loading_same_as_current as boolean : undefined,
+     };
+   });
+ };
+
 // Schema for Load Master loading details form
 const loadingDetailsSchema = z.object({
   truck_registration_number: z.string().min(1, 'Truck registration number is required'),
@@ -103,27 +157,24 @@ export const LoadMasterLoadingDetailsForm = ({
     }
   };
 
-  // Calculate livestock totals from loading points
-  const { totalCattle, totalSheep, totalLivestock } = (() => {
-    try {
-      const loadingPoints = typeof listing.loading_points === 'string' 
-        ? JSON.parse(listing.loading_points) 
-        : listing.loading_points;
-      
-      if (Array.isArray(loadingPoints)) {
-        return LivestockCalculations.calculateTotalLivestock(loadingPoints);
-      }
-    } catch (error) {
-      console.error('Error parsing loading points:', error);
-    }
-    
-    return {
-      totalCattle: 0,
-      totalSheep: 0,
-      totalLivestock: 0
-    };
-  })();
-
+  // Parse loading points and derive totals using new structure
+  const parsedLoadingPoints = parseLoadingPoints(listing.loading_points as unknown);
+  const totals = parsedLoadingPoints.reduce(
+    (acc, p) => {
+      const d = p.details;
+      const males = d?.number_of_males ?? 0;
+      const females = d?.number_of_females ?? 0;
+      const count = males + females;
+      if (d?.livestock_type === 'CATTLE') acc.totalCattle += count;
+      if (d?.livestock_type === 'SHEEP') acc.totalSheep += count;
+      return acc;
+    },
+    { totalCattle: 0, totalSheep: 0 }
+  );
+  const totalCattle = totals.totalCattle;
+  const totalSheep = totals.totalSheep;
+  const totalLivestock = totalCattle + totalSheep;
+  
   const livestockType = LivestockCalculations.determineLivestockType(totalCattle, totalSheep);
 
   const onSubmit = async (data: LoadingDetailsFormData) => {
@@ -299,60 +350,50 @@ export const LoadMasterLoadingDetailsForm = ({
             </div>
 
             {/* Loading Points Information */}
-            {listing.loading_points && (() => {
-              try {
-                const loadingPoints = typeof listing.loading_points === 'string' 
-                  ? JSON.parse(listing.loading_points) 
-                  : listing.loading_points;
-                
-                if (Array.isArray(loadingPoints) && loadingPoints.length > 0) {
-                  return (
-                    <div className="mt-4">
-                      <h5 className="font-medium mb-3">Loading Points</h5>
-                      <div className="space-y-2">
-                        {loadingPoints.map((point: any, index: number) => {
-                          const hasCattle = (point.number_of_cattle ?? 0) > 0;
-                          const hasSheep = (point.number_of_sheep ?? 0) > 0;
-                          
-                          if (!hasCattle && !hasSheep) return null;
-                          
-                          return (
-                            <div key={index} className="p-3 bg-white border rounded-md">
-                              <div className="flex justify-between items-start mb-2">
-                                <h6 className="font-medium text-sm">Loading Point {index + 1}</h6>
-                                <div className="flex gap-2">
-                                  {hasCattle && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      {point.number_of_cattle} Cattle
-                                    </Badge>
-                                  )}
-                                  {hasSheep && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      {point.number_of_sheep} Sheep
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              <div className="text-xs text-gray-600">
-                                <strong>Loading Address:</strong> {
-                                  point.is_loading_same_as_current 
-                                    ? 'Same as current address'
-                                    : `${point.loading_address?.farm_name || 'N/A'}, ${point.loading_address?.district || 'N/A'}, ${point.loading_address?.province || 'N/A'}`
-                                }
-                              </div>
-                            </div>
-                          );
-                        })}
+            {parsedLoadingPoints.length > 0 && (
+              <div className="mt-4">
+                <h5 className="font-medium mb-3">Loading Points</h5>
+                <div className="space-y-2">
+                  {parsedLoadingPoints.map((point, index) => {
+                    const d = point.details;
+                    const males = d?.number_of_males ?? 0;
+                    const females = d?.number_of_females ?? 0;
+                    const total = males + females;
+                    if (total <= 0) return null;
+                    const isCattle = d?.livestock_type === 'CATTLE';
+                    const isSheep = d?.livestock_type === 'SHEEP';
+                    return (
+                      <div key={index} className="p-3 bg-white border rounded-md">
+                        <div className="flex justify-between items-start mb-2">
+                          <h6 className="font-medium text-sm">Loading Point {index + 1}</h6>
+                          <div className="flex gap-2">
+                            {isCattle && (
+                              <Badge variant="secondary" className="text-xs">
+                                {total} Cattle
+                              </Badge>
+                            )}
+                            {isSheep && (
+                              <Badge variant="secondary" className="text-xs">
+                                {total} Sheep
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-600 mb-1">
+                          <strong>Counts:</strong> Males {males} • Females {females}
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          <strong>Loading Address:</strong>{' '}
+                          {point.is_loading_same_as_current
+                            ? 'Same as current address'
+                            : `${point.loading_address?.farm_name || 'N/A'}, ${point.loading_address?.district || 'N/A'}, ${point.loading_address?.province || 'N/A'}`}
+                        </div>
                       </div>
-                    </div>
-                  );
-                }
-              } catch (error) {
-                console.error('Error parsing loading_points:', error);
-              }
-              return null;
-            })()}
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Loading Details Form */}

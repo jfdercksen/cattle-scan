@@ -18,6 +18,47 @@ import { YesNoSwitch } from './ui/YesNoSwitch';
 import { Tables } from '@/integrations/supabase/types';
 import { calculationEngine, LivestockCalculations } from '@/lib/calculationEngine';
 
+// Minimal helpers to parse loading points and compute derived totals
+type LoadingPointDetails = {
+  livestock_type?: 'CATTLE' | 'SHEEP';
+  number_of_males?: number;
+  number_of_females?: number;
+  males_castrated?: boolean;
+};
+type LoadingPoint = {
+  details?: LoadingPointDetails;
+  // Optional address fields may exist and are used for display if present
+  birth_address?: { farm_name?: string; district?: string; province?: string };
+  current_address?: { farm_name?: string; district?: string; province?: string };
+  loading_address?: { farm_name?: string; district?: string; province?: string };
+  is_current_same_as_birth?: boolean;
+  is_loading_same_as_current?: boolean;
+};
+
+const parseLoadingPoints = (lp: unknown): LoadingPoint[] => {
+  if (!lp) return [];
+  let raw: unknown = lp;
+  if (typeof lp === 'string') {
+    try { raw = JSON.parse(lp); } catch { return []; }
+  }
+  if (!Array.isArray(raw)) return [];
+  return raw as LoadingPoint[];
+};
+
+const getTotalsFromLoadingPoints = (lp: unknown): { cattleTotal: number; sheepTotal: number } => {
+  const points = parseLoadingPoints(lp);
+  let cattleTotal = 0;
+  let sheepTotal = 0;
+  for (const p of points) {
+    const males = p.details?.number_of_males ?? 0;
+    const females = p.details?.number_of_females ?? 0;
+    const total = males + females;
+    if (p.details?.livestock_type === 'CATTLE') cattleTotal += total;
+    else if (p.details?.livestock_type === 'SHEEP') sheepTotal += total;
+  }
+  return { cattleTotal, sheepTotal };
+};
+
 interface VeterinaryDeclarationFormProps {
   listingId: string;
   onSuccess?: () => void;
@@ -66,13 +107,17 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
       });
     } else {
       setListing(data);
+      const { cattleTotal, sheepTotal } = getTotalsFromLoadingPoints(data.loading_points);
+      // Fallback to legacy top-level fields if derived totals are zero
+      const derivedCattle = cattleTotal || data.number_cattle_loaded || 0;
+      const derivedSheep = sheepTotal || data.number_sheep_loaded || 0;
       form.reset({
         ...form.getValues(),
         reference_id: data.reference_id,
         owner_of_livestock: data.owner_name,
         farm_address: data.farm_loading_address ?? '',
-        number_cattle_loaded: data.number_cattle_loaded ?? 0,
-        number_sheep_loaded: data.number_sheep_loaded ?? 0,
+        number_cattle_loaded: derivedCattle,
+        number_sheep_loaded: derivedSheep,
       });
     }
   }, [listingId, form, toast]);
@@ -172,6 +217,11 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
     return <div>Loading...</div>;
   }
 
+  // Compute derived totals for display and conditional UI
+  const { cattleTotal, sheepTotal } = getTotalsFromLoadingPoints(listing.loading_points);
+  const displayCattleTotal = cattleTotal || listing.number_cattle_loaded || 0;
+  const displaySheepTotal = sheepTotal || listing.number_sheep_loaded || 0;
+
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
@@ -197,24 +247,24 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                 <h3 className="text-lg font-semibold">Livestock to be Loaded</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Only show cattle count if > 0 */}
-                  {(listing?.number_cattle_loaded ?? 0) > 0 && (
+                  {displayCattleTotal > 0 && (
                     <div>
-                      <p><strong>Total Cattle:</strong> {listing?.number_cattle_loaded}</p>
+                      <p><strong>Total Cattle:</strong> {displayCattleTotal}</p>
                     </div>
                   )}
 
                   {/* Only show sheep count if > 0 */}
-                  {(listing?.number_sheep_loaded ?? 0) > 0 && (
+                  {displaySheepTotal > 0 && (
                     <div>
-                      <p><strong>Total Sheep:</strong> {listing?.number_sheep_loaded}</p>
+                      <p><strong>Total Sheep:</strong> {displaySheepTotal}</p>
                     </div>
                   )}
 
                   <div>
                     <Badge variant="outline">
                       {LivestockCalculations.determineLivestockType(
-                        listing?.number_cattle_loaded ?? 0,
-                        listing?.number_sheep_loaded ?? 0
+                        displayCattleTotal,
+                        displaySheepTotal
                       ) || "No livestock"}
                     </Badge>
                   </div>
@@ -223,21 +273,26 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                 {/* Loading Points Information */}
                 {listing?.loading_points && (() => {
                   try {
-                    const loadingPoints = typeof listing.loading_points === 'string' 
-                      ? JSON.parse(listing.loading_points) 
+                    const loadingPointsRaw = typeof listing.loading_points === 'string'
+                      ? JSON.parse(listing.loading_points)
                       : listing.loading_points;
-                    
-                    if (Array.isArray(loadingPoints) && loadingPoints.length > 0) {
+                    const loadingPoints = Array.isArray(loadingPointsRaw) ? (loadingPointsRaw as LoadingPoint[]) : [];
+                    if (loadingPoints.length > 0) {
                       return (
                         <div className="mt-4">
                           <h4 className="font-medium mb-3">Loading Points Breakdown</h4>
                           <div className="space-y-3">
-                            {loadingPoints.map((point: any, index: number) => {
-                              const hasCattle = (point.number_of_cattle ?? 0) > 0;
-                              const hasSheep = (point.number_of_sheep ?? 0) > 0;
-                              
+                            {loadingPoints.map((point: LoadingPoint, index: number) => {
+                              const males = point.details?.number_of_males ?? 0;
+                              const females = point.details?.number_of_females ?? 0;
+                              const total = males + females;
+                              const isCattle = point.details?.livestock_type === 'CATTLE';
+                              const isSheep = point.details?.livestock_type === 'SHEEP';
+                              const cattleCount = isCattle ? total : 0;
+                              const sheepCount = isSheep ? total : 0;
+                              const hasCattle = cattleCount > 0;
+                              const hasSheep = sheepCount > 0;
                               if (!hasCattle && !hasSheep) return null;
-                              
                               return (
                                 <div key={index} className="p-3 bg-white border rounded-md">
                                   <div className="flex justify-between items-start mb-2">
@@ -245,17 +300,16 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                                     <div className="flex gap-2">
                                       {hasCattle && (
                                         <Badge variant="secondary" className="text-xs">
-                                          {point.number_of_cattle} Cattle
+                                          {cattleCount} Cattle
                                         </Badge>
                                       )}
                                       {hasSheep && (
                                         <Badge variant="secondary" className="text-xs">
-                                          {point.number_of_sheep} Sheep
+                                          {sheepCount} Sheep
                                         </Badge>
                                       )}
                                     </div>
                                   </div>
-                                  
                                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-gray-600">
                                     <div>
                                       <strong>Birth:</strong> {point.birth_address?.farm_name || 'N/A'}, {point.birth_address?.district || 'N/A'}, {point.birth_address?.province || 'N/A'}
@@ -289,21 +343,21 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                 })()}
 
                 {/* Mouthing Requirements Display */}
-                {(listing?.number_cattle_loaded ?? 0) > 0 && (
+                {displayCattleTotal > 0 && (
                   <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
                     <h4 className="font-medium text-blue-900 mb-2">Cattle Mouthing Requirements</h4>
                     <p className="text-sm text-blue-800">
-                      {calculationEngine.calculateMouthingRequirement(listing?.number_cattle_loaded ?? 0).displayText}
+                      {calculationEngine.calculateMouthingRequirement(displayCattleTotal).displayText}
                     </p>
                   </div>
                 )}
 
                 {/* Sheep Mouthing Requirements Display */}
-                {(listing?.number_sheep_loaded ?? 0) > 0 && (
+                {displaySheepTotal > 0 && (
                   <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
                     <h4 className="font-medium text-green-900 mb-2">Sheep Mouthing Requirements</h4>
                     <p className="text-sm text-green-800">
-                      {Math.ceil((listing?.number_sheep_loaded ?? 0) * 0.25)} sheep must be mouthed (25% of {listing?.number_sheep_loaded ?? 0} total sheep)
+                      {Math.ceil(displaySheepTotal * 0.25)} sheep must be mouthed (25% of {displaySheepTotal} total sheep)
                     </p>
                   </div>
                 )}
@@ -313,13 +367,13 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Cattle-related fields - Only show if cattle are loaded */}
-                {LivestockCalculations.shouldShowCattleFields(listing?.number_cattle_loaded ?? 0) && (
+                {LivestockCalculations.shouldShowCattleFields(displayCattleTotal) && (
                   <>
                     <FormField
                       name="cattle_visually_inspected"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Have {listing?.number_cattle_loaded || 0} cattle visually been inspected?</FormLabel>
+                          <FormLabel>Have {displayCattleTotal} cattle visually been inspected?</FormLabel>
                           <FormControl>
                             <YesNoSwitch value={field.value} onChange={field.onChange} />
                           </FormControl>
@@ -331,7 +385,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>
-                            Have {calculationEngine.calculateMouthingRequirement(listing?.number_cattle_loaded ?? 0).requiredCount} cattle been mouthed? (25%)
+                            Have {calculationEngine.calculateMouthingRequirement(displayCattleTotal).requiredCount} cattle been mouthed? (25%)
                           </FormLabel>
                           <FormControl>
                             <YesNoSwitch value={field.value} onChange={field.onChange} />
@@ -343,13 +397,13 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                 )}
 
                 {/* Sheep-related fields - Only show if sheep are loaded */}
-                {LivestockCalculations.shouldShowSheepFields(listing?.number_sheep_loaded ?? 0) && (
+                {LivestockCalculations.shouldShowSheepFields(displaySheepTotal) && (
                   <>
                     <FormField
                       name="sheep_visually_inspected"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Have {listing?.number_sheep_loaded || 0} sheep been visually inspected?</FormLabel>
+                          <FormLabel>Have {displaySheepTotal} sheep been visually inspected?</FormLabel>
                           <FormControl>
                             <YesNoSwitch value={field.value} onChange={field.onChange} />
                           </FormControl>
@@ -360,7 +414,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                       name="sheep_mouthed"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Have {Math.ceil((listing?.number_sheep_loaded || 0) * 0.25)} sheep been mouthed? (25%)</FormLabel>
+                          <FormLabel>Have {Math.ceil(displaySheepTotal * 0.25)} sheep been mouthed? (25%)</FormLabel>
                           <FormControl>
                             <YesNoSwitch value={field.value} onChange={field.onChange} />
                           </FormControl>

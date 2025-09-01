@@ -267,6 +267,8 @@ export type Database = {
           additional_r25_per_calf: boolean | null
           affidavit_file_path: string | null
           affidavit_required: boolean | null
+          additional_r25_per_head: boolean | null
+          gln_num: string | null
           assigned_load_master_id: string | null
           assigned_vet_id: string | null
           bred_or_bought: string
@@ -335,6 +337,8 @@ export type Database = {
           additional_r25_per_calf?: boolean | null
           affidavit_file_path?: string | null
           affidavit_required?: boolean | null
+          additional_r25_per_head: boolean | null
+          gln_num: string | null
           assigned_load_master_id?: string | null
           assigned_vet_id?: string | null
           bred_or_bought: string
@@ -403,6 +407,8 @@ export type Database = {
           additional_r25_per_calf?: boolean | null
           affidavit_file_path?: string | null
           affidavit_required?: boolean | null
+          additional_r25_per_head: boolean | null
+          gln_num: string | null
           assigned_load_master_id?: string | null
           assigned_vet_id?: string | null
           bred_or_bought?: string

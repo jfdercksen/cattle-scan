@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { User, Session, AuthError, PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
@@ -12,6 +12,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const loadedUserIdRef = useRef<string | null>(null);
+  const profileRef = useRef<Profile | null>(null);
+  const isLoadingProfileRef = useRef<boolean>(false);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+  useEffect(() => {
+    isLoadingProfileRef.current = isLoadingProfile;
+  }, [isLoadingProfile]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -19,16 +30,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
+      // Ignore token refresh events triggered on tab visibility changes to avoid unnecessary reloads
+      if (_event === 'TOKEN_REFRESHED') {
+        console.log('Ignoring TOKEN_REFRESHED event to avoid redundant profile reload.');
+        return;
+      }
+      
       // Load profile when user signs in
       if (session?.user) {
+        // If we already have a profile loaded for this user, skip redundant reloads
+        if (loadedUserIdRef.current === session.user.id && profileRef.current) {
+          console.log('Profile already loaded for this user, skipping reload on event:', _event);
+          setLoading(false);
+          return;
+        }
         // Prevent multiple concurrent profile loads
-        if (isLoadingProfile) {
+        if (isLoadingProfileRef.current) {
           console.log('Profile loading already in progress, skipping...');
           return;
         }
         
         console.log('Loading profile for user:', session.user.id);
         setIsLoadingProfile(true);
+        isLoadingProfileRef.current = true;
         
         // Use RPC approach with timeout to prevent hanging
         console.log('Loading profile with RPC function...');
@@ -48,6 +72,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (!error && data && Array.isArray(data) && data.length > 0) {
             console.log('Profile loaded successfully:', data[0]);
             setProfile(data[0] as Profile);
+            loadedUserIdRef.current = session.user.id;
           } else {
             console.error('Error loading profile:', error);
             console.log('Setting profile to null due to error or no data');
@@ -56,11 +81,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } catch (err) {
           console.error('Exception or timeout loading profile:', err);
-          console.log('Setting profile to null due to exception/timeout');
-          setProfile(null);
+          // Treat timeouts as non-fatal: keep existing profile to avoid UI flicker on tab visibility changes
+          if (err instanceof Error && err.message === 'RPC timeout') {
+            console.log('RPC timeout while loading profile; keeping existing profile.');
+          } else {
+            console.log('Non-timeout error; clearing profile.');
+            setProfile(null);
+          }
         }
         
         setIsLoadingProfile(false);
+        isLoadingProfileRef.current = false;
         // Only set loading to false after profile loading is complete
         setLoading(false);
       } else {
@@ -98,13 +129,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (!error && data && Array.isArray(data) && data.length > 0) {
             console.log('Initial profile loaded successfully:', data[0]);
             setProfile(data[0] as Profile);
+            loadedUserIdRef.current = session.user.id;
           } else {
             console.error('Error loading initial profile:', error);
             setProfile(null);
           }
         } catch (err) {
           console.error('Exception or timeout loading initial profile:', err);
-          setProfile(null);
+          if (err instanceof Error && err.message === 'RPC timeout') {
+            console.log('RPC timeout on initial load; keeping existing profile.');
+          } else {
+            setProfile(null);
+          }
         }
       } else {
         setProfile(null);

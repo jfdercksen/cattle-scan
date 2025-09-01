@@ -12,11 +12,12 @@ import { Input } from '@/components/ui/input';
 import FileUploadManager, { type UploadResult } from '@/components/FileUploadManager';
 import { LivestockListingFormData } from '@/lib/schemas/livestockListingSchema';
 
-export const OfferTermsSection = () => {
+export const OfferTermsSection = ({ companyName }: { companyName?: string }) => {
   const form = useFormContext<LivestockListingFormData>();
   const { watch, setValue } = form;
   const additionalR25 = watch('additional_r25_per_calf');
   const affidavitFilePath = watch('affidavit_file_path');
+  const additionalR25PerHead = watch('additional_r25_per_head');
 
   useEffect(() => {
     // Automatically set affidavit_required based on the additional_r25_per_calf selection.
@@ -32,8 +33,45 @@ export const OfferTermsSection = () => {
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-4">Offer Terms</h3>
+      <h3 className="text-lg font-semibold mb-4">Premiums</h3>
       <div className="space-y-4">
+      <FormField
+          control={form.control}
+          name="additional_r25_per_head"
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center justify-between rounded-md border p-4 h-full">
+                <FormLabel>If the entity selling the livestock has a GLN Number, it could mean an additional R 25 per head payment. Apply?</FormLabel>
+                <FormControl>
+                  <YesNoSwitch value={field.value} onChange={field.onChange} />
+                </FormControl>
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {additionalR25PerHead && (
+          <div className="space-y-2 rounded-md border p-4">
+            <p className="text-sm text-gray-700">
+              To qualify for the additional payment, a GLN number is required.
+            </p>
+            <FormField
+              control={form.control}
+              name="gln_num"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>GLN Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter GLN number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        )}
+        
         <FormField
           control={form.control}
           name="additional_r25_per_calf"
@@ -75,7 +113,7 @@ export const OfferTermsSection = () => {
       <div className="bg-blue-50 p-4 rounded-lg mt-4">
         <p className="text-sm text-blue-800">
           <strong>Note:</strong> This offer is subject to biosecurity terms and evaluation of biosecurity and trace-ability
-          assessment as well as the veterinary declaration. If Chalmar Beef is placed under quarantine before the livestock
+          assessment as well as the veterinary declaration. If {companyName || 'Chalmar Beef'} is placed under quarantine before the livestock
           is offloaded, the offer is withdrawn.
         </p>
       </div>

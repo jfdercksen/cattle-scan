@@ -24,6 +24,59 @@ interface Address {
   province: string;
 }
 
+// Minimal types for loading points used for derived fields (align with ViewListingPage)
+type LoadingPointDetails = {
+  livestock_type?: 'CATTLE' | 'SHEEP';
+  bred_or_bought?: 'BRED' | 'BOUGHT IN';
+  number_of_males?: number;
+  number_of_females?: number;
+  males_castrated?: boolean;
+};
+type LoadingPointBiosecurity = {
+  breeder_name?: string;
+  is_breeder_seller?: boolean;
+};
+type LoadingPoint = {
+  details?: LoadingPointDetails;
+  biosecurity?: LoadingPointBiosecurity;
+};
+
+type AddressLike = { farm_name?: string; district?: string; province?: string };
+type DisplayPoint = LoadingPoint & {
+  birth_address?: AddressLike;
+  current_address?: AddressLike;
+  loading_address?: AddressLike;
+  is_current_same_as_birth?: boolean;
+  is_loading_same_as_current?: boolean;
+};
+
+const parseLoadingPoints = (lp: Json | string | null | undefined): LoadingPoint[] => {
+  if (!lp) return [];
+  let raw: unknown = lp;
+  if (typeof lp === 'string') {
+    try { raw = JSON.parse(lp); } catch { return []; }
+  }
+  if (!Array.isArray(raw)) return [];
+  return (raw as unknown[]).map((p): LoadingPoint => {
+    const obj = (p && typeof p === 'object') ? p as Record<string, unknown> : {};
+    const details = (obj.details && typeof obj.details === 'object') ? obj.details as Record<string, unknown> : undefined;
+    const biosecurity = (obj.biosecurity && typeof obj.biosecurity === 'object') ? obj.biosecurity as Record<string, unknown> : undefined;
+    return {
+      details: details ? {
+        livestock_type: details.livestock_type === 'CATTLE' || details.livestock_type === 'SHEEP' ? details.livestock_type : undefined,
+        bred_or_bought: details.bred_or_bought === 'BRED' || details.bred_or_bought === 'BOUGHT IN' ? details.bred_or_bought : undefined,
+        number_of_males: typeof details.number_of_males === 'number' ? details.number_of_males : Number(details.number_of_males ?? 0) || 0,
+        number_of_females: typeof details.number_of_females === 'number' ? details.number_of_females : Number(details.number_of_females ?? 0) || 0,
+        males_castrated: typeof details.males_castrated === 'boolean' ? details.males_castrated : false,
+      } : undefined,
+      biosecurity: biosecurity ? {
+        breeder_name: typeof biosecurity.breeder_name === 'string' ? biosecurity.breeder_name : undefined,
+        is_breeder_seller: typeof biosecurity.is_breeder_seller === 'boolean' ? biosecurity.is_breeder_seller : undefined,
+      } : undefined,
+    };
+  });
+};
+
 const formatStatus = (status: string | null | undefined): string => {
   if (!status) return 'N/A';
   return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -123,6 +176,65 @@ export const AdminViewListingPage = () => {
     return <div className="text-center p-4">Listing not found.</div>;
   }
 
+  // Derive livestock info and counts from loading_points (new schema)
+  let derivedLivestockType: string = 'N/A';
+  let derivedBredOrBought: string = 'N/A';
+  const loadingPoints = parseLoadingPoints(listing.loading_points as Json | string | null | undefined);
+  const types = new Set<string>();
+  const bob = new Set<string>();
+  let cattleTotal = 0;
+  let sheepTotal = 0;
+  let maleTotal = 0;
+  let femaleTotal = 0;
+  const malesCastrationSet = new Set<boolean>();
+  const breederSellerSet = new Set<boolean>();
+  const breederNames = new Set<string>();
+  for (const p of loadingPoints) {
+    if (p.details?.livestock_type) types.add(p.details.livestock_type);
+    if (p.details?.bred_or_bought) bob.add(p.details.bred_or_bought);
+    const males = p.details?.number_of_males ?? 0;
+    const females = p.details?.number_of_females ?? 0;
+    const total = males + females;
+    maleTotal += males;
+    femaleTotal += females;
+    if (p.details?.livestock_type === 'CATTLE') cattleTotal += total;
+    else if (p.details?.livestock_type === 'SHEEP') sheepTotal += total;
+    if (p.details?.livestock_type === 'CATTLE' && typeof p.details?.males_castrated === 'boolean') {
+      malesCastrationSet.add(p.details.males_castrated);
+    }
+    if (typeof p.biosecurity?.is_breeder_seller === 'boolean') {
+      breederSellerSet.add(p.biosecurity.is_breeder_seller);
+    }
+    const bname = p.biosecurity?.breeder_name?.trim();
+    if (bname) breederNames.add(bname);
+  }
+
+  let derivedMalesCastrated: string = 'N/A';
+  if (malesCastrationSet.size === 1) derivedMalesCastrated = malesCastrationSet.has(true) ? 'Yes' : 'No';
+  else if (malesCastrationSet.size > 1) derivedMalesCastrated = 'Mixed';
+
+  let derivedIsBreederSeller: string = 'N/A';
+  if (breederSellerSet.size === 1) derivedIsBreederSeller = breederSellerSet.has(true) ? 'Yes' : 'No';
+  else if (breederSellerSet.size > 1) derivedIsBreederSeller = 'Mixed';
+
+  let derivedBreederName: string = 'N/A';
+  if (breederNames.size === 1) derivedBreederName = Array.from(breederNames)[0];
+  else if (breederNames.size > 1) derivedBreederName = 'Mixed';
+
+  if (types.size > 1) {
+    derivedLivestockType = 'CATTLE AND SHEEP';
+  } else if (types.size === 1) {
+    const only = Array.from(types)[0];
+    derivedLivestockType = only === 'CATTLE' || only === 'SHEEP' ? only : 'N/A';
+  } else {
+    if (cattleTotal > 0 && sheepTotal > 0) derivedLivestockType = 'CATTLE AND SHEEP';
+    else if (cattleTotal > 0) derivedLivestockType = 'CATTLE';
+    else if (sheepTotal > 0) derivedLivestockType = 'SHEEP';
+  }
+
+  if (bob.size > 1) derivedBredOrBought = 'Mixed';
+  else if (bob.size === 1) derivedBredOrBought = Array.from(bob)[0];
+
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8">
       <Button variant="outline" size="sm" onClick={() => navigate(-1)} className="mb-4">
@@ -151,19 +263,20 @@ export const AdminViewListingPage = () => {
               <AccordionTrigger>General Information</AccordionTrigger>
               <AccordionContent>
                 <DetailItem label="Owner Name" value={listing.owner_name} />
-                <DetailItem label="Livestock Type" value={listing.livestock_type} />
-                <DetailItem label="Bred or Bought" value={listing.bred_or_bought} />
-                <DetailItem label="Breeder Name" value={listing.breeder_name} />
-                <DetailItem label="Is Breeder the Seller?" value={<BooleanDisplay value={listing.is_breeder_seller} />} />
+                <DetailItem label="Livestock Type" value={derivedLivestockType} />
+                <DetailItem label="Bred or Bought" value={derivedBredOrBought} />
+                <DetailItem label="Breeder Name" value={derivedBreederName} />
+                <DetailItem label="Is Breeder the Seller?" value={derivedIsBreederSeller} />
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="item-2">
               <AccordionTrigger>Livestock Details</AccordionTrigger>
               <AccordionContent>
-                <DetailItem label="Total Livestock Offered" value={listing.total_livestock_offered} />
-                <DetailItem label="Number of Heifers" value={listing.number_of_heifers} />
-                <DetailItem label="Males Castrated" value={<BooleanDisplay value={listing.males_castrated} />} />
+                <DetailItem label="Total Livestock" value={maleTotal + femaleTotal} />
+                <DetailItem label="Number of Males" value={maleTotal} />
+                <DetailItem label="Number of Females" value={femaleTotal} />
+                <DetailItem label="Males Castrated" value={derivedMalesCastrated} />
               </AccordionContent>
             </AccordionItem>
 
@@ -188,97 +301,103 @@ export const AdminViewListingPage = () => {
                     <h4 className="text-lg font-semibold mb-3">Livestock Loading Summary</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {/* Only show cattle count if > 0 */}
-                      {(listing.number_cattle_loaded ?? 0) > 0 && (
+                      {cattleTotal > 0 && (
                         <div>
-                          <p><strong>Total Cattle:</strong> {listing.number_cattle_loaded}</p>
+                          <p><strong>Total Cattle:</strong> {cattleTotal}</p>
                         </div>
                       )}
 
                       {/* Only show sheep count if > 0 */}
-                      {(listing.number_sheep_loaded ?? 0) > 0 && (
+                      {sheepTotal > 0 && (
                         <div>
-                          <p><strong>Total Sheep:</strong> {listing.number_sheep_loaded}</p>
+                          <p><strong>Total Sheep:</strong> {sheepTotal}</p>
                         </div>
                       )}
 
                       <div>
                         <Badge variant="outline">
                           {LivestockCalculations.determineLivestockType(
-                            listing.number_cattle_loaded ?? 0,
-                            listing.number_sheep_loaded ?? 0
+                            cattleTotal,
+                            sheepTotal
                           ) || "No livestock"}
                         </Badge>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Loading Points Information */}
-                    {listing.loading_points && (() => {
-                      try {
-                        const loadingPoints = typeof listing.loading_points === 'string'
-                          ? JSON.parse(listing.loading_points)
-                          : listing.loading_points;
-
-                        if (Array.isArray(loadingPoints) && loadingPoints.length > 0) {
-                          return (
-                            <div className="mt-4">
-                              <h5 className="font-medium mb-3">Loading Points Breakdown</h5>
-                              <div className="space-y-3">
-                                {loadingPoints.map((point: any, index: number) => {
-                                  const hasCattle = (point.number_of_cattle ?? 0) > 0;
-                                  const hasSheep = (point.number_of_sheep ?? 0) > 0;
-
-                                  if (!hasCattle && !hasSheep) return null;
-
-                                  return (
-                                    <div key={index} className="p-3 bg-white border rounded-md">
-                                      <div className="flex justify-between items-start mb-2">
-                                        <h6 className="font-medium text-sm">Loading Point {index + 1}</h6>
-                                        <div className="flex gap-2">
-                                          {hasCattle && (
-                                            <Badge variant="secondary" className="text-xs">
-                                              {point.number_of_cattle} Cattle
-                                            </Badge>
-                                          )}
-                                          {hasSheep && (
-                                            <Badge variant="secondary" className="text-xs">
-                                              {point.number_of_sheep} Sheep
-                                            </Badge>
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-gray-600">
-                                        <div>
-                                          <strong>Birth:</strong> {point.birth_address?.farm_name || 'N/A'}, {point.birth_address?.district || 'N/A'}, {point.birth_address?.province || 'N/A'}
-                                        </div>
-                                        <div>
-                                          <strong>Current:</strong> {
-                                            point.is_current_same_as_birth
-                                              ? 'Same as birth address'
-                                              : `${point.current_address?.farm_name || 'N/A'}, ${point.current_address?.district || 'N/A'}, ${point.current_address?.province || 'N/A'}`
-                                          }
-                                        </div>
-                                        <div>
-                                          <strong>Loading:</strong> {
-                                            point.is_loading_same_as_current
-                                              ? 'Same as current address'
-                                              : `${point.loading_address?.farm_name || 'N/A'}, ${point.loading_address?.district || 'N/A'}, ${point.loading_address?.province || 'N/A'}`
-                                          }
-                                        </div>
+                  {/* Loading Points Information */}
+                  {listing.loading_points && (() => {
+                    try {
+                      const loadingPointsRaw = typeof listing.loading_points === 'string'
+                        ? JSON.parse(listing.loading_points)
+                        : listing.loading_points;
+                      const points = Array.isArray(loadingPointsRaw) ? (loadingPointsRaw as DisplayPoint[]) : [];
+                      if (points.length > 0) {
+                        return (
+                          <div className="mt-4">
+                            <h5 className="font-medium mb-3">Loading Points Breakdown</h5>
+                            <div className="space-y-3">
+                              {points.map((point: DisplayPoint, index: number) => {
+                                const males = point.details?.number_of_males ?? 0;
+                                const females = point.details?.number_of_females ?? 0;
+                                const total = males + females;
+                                const isCattle = point.details?.livestock_type === 'CATTLE';
+                                const isSheep = point.details?.livestock_type === 'SHEEP';
+                                const cattleCount = isCattle ? total : 0;
+                                const sheepCount = isSheep ? total : 0;
+                                const hasCattle = cattleCount > 0;
+                                const hasSheep = sheepCount > 0;
+                                if (!hasCattle && !hasSheep) return null;
+                                return (
+                                  <div key={index} className="p-3 bg-white border rounded-md">
+                                    <div className="flex justify-between items-start mb-2">
+                                      <h6 className="font-medium text-sm">Loading Point {index + 1}</h6>
+                                      <div className="flex gap-2">
+                                        {hasCattle && (
+                                          <Badge variant="secondary" className="text-xs">
+                                            {cattleCount} Cattle
+                                          </Badge>
+                                        )}
+                                        {hasSheep && (
+                                          <Badge variant="secondary" className="text-xs">
+                                            {sheepCount} Sheep
+                                          </Badge>
+                                        )}
                                       </div>
                                     </div>
-                                  );
-                                })}
-                              </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-gray-600">
+                                      <div>
+                                        <strong>Birth:</strong> {point.birth_address?.farm_name || 'N/A'}, {point.birth_address?.district || 'N/A'}, {point.birth_address?.province || 'N/A'}
+                                      </div>
+                                      <div>
+                                        <strong>Current:</strong> {point.is_current_same_as_birth ? 'Same as birth address' : `${point.current_address?.farm_name || 'N/A'}, ${point.current_address?.district || 'N/A'}, ${point.current_address?.province || 'N/A'}`}
+                                      </div>
+                                      <div>
+                                        <strong>Loading:</strong> {point.is_loading_same_as_current ? 'Same as current address' : `${point.loading_address?.farm_name || 'N/A'}, ${point.loading_address?.district || 'N/A'}, ${point.loading_address?.province || 'N/A'}`}
+                                      </div>
+                                    </div>
+                                    <div className="mt-2 text-xs text-gray-700">
+                                      <div>
+                                        <strong>Male/Female:</strong> {males} / {females}
+                                      </div>
+                                      {isCattle && typeof point.details?.males_castrated === 'boolean' && (
+                                        <div>
+                                          <strong>Males Castrated:</strong> {point.details.males_castrated ? 'Yes' : 'No'}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
-                          );
-                        }
-                      } catch (error) {
-                        console.error('Error parsing loading_points:', error);
+                          </div>
+                        );
                       }
-                      return null;
-                    })()}
-                  </div>
+                    } catch (error) {
+                      console.error('Error parsing loading_points:', error);
+                    }
+                    return null;
+                  })()}
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -300,8 +419,8 @@ export const AdminViewListingPage = () => {
             <AccordionItem value="item-6">
               <AccordionTrigger>Loading Information</AccordionTrigger>
               <AccordionContent>
-                <DetailItem label="Number of Cattle Loaded" value={listing.number_cattle_loaded} />
-                <DetailItem label="Number of Sheep Loaded" value={listing.number_sheep_loaded} />
+                <DetailItem label="Number of Cattle Loaded" value={cattleTotal} />
+                <DetailItem label="Number of Sheep Loaded" value={sheepTotal} />
                 <DetailItem label="Truck Registration Number" value={listing.truck_registration_number} />
                 {listing.signature_data && (
                   <div className="py-2">

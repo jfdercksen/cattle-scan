@@ -115,6 +115,8 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
   const [signature, setSignature] = useState<string | null>(null);
   const [existingListingId, setExistingListingId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
+  const [invitingCompanyName, setInvitingCompanyName] = useState<string | undefined>(undefined);
+  const draftKey = `livestock_listing_draft:${invitationId}`;
 
   const form = useForm<LivestockListingFormData>({
     resolver: zodResolver(livestockListingSchema),
@@ -136,6 +138,11 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
       growth_implant_type: '',
       estimated_average_weight: undefined,
       breed: '',
+      additional_r25_per_calf: false,
+      additional_r25_per_head: false,
+      gln_num: '',
+      affidavit_required: false,
+      affidavit_file_path: '',
       breeder_name: '',
       is_breeder_seller: false,
       farm_birth_address: { farm_name: '', district: '', province: '' }, // Legacy field, now handled by loading_points
@@ -220,8 +227,8 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
     { title: "Movement Tracker", component: <LoadingPointsSection fields={fields} append={append} remove={remove} /> },
 
     { title: "Veterinarian", component: <VetSelectionSection /> },
-    { title: "Offer Terms", component: <OfferTermsSection /> },
-    { title: "Declarations", component: <DeclarationsSection /> },
+    { title: "Premiums", component: <OfferTermsSection companyName={invitingCompanyName} /> },
+    { title: "Declarations", component: <DeclarationsSection companyName={invitingCompanyName} /> },
     {
       title: "Signature",
       component: <SignatureSection signature={signature} setSignature={setSignature} />,
@@ -250,7 +257,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         // Fetch invitation data with explicit typing to avoid deep type inference
         const invitationQuery = supabase
           .from('listing_invitations')
-          .select('reference_id')
+          .select('reference_id, company_id, companies ( name )')
           .eq('id', invitationId)
           .single();
         
@@ -279,6 +286,19 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
           });
           return;
         }
+        // Capture inviting company name (if available via FK join), with typed data and fallback
+        type InvitationWithCompany = { reference_id: string | null; company_id: string | null; companies: { name: string } | null };
+        const typedInvitation = invitationData as InvitationWithCompany | null;
+        let companyName: string | undefined = typedInvitation?.companies?.name || undefined;
+        if (!companyName && typedInvitation?.company_id) {
+          const { data: companyRow } = await supabase
+            .from('companies')
+            .select('name')
+            .eq('id', typedInvitation.company_id)
+            .maybeSingle();
+          companyName = companyRow?.name || undefined;
+        }
+        setInvitingCompanyName(companyName);
 
         const { data: listingData, error: listingError } = typedListingRes;
         if (listingError) {
@@ -324,6 +344,11 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
             growth_implant_type: getString(listingData.growth_implant_type),
             estimated_average_weight: getNumber(listingData.estimated_average_weight) || undefined,
             breed: getString(listingData.breed),
+            additional_r25_per_calf: getBoolean(listingData.additional_r25_per_calf),
+            affidavit_required: getBoolean(listingData.affidavit_required),
+            additional_r25_per_head: getBoolean(listingData.additional_r25_per_head),
+            gln_num: getString(listingData.gln_num),
+            affidavit_file_path: getString(listingData.affidavit_file_path),
             breeder_name: getString(listingData.breeder_name),
             is_breeder_seller: getBoolean(listingData.is_breeder_seller),
             farm_birth_address: safeJsonParse(getJsonValue(listingData.farm_birth_address), { farm_name: '', district: '', province: '' }),
@@ -494,6 +519,35 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
             loading_points: [defaultLoadingPoint],
           });
         }
+
+        // Attempt to restore any saved draft (applies to both existing and new listings)
+        try {
+          const rawDraft = localStorage.getItem(draftKey);
+          if (rawDraft) {
+            const parsed = JSON.parse(rawDraft) as {
+              data?: Partial<LivestockListingFormData>;
+              signature?: string | null;
+              currentStep?: number;
+            };
+            if (parsed?.data) {
+              const merged = {
+                ...form.getValues(),
+                ...parsed.data,
+                invitation_id: invitationId,
+                reference_id: referenceId,
+              } as LivestockListingFormData;
+              form.reset(merged);
+            }
+            if (typeof parsed.signature !== 'undefined') {
+              setSignature(parsed.signature ?? null);
+            }
+            if (typeof parsed.currentStep === 'number') {
+              setCurrentStep(Math.min(Math.max(0, parsed.currentStep), formSections.length - 1));
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to restore draft:', e);
+        }
       } catch (error) {
         console.error('Error loading initial data:', error);
         toast({
@@ -507,6 +561,56 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
     loadInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invitationId, form, profile]);
+
+  // Auto-save draft to localStorage (debounced)
+  useEffect(() => {
+    let saveTimer: number | undefined;
+    const subscription = watch((values) => {
+      if (saveTimer) window.clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(() => {
+        try {
+          const draft = {
+            data: values,
+            signature,
+            currentStep,
+          };
+          const replacer = (_k: string, v: unknown) => {
+            if (typeof File !== 'undefined' && v instanceof File) return undefined;
+            if (typeof Blob !== 'undefined' && v instanceof Blob) return undefined;
+            return v as any;
+          };
+          localStorage.setItem(draftKey, JSON.stringify(draft, replacer));
+        } catch (e) {
+          console.warn('Failed to save draft:', e);
+        }
+      }, 600);
+    });
+    return () => {
+      if (saveTimer) window.clearTimeout(saveTimer);
+      subscription.unsubscribe();
+    };
+  }, [watch, draftKey, signature, currentStep]);
+
+  // Persist signature and step changes even if no form fields changed
+  useEffect(() => {
+    try {
+      const existingRaw = localStorage.getItem(draftKey);
+      const existing = existingRaw ? JSON.parse(existingRaw) : {};
+      const draft = {
+        ...existing,
+        signature,
+        currentStep,
+      };
+      const replacer = (_k: string, v: unknown) => {
+        if (typeof File !== 'undefined' && v instanceof File) return undefined;
+        if (typeof Blob !== 'undefined' && v instanceof Blob) return undefined;
+        return v as any;
+      };
+      localStorage.setItem(draftKey, JSON.stringify(draft, replacer));
+    } catch (e) {
+      // ignore storage errors
+    }
+  }, [signature, currentStep, draftKey]);
 
   const onInvalid = (errors: FieldErrors<LivestockListingFormData>) => {
     console.error('Form validation errors:', errors);
@@ -544,7 +648,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         affidavitFilePath = publicUrlData.publicUrl;
       }
 
-      const submissionData: any = {
+      const submissionData = {
         profile_id: profile.id,
         seller_id: user.id,
         signature_data: signature,
@@ -580,6 +684,9 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         invited_vet_email: data.invited_vet_email,
         additional_r25_per_calf: data.additional_r25_per_calf,
         affidavit_required: data.affidavit_required,
+        additional_r25_per_head: data.additional_r25_per_head,
+        // Include gln_num only when applicable; keep null otherwise for type compatibility
+        gln_num: data.additional_r25_per_head ? (data.gln_num || null) : null,
         is_loading_at_birth_farm: data.loading_points?.[0]?.is_loading_same_as_current ?? data.is_loading_at_birth_farm,
         livestock_moved_out_of_boundaries: data.livestock_moved_out_of_boundaries,
         declaration_no_cloven_hooved_animals: data.declaration_no_cloven_hooved_animals,
@@ -622,8 +729,12 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
       });
 
       if (onSuccess) {
+        // Clear saved draft upon success
+        try { localStorage.removeItem(draftKey); } catch (e) { /* ignore draft removal error */ }
         onSuccess();
       } else {
+        // Clear saved draft upon success
+        try { localStorage.removeItem(draftKey); } catch (e) { /* ignore draft removal error */ }
         navigate('/seller-dashboard');
       }
     } catch (error) {

@@ -23,6 +23,9 @@ export const livestockListingSchema = z.object({
   // Breed - Made optional for initial launch
   breed: z.string().optional(),
   additional_r25_per_calf: z.boolean().optional(),
+  // Additional R25 per head (based on GLN)
+  additional_r25_per_head: z.boolean().optional(),
+  gln_num: z.string().optional(),
   affidavit_required: z.boolean().optional(),
   affidavit_file_path: z.string().nullable().optional(),
   affidavit_file: z.any().optional(),
@@ -34,23 +37,31 @@ export const livestockListingSchema = z.object({
     farm_name: z.string(),
     district: z.string(),
     province: z.string(),
+    postal_code: z.string().optional(),
+    country: z.string().optional(),
   }).optional(), // Now handled by loading_points
   is_loading_at_birth_farm: z.boolean().default(true),
   farm_loading_address: z.object({
     farm_name: z.string(),
     district: z.string(),
     province: z.string(),
+    postal_code: z.string().optional(),
+    country: z.string().optional(),
   }).optional(),
   livestock_moved_out_of_boundaries: z.boolean().default(false),
   livestock_moved_location: z.object({
     farm_name: z.string(),
     district: z.string(),
     province: z.string(),
+    postal_code: z.string().optional(),
+    country: z.string().optional(),
   }).optional(),
   livestock_moved_location_to: z.object({
     farm_name: z.string(),
     district: z.string(),
     province: z.string(),
+    postal_code: z.string().optional(),
+    country: z.string().optional(),
   }).optional(),
   livestock_moved_year: z.coerce.number().optional(),
   livestock_moved_month: z.coerce.number().optional(),
@@ -88,16 +99,22 @@ export const livestockListingSchema = z.object({
       farm_name: z.string().min(1, 'Farm name is required'),
       district: z.string().min(1, 'District is required'),
       province: z.string().min(1, 'Province is required'),
+      postal_code: z.string().default(''),
+      country: z.string().default(''),
     }),
     current_address: z.object({
       farm_name: z.string().default(''),
       district: z.string().default(''),
       province: z.string().default(''),
+      postal_code: z.string().default(''),
+      country: z.string().default(''),
     }),
     loading_address: z.object({
       farm_name: z.string().default(''),
       district: z.string().default(''),
       province: z.string().default(''),
+      postal_code: z.string().default(''),
+      country: z.string().default(''),
     }),
     is_current_same_as_birth: z.boolean().default(false),
     is_loading_same_as_current: z.boolean().default(false),
@@ -105,6 +122,7 @@ export const livestockListingSchema = z.object({
     details: z.object({
       livestock_type: z.enum(['CATTLE', 'SHEEP']).optional(),
       bred_or_bought: z.enum(['BRED', 'BOUGHT IN']).optional(),
+      breed: z.string().optional(),
       number_of_males: z.number().min(0).default(0),
       number_of_females: z.number().min(0).default(0),
       males_castrated: z.boolean().default(false),
@@ -119,11 +137,15 @@ export const livestockListingSchema = z.object({
         farm_name: z.string(),
         district: z.string(),
         province: z.string(),
+        postal_code: z.string().optional(),
+        country: z.string().optional(),
       }).optional(),
       livestock_moved_location_to: z.object({
         farm_name: z.string(),
         district: z.string(),
         province: z.string(),
+        postal_code: z.string().optional(),
+        country: z.string().optional(),
       }).optional(),
       livestock_moved_year: z.coerce.number().optional(),
       livestock_moved_month: z.coerce.number().optional(),
@@ -157,6 +179,17 @@ export const livestockListingSchema = z.object({
       message: 'An affidavit is required for the additional payment.',
       path: ['affidavit_file'],
     });
+  }
+
+  // GLN validation: when additional R25 per head is selected, require GLN number
+  if (data.additional_r25_per_head) {
+    if (!data.gln_num || data.gln_num.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'GLN number is required to qualify for the additional R25 per head.',
+        path: ['gln_num'],
+      });
+    }
   }
 
   // Enhanced loading points validation
