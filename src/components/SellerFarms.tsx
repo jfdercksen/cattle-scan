@@ -186,7 +186,7 @@ export default function SellerFarms() {
           </div>
           <div className="mt-4">
             <Button onClick={onAddFarm} disabled={saving}>
-              {saving ? 'Saving...' : 'Add Farm'}
+              {saving ? 'Saving...' : 'Add Grazing Location'}
             </Button>
           </div>
         </CardContent>
