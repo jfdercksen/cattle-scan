@@ -72,7 +72,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
 
   const handleSelectFarm = (
     herdIndex: number,
-    section: 'birth_address' | 'current_address' | 'loading_address',
+    section: 'birth_address' | 'current_address' | 'loading_address' | 'biosecurity.livestock_moved_location' | 'biosecurity.livestock_moved_location_to',
     farmId: string
   ) => {
     const farm = farms.find(f => f.id === farmId);
@@ -124,6 +124,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
         livestock_moved_out_of_boundaries: false,
         livestock_moved_location: undefined,
         livestock_moved_location_to: undefined,
+        livestock_moved_how: undefined,
         livestock_moved_year: undefined,
         livestock_moved_month: undefined,
       },
@@ -648,6 +649,23 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                 {form.watch(`loading_points.${index}.biosecurity.livestock_moved_out_of_boundaries`) && (
                   <div className="mt-4">
                     <Label>Location where livestock was moved from</Label>
+                    {farms.length > 0 && (
+                      <div className="mt-2">
+                        <Label className="text-xs">Use saved farm</Label>
+                        <div className="mt-1 w-full md:w-96">
+                          <Select onValueChange={(val) => handleSelectFarm(index, 'biosecurity.livestock_moved_location', val)}>
+                            <SelectTrigger>
+                              <SelectValue placeholder={loadingFarms ? 'Loading saved farms...' : 'Select a saved farm'} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {farms.map((f) => (
+                                <SelectItem key={f.id} value={f.id}>{f.name} — {formatFarmAddress(f.address)}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-2">
                       <FormField
                         control={form.control}
@@ -718,6 +736,23 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
 
                     <div className="mt-4">
                       <Label>Location where livestock was moved to</Label>
+                      {farms.length > 0 && (
+                        <div className="mt-2">
+                          <Label className="text-xs">Use saved farm</Label>
+                          <div className="mt-1 w-full md:w-96">
+                            <Select onValueChange={(val) => handleSelectFarm(index, 'biosecurity.livestock_moved_location_to', val)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder={loadingFarms ? 'Loading saved farms...' : 'Select a saved farm'} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {farms.map((f) => (
+                                  <SelectItem key={f.id} value={f.id}>{f.name} — {formatFarmAddress(f.address)}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
                       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-2">
                         <FormField
                           control={form.control}
@@ -812,6 +847,29 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                               <FormControl>
                                 <Input type="number" placeholder="Enter month" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))} />
                               </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        <FormField
+                          control={form.control}
+                          name={`loading_points.${index}.biosecurity.livestock_moved_how`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">How Were They Moved?</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select how they were moved" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="Truck">Truck</SelectItem>
+                                  <SelectItem value="On Foot">On Foot</SelectItem>
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}

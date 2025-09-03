@@ -147,6 +147,7 @@ export const livestockListingSchema = z.object({
         postal_code: z.string().optional(),
         country: z.string().optional(),
       }).optional(),
+      livestock_moved_how: z.enum(['Truck', 'On Foot']).optional(),
       livestock_moved_year: z.coerce.number().optional(),
       livestock_moved_month: z.coerce.number().optional(),
     }).optional(),
