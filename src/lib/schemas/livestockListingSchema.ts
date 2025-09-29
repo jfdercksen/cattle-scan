@@ -26,6 +26,7 @@ export const livestockListingSchema = z.object({
   // Additional R25 per head (based on GLN)
   additional_r25_per_head: z.boolean().optional(),
   gln_num: z.string().optional(),
+  gln_document_url: z.string().url('GLN document must be a valid URL').optional().nullable(),
   affidavit_required: z.boolean().optional(),
   affidavit_file_path: z.string().nullable().optional(),
   affidavit_file: z.any().optional(),
@@ -126,6 +127,8 @@ export const livestockListingSchema = z.object({
       number_of_males: z.number().min(0).default(0),
       number_of_females: z.number().min(0).default(0),
       males_castrated: z.boolean().default(false),
+      previous_owner_declaration_url: z.string().url('Declaration upload must be a valid URL').optional().nullable(),
+      previous_owner_declaration_name: z.string().optional().nullable(),
     }).optional(),
 
     // Per-herd biosecurity details (moved from BiosecuritySection)
@@ -147,7 +150,7 @@ export const livestockListingSchema = z.object({
         postal_code: z.string().optional(),
         country: z.string().optional(),
       }).optional(),
-      livestock_moved_how: z.enum(['Truck', 'On Foot']).optional(),
+      livestock_moved_how: z.enum(['Transport Contractor', 'Own Truck', 'On Foot']).optional(),
       livestock_moved_year: z.coerce.number().optional(),
       livestock_moved_month: z.coerce.number().optional(),
     }).optional(),
@@ -191,10 +194,19 @@ export const livestockListingSchema = z.object({
         path: ['gln_num'],
       });
     }
+    if (!data.gln_document_url) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'GLN registration document is required when applying for the additional R25 per head.',
+        path: ['gln_document_url'],
+      });
+    }
   }
 
   // Enhanced loading points validation
   data.loading_points?.forEach((loadingPoint, index) => {
+    const herdDetails = loadingPoint.details;
+
     // Validate current address if not same as birth
     if (!loadingPoint.is_current_same_as_birth) {
       if (!loadingPoint.current_address?.farm_name) {
@@ -241,6 +253,16 @@ export const livestockListingSchema = z.object({
           path: [`loading_points.${index}.loading_address.province`], 
           message: 'Province is required for loading address', 
           code: 'custom' 
+        });
+      }
+    }
+
+    if (herdDetails?.bred_or_bought === 'BOUGHT IN') {
+      if (!herdDetails.previous_owner_declaration_url) {
+        ctx.addIssue({
+          path: [`loading_points.${index}.details.previous_owner_declaration_url`],
+          message: 'Declaration from previous owner is required when livestock is bought in.',
+          code: z.ZodIssueCode.custom,
         });
       }
     }

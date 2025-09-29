@@ -15,13 +15,16 @@ import { LivestockListingFormData } from '@/lib/schemas/livestockListingSchema';
 interface SignatureSectionProps {
   signature: string | null;
   setSignature: (signature: string | null) => void;
+  onLocationCapture?: (location: string) => void;
+  disableLocationCapture?: boolean;
 }
 
-export const SignatureSection = ({ signature, setSignature }: SignatureSectionProps) => {
+export const SignatureSection = ({ signature, setSignature, onLocationCapture, disableLocationCapture = false }: SignatureSectionProps) => {
   const form = useFormContext<LivestockListingFormData>();
   const { toast } = useToast();
 
   const handleGetLocation = () => {
+    if (disableLocationCapture) return;
     if (navigator.geolocation) {
       const options = {
         enableHighAccuracy: true,
@@ -37,6 +40,7 @@ export const SignatureSection = ({ signature, setSignature }: SignatureSectionPr
           const { latitude, longitude } = position.coords;
           const locationString = `Lat: ${latitude.toFixed(5)}, Lon: ${longitude.toFixed(5)}`;
           form.setValue('signed_location', locationString, { shouldValidate: true });
+          onLocationCapture?.(locationString);
           toast({ title: 'Success', description: 'Location captured successfully.' });
         },
         (error) => {
@@ -83,7 +87,7 @@ export const SignatureSection = ({ signature, setSignature }: SignatureSectionPr
                   <FormControl>
                     <Input placeholder="Enter location or get GPS" {...field} />
                   </FormControl>
-                  <Button type="button" variant="outline" onClick={handleGetLocation}>Get Location</Button>
+                  <Button type="button" variant="outline" onClick={handleGetLocation} disabled={disableLocationCapture}>Get Location</Button>
                 </div>
                 <FormMessage />
               </FormItem>

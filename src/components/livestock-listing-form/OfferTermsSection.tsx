@@ -18,6 +18,7 @@ export const OfferTermsSection = ({ companyName }: { companyName?: string }) => 
   const additionalR25 = watch('additional_r25_per_calf');
   const affidavitFilePath = watch('affidavit_file_path');
   const additionalR25PerHead = watch('additional_r25_per_head');
+  const glnDocumentUrl = watch('gln_document_url');
 
   useEffect(() => {
     // Automatically set affidavit_required based on the additional_r25_per_calf selection.
@@ -41,7 +42,7 @@ export const OfferTermsSection = ({ companyName }: { companyName?: string }) => 
           render={({ field }) => (
             <FormItem>
               <div className="flex items-center justify-between rounded-md border p-4 h-full">
-                <FormLabel>If the entity selling the livestock has a GLN Number, it could mean an additional R 25 per head payment. Apply?</FormLabel>
+                <FormLabel>If the <span className="font-semibold">ENTITY</span> selling the livestock has a GLN Number, it could mean an additional R 25 per head payment. Apply?</FormLabel>
                 <FormControl>
                   <YesNoSwitch value={field.value} onChange={field.onChange} />
                 </FormControl>
@@ -52,9 +53,9 @@ export const OfferTermsSection = ({ companyName }: { companyName?: string }) => 
         />
 
         {additionalR25PerHead && (
-          <div className="space-y-2 rounded-md border p-4">
+          <div className="space-y-3 rounded-md border p-4">
             <p className="text-sm text-gray-700">
-              To qualify for the additional payment, a GLN number is required.
+              To qualify for the additional payment, a GLN number is required. Please upload the GLN registration document.
             </p>
             <FormField
               control={form.control}
@@ -65,6 +66,29 @@ export const OfferTermsSection = ({ companyName }: { companyName?: string }) => 
                   <FormControl>
                     <Input placeholder="Enter GLN number" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="gln_document_url"
+              render={() => (
+                <FormItem>
+                  <FormLabel>GLN Registration Document</FormLabel>
+                  <FileUploadManager
+                    documentType="gln_document"
+                    label="Upload GLN Registration"
+                    required
+                    accept="image/*,application/pdf"
+                    onUploadComplete={(result) => {
+                      if (result.success && result.fileUrl) {
+                        setValue('gln_document_url', result.fileUrl, { shouldValidate: true, shouldDirty: true });
+                      }
+                    }}
+                    onRemove={() => setValue('gln_document_url', null, { shouldValidate: true, shouldDirty: true })}
+                    currentFileUrl={glnDocumentUrl || undefined}
+                  />
                   <FormMessage />
                 </FormItem>
               )}

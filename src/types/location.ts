@@ -4,6 +4,8 @@ export interface FarmAddress {
   farm_name: string;
   district: string;
   province: string;
+  postal_code?: string;
+  country?: string;
   coordinates?: {
     latitude: number;
     longitude: number;
@@ -17,6 +19,8 @@ export interface HerdDetails {
   number_of_males: number;
   number_of_females: number;
   males_castrated: boolean;
+  previous_owner_declaration_url?: string | null;
+  previous_owner_declaration_name?: string | null;
 }
 
 // Per-herd biosecurity details (aligned with Zod schema)
@@ -28,6 +32,7 @@ export interface HerdBiosecurity {
   livestock_moved_location_to?: FarmAddress;
   livestock_moved_year?: number;
   livestock_moved_month?: number;
+  livestock_moved_how?: 'Transport Contractor' | 'Own Truck' | 'On Foot';
 }
 
 export interface HerdLocation {

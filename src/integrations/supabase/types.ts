@@ -793,6 +793,7 @@ export type Database = {
           updated_at: string
           veterinarian_name: string
           veterinarian_registration_number: string
+          signed_location: string | null
         }
         Insert: {
           cattle_mouthed?: boolean | null
@@ -814,6 +815,7 @@ export type Database = {
           updated_at?: string
           veterinarian_name: string
           veterinarian_registration_number: string
+          signed_location?: string | null
         }
         Update: {
           cattle_mouthed?: boolean | null
@@ -835,6 +837,7 @@ export type Database = {
           updated_at?: string
           veterinarian_name?: string
           veterinarian_registration_number?: string
+          signed_location?: string | null
         }
         Relationships: [
           {

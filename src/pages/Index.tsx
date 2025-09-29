@@ -44,26 +44,26 @@ const Index = () => {
   const content: Record<'en' | 'af', ContentStructure> = {
     en: {
       hero: {
-        title: "Cattle Scan & Biosecurity Tracking",
+        title: "Cattle Scan, Biosecurity Tracking and Traceability",
         cta: "Sign In",
       },
       footer: {
         company: "Powered By Workbalance",
         privacy: "Privacy Policy",
         terms: "Terms of Service",
-        contact: "Contact Us",
+        contact: "Register",
       },
     },
     af: {
       hero: {
-        title: "Cattle Scan & Biosecurity Tracking",
+        title: "Cattle Scan, Biosecurity Tracking and Traceability",
         cta: "Teken In",
       },
       footer: {
         company: "Powered By Workbalance",
         privacy: "Privaatheid Beleid",
         terms: "Terme van Diens",
-        contact: "Kontak Ons",
+        contact: "Register",
       },
     },
   };
@@ -111,12 +111,49 @@ const Index = () => {
             {titleBottom && <span className="block pb-[0.3em]">{titleBottom}</span>}
           </h1>
           <div className="flex justify-center">
-            <Link to="/auth">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg">
-                {t.hero.cta}
-                <ChevronRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <Link to="/auth">
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg">
+                  {t.hero.cta}
+                  <ChevronRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+              <Dialog open={contactOpen} onOpenChange={setContactOpen}>
+                <DialogTrigger asChild>
+                  <Button size="lg" variant="outline" className="px-8 py-3 text-lg">
+                    Register
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Register</DialogTitle>
+                    <DialogDescription>
+                      We'd love to hear from you. Please fill in the form below and we'll get back to you.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleContactSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="contact-name">Name</Label>
+                      <Input id="contact-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contact-email">Email</Label>
+                      <Input id="contact-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contact-message">Message</Label>
+                      <Textarea id="contact-message" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="How can we help?" rows={5} />
+                    </div>
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button type="button" variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">Submit</Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         </div>
       </main>
@@ -142,41 +179,6 @@ const Index = () => {
             <div className="flex space-x-6 text-sm">
               <a href="#" className="text-slate-400 hover:text-white transition-colors">{t.footer.privacy}</a>
               <a href="#" className="text-slate-400 hover:text-white transition-colors">{t.footer.terms}</a>
-              <Dialog open={contactOpen} onOpenChange={setContactOpen}>
-                <DialogTrigger asChild>
-                  <button type="button" className="text-slate-400 hover:text-white transition-colors">
-                    {t.footer.contact}
-                  </button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Contact Us</DialogTitle>
-                    <DialogDescription>
-                      We'd love to hear from you. Please fill in the form below and we'll get back to you.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleContactSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="contact-name">Name</Label>
-                      <Input id="contact-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="contact-email">Email</Label>
-                      <Input id="contact-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="contact-message">Message</Label>
-                      <Textarea id="contact-message" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="How can we help?" rows={5} />
-                    </div>
-                    <DialogFooter>
-                      <DialogClose asChild>
-                        <Button type="button" variant="outline">Cancel</Button>
-                      </DialogClose>
-                      <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">Send</Button>
-                    </DialogFooter>
-                  </form>
-                </DialogContent>
-              </Dialog>
             </div>
           </div>
         </div>

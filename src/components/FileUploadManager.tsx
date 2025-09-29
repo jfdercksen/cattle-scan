@@ -22,7 +22,7 @@ export interface CaptureResult {
   error?: string;
 }
 
-export type DocumentType = 'brand_photo' | 'vet_letterhead' | 'affidavit';
+export type DocumentType = 'brand_photo' | 'vet_letterhead' | 'affidavit' | 'gln_document';
 
 interface FileUploadManagerProps {
   documentType: DocumentType;
@@ -34,18 +34,21 @@ interface FileUploadManagerProps {
   onUploadStart?: () => void;
   currentFileUrl?: string;
   disabled?: boolean;
+  onRemove?: () => void;
 }
 
 const ALLOWED_FILE_TYPES = {
   brand_photo: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
   vet_letterhead: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'],
-  affidavit: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf']
+  affidavit: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'],
+  gln_document: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf']
 };
 
 const STORAGE_BUCKETS = {
   brand_photo: 'documents',
   vet_letterhead: 'documents', 
-  affidavit: 'livestock_affidavits'
+  affidavit: 'livestock_affidavits',
+  gln_document: 'documents'
 };
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB default
@@ -59,7 +62,8 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
   onUploadComplete,
   onUploadStart,
   currentFileUrl,
-  disabled = false
+  disabled = false,
+  onRemove,
 }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -259,6 +263,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
           result = await uploadBrandPhoto(selectedFile, userId || 'anonymous');
           break;
         case 'vet_letterhead':
+        case 'gln_document':
           result = await uploadVetLetterhead(selectedFile, userId || 'anonymous');
           break;
         case 'affidavit':
@@ -311,6 +316,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
     if (cameraInputRef.current) {
       cameraInputRef.current.value = '';
     }
+    onRemove?.();
   };
 
   const getAcceptAttribute = () => {

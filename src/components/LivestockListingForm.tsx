@@ -42,6 +42,7 @@ interface Address {
   district: string;
   province: string;
   postal_code?: string;
+  country?: string;
 }
 
 interface LoadingPoint {
@@ -58,6 +59,8 @@ interface LoadingPoint {
     number_of_males: number;
     number_of_females: number;
     males_castrated: boolean;
+    previous_owner_declaration_url?: string | null;
+    previous_owner_declaration_name?: string | null;
   };
   biosecurity?: {
     is_breeder_seller: boolean;
@@ -67,6 +70,7 @@ interface LoadingPoint {
     livestock_moved_location_to?: Address;
     livestock_moved_year?: number;
     livestock_moved_month?: number;
+    livestock_moved_how?: 'Transport Contractor' | 'Own Truck' | 'On Foot';
   };
 }
 
@@ -141,6 +145,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
       additional_r25_per_calf: false,
       additional_r25_per_head: false,
       gln_num: '',
+      gln_document_url: null,
       affidavit_required: false,
       affidavit_file_path: '',
       breeder_name: '',
@@ -348,14 +353,15 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
             affidavit_required: getBoolean(listingData.affidavit_required),
             additional_r25_per_head: getBoolean(listingData.additional_r25_per_head),
             gln_num: getString(listingData.gln_num),
+            gln_document_url: getString(listingData.gln_document_url),
             affidavit_file_path: getString(listingData.affidavit_file_path),
             breeder_name: getString(listingData.breeder_name),
             is_breeder_seller: getBoolean(listingData.is_breeder_seller),
-            farm_birth_address: safeJsonParse(getJsonValue(listingData.farm_birth_address), { farm_name: '', district: '', province: '' }),
-            farm_loading_address: safeJsonParse(getJsonValue(listingData.farm_loading_address), { farm_name: '', district: '', province: '' }),
+            farm_birth_address: safeJsonParse(getJsonValue(listingData.farm_birth_address), { farm_name: '', district: '', province: '', postal_code: '', country: '' }),
+            farm_loading_address: safeJsonParse(getJsonValue(listingData.farm_loading_address), { farm_name: '', district: '', province: '', postal_code: '', country: '' }),
             livestock_moved_out_of_boundaries: getBoolean(listingData.livestock_moved_out_of_boundaries),
-            livestock_moved_location: safeJsonParse(getJsonValue(listingData.livestock_moved_location), { farm_name: '', district: '', province: '' }),
-            livestock_moved_location_to: safeJsonParse(getJsonValue(listingData.livestock_moved_location_to), { farm_name: '', district: '', province: '' }),
+            livestock_moved_location: safeJsonParse(getJsonValue(listingData.livestock_moved_location), { farm_name: '', district: '', province: '', postal_code: '', country: '' }),
+            livestock_moved_location_to: safeJsonParse(getJsonValue(listingData.livestock_moved_location_to), { farm_name: '', district: '', province: '', postal_code: '', country: '' }),
             livestock_moved_year: getNumber(listingData.livestock_moved_year) || undefined,
             livestock_moved_month: getNumber(listingData.livestock_moved_month) || undefined,
             declaration_no_cloven_hooved_animals: getBoolean(listingData.declaration_no_cloven_hooved_animals),
@@ -377,6 +383,25 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
                 is_loading_at_birth_farm?: boolean;
                 number_of_cattle?: number;
                 number_of_sheep?: number;
+                details?: {
+                  livestock_type?: 'CATTLE' | 'SHEEP';
+                  bred_or_bought?: 'BRED' | 'BOUGHT IN';
+                  number_of_males?: number;
+                  number_of_females?: number;
+                  males_castrated?: boolean;
+                  previous_owner_declaration_url?: string | null;
+                  previous_owner_declaration_name?: string | null;
+                };
+                biosecurity?: {
+                  is_breeder_seller?: boolean;
+                  breeder_name?: string;
+                  livestock_moved_out_of_boundaries?: boolean;
+                  livestock_moved_location?: Address;
+                  livestock_moved_location_to?: Address;
+                  livestock_moved_year?: number;
+                  livestock_moved_month?: number;
+                  livestock_moved_how?: 'Transport Contractor' | 'Own Truck' | 'On Foot';
+                };
               };
               type NewPoint = {
                 birth_address?: Address;
@@ -392,6 +417,8 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
                   number_of_males?: number;
                   number_of_females?: number;
                   males_castrated?: boolean;
+                  previous_owner_declaration_url?: string | null;
+                  previous_owner_declaration_name?: string | null;
                 };
                 biosecurity?: {
                   is_breeder_seller?: boolean;
@@ -401,12 +428,13 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
                   livestock_moved_location_to?: Address;
                   livestock_moved_year?: number;
                   livestock_moved_month?: number;
+                  livestock_moved_how?: 'Transport Contractor' | 'Own Truck' | 'On Foot';
                 };
               };
               const isLegacyPoint = (p: unknown): p is LegacyPoint =>
                 typeof p === 'object' && p !== null && 'is_loading_at_birth_farm' in p;
 
-              const fallbackAddress: Address = { farm_name: '', district: '', province: '', postal_code: '' };
+              const fallbackAddress: Address = { farm_name: '', district: '', province: '', postal_code: '', country: '' };
 
               return points.map((point) => {
                 if (isLegacyPoint(point)) {
@@ -427,6 +455,8 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
                       number_of_males: 0,
                       number_of_females: 0,
                       males_castrated: false,
+                      previous_owner_declaration_url: null,
+                      previous_owner_declaration_name: null,
                     },
                     biosecurity: {
                       is_breeder_seller: true,
@@ -436,12 +466,30 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
                       livestock_moved_location_to: undefined,
                       livestock_moved_year: undefined,
                       livestock_moved_month: undefined,
+                      livestock_moved_how: undefined,
                     },
                   };
                 }
                 const p = point as NewPoint;
-                const rawDetails = p.details || {};
-                const rawBiosecurity = p.biosecurity || {};
+                const detailsData = {
+                  livestock_type: p.details?.livestock_type,
+                  bred_or_bought: p.details?.bred_or_bought,
+                  number_of_males: p.details?.number_of_males,
+                  number_of_females: p.details?.number_of_females,
+                  males_castrated: p.details?.males_castrated,
+                  previous_owner_declaration_url: p.details?.previous_owner_declaration_url ?? null,
+                  previous_owner_declaration_name: p.details?.previous_owner_declaration_name ?? null,
+                };
+                const biosecurityData = {
+                  is_breeder_seller: p.biosecurity?.is_breeder_seller,
+                  breeder_name: p.biosecurity?.breeder_name,
+                  livestock_moved_out_of_boundaries: p.biosecurity?.livestock_moved_out_of_boundaries,
+                  livestock_moved_location: p.biosecurity?.livestock_moved_location,
+                  livestock_moved_location_to: p.biosecurity?.livestock_moved_location_to,
+                  livestock_moved_year: p.biosecurity?.livestock_moved_year,
+                  livestock_moved_month: p.biosecurity?.livestock_moved_month,
+                  livestock_moved_how: p.biosecurity?.livestock_moved_how,
+                };
                 return {
                   birth_address: p.birth_address || fallbackAddress,
                   current_address: p.current_address || fallbackAddress,
@@ -451,20 +499,23 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
                   number_of_cattle: p.number_of_cattle || 0,
                   number_of_sheep: p.number_of_sheep || 0,
                   details: {
-                    livestock_type: rawDetails.livestock_type,
-                    bred_or_bought: rawDetails.bred_or_bought,
-                    number_of_males: rawDetails.number_of_males ?? 0,
-                    number_of_females: rawDetails.number_of_females ?? 0,
-                    males_castrated: rawDetails.males_castrated ?? false,
+                    livestock_type: detailsData.livestock_type,
+                    bred_or_bought: detailsData.bred_or_bought,
+                    number_of_males: detailsData.number_of_males ?? 0,
+                    number_of_females: detailsData.number_of_females ?? 0,
+                    males_castrated: detailsData.males_castrated ?? false,
+                    previous_owner_declaration_url: detailsData.previous_owner_declaration_url ?? null,
+                    previous_owner_declaration_name: detailsData.previous_owner_declaration_name ?? null,
                   },
                   biosecurity: {
-                    is_breeder_seller: rawBiosecurity.is_breeder_seller ?? true,
-                    breeder_name: rawBiosecurity.breeder_name,
-                    livestock_moved_out_of_boundaries: rawBiosecurity.livestock_moved_out_of_boundaries ?? false,
-                    livestock_moved_location: rawBiosecurity.livestock_moved_location || undefined,
-                    livestock_moved_location_to: rawBiosecurity.livestock_moved_location_to || undefined,
-                    livestock_moved_year: rawBiosecurity.livestock_moved_year ?? undefined,
-                    livestock_moved_month: rawBiosecurity.livestock_moved_month ?? undefined,
+                    is_breeder_seller: biosecurityData.is_breeder_seller ?? true,
+                    breeder_name: biosecurityData.breeder_name,
+                    livestock_moved_out_of_boundaries: biosecurityData.livestock_moved_out_of_boundaries ?? false,
+                    livestock_moved_location: biosecurityData.livestock_moved_location || undefined,
+                    livestock_moved_location_to: biosecurityData.livestock_moved_location_to || undefined,
+                    livestock_moved_year: biosecurityData.livestock_moved_year ?? undefined,
+                    livestock_moved_month: biosecurityData.livestock_moved_month ?? undefined,
+                    livestock_moved_how: biosecurityData.livestock_moved_how,
                   },
                 };
               });
@@ -484,7 +535,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
           }
         } else if (profile) {
           // New listing: populate with blank addresses
-          const defaultAddress = { farm_name: '', district: '', province: '', postal_code: '' };
+          const defaultAddress = { farm_name: '', district: '', province: '', postal_code: '', country: '' };
           const defaultLoadingPoint = {
             birth_address: defaultAddress,
             current_address: defaultAddress,
@@ -499,6 +550,8 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
               number_of_males: 0,
               number_of_females: 0,
               males_castrated: false,
+              previous_owner_declaration_url: null,
+              previous_owner_declaration_name: null,
             },
             biosecurity: {
               is_breeder_seller: true,
@@ -508,6 +561,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
               livestock_moved_location_to: undefined,
               livestock_moved_year: undefined,
               livestock_moved_month: undefined,
+              livestock_moved_how: undefined,
             },
           };
           form.reset({
@@ -707,6 +761,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         livestock_moved_location: data.livestock_moved_out_of_boundaries ? JSON.stringify(data.livestock_moved_location) : null,
         livestock_moved_location_to: data.livestock_moved_out_of_boundaries ? JSON.stringify(data.livestock_moved_location_to) : null,
         loading_points: JSON.stringify(data.loading_points),
+        gln_document_url: data.gln_document_url,
       };
 
       let result;

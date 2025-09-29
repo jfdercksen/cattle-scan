@@ -9,6 +9,7 @@ export const veterinaryDeclarationSchema = z.object({
   farm_name: z.string().optional(),
   farm_district: z.string().optional(),
   farm_province: z.string().optional(),
+  signed_location: z.string().optional(),
   cattle_visually_inspected: z.boolean().nullable().optional(),
   cattle_mouthed: z.boolean().nullable().optional(),
   sheep_visually_inspected: z.boolean().nullable().optional(),

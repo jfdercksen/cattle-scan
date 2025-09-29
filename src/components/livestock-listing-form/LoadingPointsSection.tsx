@@ -117,6 +117,8 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
         number_of_males: 0,
         number_of_females: 0,
         males_castrated: false,
+        previous_owner_declaration_url: undefined,
+        previous_owner_declaration_name: undefined,
       },
       biosecurity: {
         is_breeder_seller: false,
@@ -217,6 +219,64 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                       </FormItem>
                     )}
                   />
+
+                  {form.watch(`loading_points.${index}.details.bred_or_bought`) === 'BOUGHT IN' && (
+                    <div className="grid grid-cols-1 gap-4">
+                      <FormField
+                        control={form.control}
+                        name={`loading_points.${index}.details.previous_owner_declaration_name`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Declaration from Previous Owner</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                onChange={async (event) => {
+                                  const file = event.target.files?.[0];
+                                  if (!file) {
+                                    form.setValue(`loading_points.${index}.details.previous_owner_declaration_url`, undefined, { shouldValidate: true });
+                                    form.setValue(`loading_points.${index}.details.previous_owner_declaration_name`, undefined, { shouldValidate: true });
+                                    return;
+                                  }
+
+                                  const fileExt = file.name.split('.').pop();
+                                  const fileName = `previous-owner-declaration-${index}-${Date.now()}.${fileExt}`;
+                                  const filePath = `previous-owner-declarations/${fileName}`;
+
+                                  const { error: uploadError } = await supabase.storage
+                                    .from('listing-documents')
+                                    .upload(filePath, file, { upsert: true, cacheControl: '3600' });
+
+                                  if (uploadError) {
+                                    console.error('Upload error', uploadError);
+                                    form.setValue(`loading_points.${index}.details.previous_owner_declaration_url`, undefined, { shouldValidate: true });
+                                    form.setValue(`loading_points.${index}.details.previous_owner_declaration_name`, undefined, { shouldValidate: true });
+                                    return;
+                                  }
+
+                                  const { data: publicUrlData } = supabase.storage
+                                    .from('listing-documents')
+                                    .getPublicUrl(filePath);
+
+                                  form.setValue(`loading_points.${index}.details.previous_owner_declaration_url`, publicUrlData?.publicUrl || undefined, { shouldValidate: true });
+                                  form.setValue(`loading_points.${index}.details.previous_owner_declaration_name`, file.name, { shouldValidate: true });
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {form.watch(`loading_points.${index}.details.previous_owner_declaration_url`) && (
+                        <div className="text-sm">
+                          <strong>Uploaded:</strong> {form.watch(`loading_points.${index}.details.previous_owner_declaration_name`)}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   
                   <FormField
@@ -635,7 +695,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     render={({ field }) => (
                       <FormItem>
                         <div className="flex items-center justify-between rounded-md border p-2 h-full">
-                          <FormLabel>Moved out of property boundaries?</FormLabel>
+                          <FormLabel>Has the livestock been moved out of the property boundaries?</FormLabel>
                           <FormControl>
                             <YesNoSwitch value={field.value} onChange={field.onChange} />
                           </FormControl>
@@ -858,18 +918,19 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                           name={`loading_points.${index}.biosecurity.livestock_moved_how`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs">How Were They Moved?</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
+                              <FormLabel>How were they moved?</FormLabel>
+                              <FormControl>
+                                <Select value={field.value} onValueChange={field.onChange}>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select how they were moved" />
+                                    <SelectValue placeholder="Select movement method" />
                                   </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="Truck">Truck</SelectItem>
-                                  <SelectItem value="On Foot">On Foot</SelectItem>
-                                </SelectContent>
-                              </Select>
+                                  <SelectContent>
+                                    <SelectItem value="Transport Contractor">Transport Contractor</SelectItem>
+                                    <SelectItem value="Own Truck">Own Truck</SelectItem>
+                                    <SelectItem value="On Foot">On Foot</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -880,7 +941,6 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                 )}
               </div>
             </CardContent>
-
             {fields.length > 1 && (
               <Button
                 type="button"

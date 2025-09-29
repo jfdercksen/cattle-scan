@@ -72,6 +72,8 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [listing, setListing] = useState<Tables<'livestock_listings'> | null>(null);
   const [vetProfile, setVetProfile] = useState<Tables<'profiles'> | null>(null);
+  const [existingDeclaration, setExistingDeclaration] = useState<Tables<'veterinary_declarations'> | null>(null);
+  const [signingLocation, setSigningLocation] = useState<string>('');
 
   const form = useForm<VeterinaryDeclarationFormData>({
     resolver: zodResolver(veterinaryDeclarationSchema),
@@ -87,6 +89,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
       lumpy_skin_disease_symptoms: null,
       foot_and_mouth_case_in_10km: null,
       rift_valley_fever_case_in_10km: null,
+      signed_location: '',
     },
   });
 
@@ -111,14 +114,44 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
       // Fallback to legacy top-level fields if derived totals are zero
       const derivedCattle = cattleTotal || data.number_cattle_loaded || 0;
       const derivedSheep = sheepTotal || data.number_sheep_loaded || 0;
-      form.reset({
+      const baseValues: VeterinaryDeclarationFormData = {
         ...form.getValues(),
         reference_id: data.reference_id,
         owner_of_livestock: data.owner_name,
         farm_address: data.farm_loading_address ?? '',
         number_cattle_loaded: derivedCattle,
         number_sheep_loaded: derivedSheep,
-      });
+        signed_location: data.signed_location ?? '',
+      };
+
+      setSigningLocation(baseValues.signed_location || '');
+      setExistingDeclaration(null);
+
+      if (data.reference_id) {
+        const { data: declarationData, error: declarationError } = await supabase
+          .from('veterinary_declarations')
+          .select('*')
+          .eq('reference_id', data.reference_id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (!declarationError && declarationData && declarationData.length > 0) {
+          const declarationRecord = declarationData[0];
+          setExistingDeclaration(declarationRecord);
+          baseValues.cattle_visually_inspected = declarationRecord.cattle_visually_inspected;
+          baseValues.cattle_mouthed = declarationRecord.cattle_mouthed;
+          baseValues.sheep_visually_inspected = declarationRecord.sheep_visually_inspected;
+          baseValues.sheep_mouthed = declarationRecord.sheep_mouthed;
+          baseValues.foot_and_mouth_symptoms = declarationRecord.foot_and_mouth_symptoms;
+          baseValues.lumpy_skin_disease_symptoms = declarationRecord.lumpy_skin_disease_symptoms;
+          baseValues.foot_and_mouth_case_in_10km = declarationRecord.foot_and_mouth_case_in_10km;
+          baseValues.rift_valley_fever_case_in_10km = declarationRecord.rift_valley_fever_case_in_10km;
+          baseValues.signed_location = declarationRecord.signed_location ?? baseValues.signed_location ?? '';
+          setSigningLocation(baseValues.signed_location || '');
+        }
+      }
+
+      form.reset(baseValues);
     }
   }, [listingId, form, toast]);
 
@@ -149,6 +182,10 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
   }, [user, form, toast]);
 
   const onSubmit = async (data: VeterinaryDeclarationFormData) => {
+    if (existingDeclaration) {
+      toast({ title: 'Already Submitted', description: 'This declaration has already been submitted and cannot be edited.', variant: 'destructive' });
+      return;
+    }
     setIsSubmitting(true);
     try {
       if (!data.reference_id) {
@@ -171,6 +208,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
         lumpy_skin_disease_symptoms: data.lumpy_skin_disease_symptoms ?? false,
         foot_and_mouth_case_in_10km: data.foot_and_mouth_case_in_10km ?? false,
         rift_valley_fever_case_in_10km: data.rift_valley_fever_case_in_10km ?? false,
+        signed_location: signingLocation || data.signed_location || null,
       };
 
       const { error: insertError } = await supabase
@@ -179,9 +217,14 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
 
       if (insertError) throw insertError;
 
+      const listingUpdate = {
+        status: 'available_for_loading',
+        signed_location: (signingLocation || data.signed_location || listing?.signed_location || '') || null,
+      } as Database['public']['Tables']['livestock_listings']['Update'];
+
       const { error: updateError } = await supabase
         .from('livestock_listings')
-        .update({ status: 'available_for_loading' })
+        .update(listingUpdate)
         .eq('id', listingId);
 
       if (updateError) throw updateError;
@@ -217,6 +260,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
     return <div>Loading...</div>;
   }
 
+  const readOnly = Boolean(existingDeclaration);
   // Compute derived totals for display and conditional UI
   const { cattleTotal, sheepTotal } = getTotalsFromLoadingPoints(listing.loading_points);
   const displayCattleTotal = cattleTotal || listing.number_cattle_loaded || 0;
@@ -239,6 +283,57 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                 <p><strong>Owner:</strong> {listing.owner_name}</p>
                 <p><strong>Location:</strong> {listing.location}</p>
                 <p><strong>Reference ID:</strong> {listing.reference_id}</p>
+                <div className="mt-3 space-y-2">
+                  <Label className="text-sm font-semibold">Inspection Location</Label>
+                  <div className="flex flex-col md:flex-row md:items-center md:gap-2">
+                    <Input
+                      value={signingLocation}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setSigningLocation(value);
+                        form.setValue('signed_location', value, { shouldValidate: true });
+                      }}
+                      placeholder="Lat: -26.00000, Lon: 28.00000"
+                      disabled={readOnly}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={readOnly}
+                      onClick={() => {
+                        if (!navigator.geolocation) {
+                          toast({ title: 'Error', description: 'Geolocation is not supported by your browser.', variant: 'destructive' });
+                          return;
+                        }
+                        toast({ title: 'Capturing Location', description: 'Attempting to retrieve your GPS coordinates.' });
+                        navigator.geolocation.getCurrentPosition(
+                          (position) => {
+                            const formatted = `Lat: ${position.coords.latitude.toFixed(5)}, Lon: ${position.coords.longitude.toFixed(5)}`;
+                            setSigningLocation(formatted);
+                            form.setValue('signed_location', formatted, { shouldValidate: true });
+                            toast({ title: 'Location Captured', description: formatted });
+                          },
+                          (error) => {
+                            console.error('Geolocation error:', error);
+                            toast({
+                              title: 'Location Error',
+                              description: error.message || 'Unable to retrieve your location. Please enter it manually.',
+                              variant: 'destructive',
+                            });
+                          },
+                          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+                        );
+                      }}
+                    >
+                      Get Location
+                    </Button>
+                  </div>
+                </div>
+                {readOnly && (
+                  <p className="mt-3 text-sm text-blue-700 bg-blue-100 border border-blue-200 rounded-md p-2">
+                    This declaration has already been submitted and is view-only.
+                  </p>
+                )}
               </div>
 
               <Separator />
@@ -375,7 +470,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                         <FormItem>
                           <FormLabel>Have {displayCattleTotal} cattle visually been inspected?</FormLabel>
                           <FormControl>
-                            <YesNoSwitch value={field.value} onChange={field.onChange} />
+                            <YesNoSwitch value={field.value} onChange={field.onChange} disabled={readOnly} />
                           </FormControl>
                         </FormItem>
                       )}
@@ -475,8 +570,8 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                 <Button type="button" variant="outline" onClick={handleCancel}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Submitting...' : 'Submit Declaration'}
+                <Button type="submit" disabled={isSubmitting || readOnly}>
+                  {readOnly ? 'Declaration Submitted' : isSubmitting ? 'Submitting...' : 'Submit Declaration'}
                 </Button>
               </div>
             </form>

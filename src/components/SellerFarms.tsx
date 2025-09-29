@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { Trash2 } from 'lucide-react';
 
-// The farms.address will be stored as: FarmName|District|Province|PostalCode|Country
+// The farms.address will be stored as: FarmName|District|Province|Country
 // We'll assemble the pipe-separated structure when inserting so we can populate required columns (city, province)
 
 type Farm = Tables<'farms'>;
@@ -19,10 +19,9 @@ function buildPipedAddress(
   farmName: string,
   district: string,
   province: string,
-  postalCode: string,
   country: string
 ) {
-  return [farmName, district, province, postalCode, country].map(p => (p ?? '').trim()).join('|');
+  return [farmName, district, province, country].map((p) => (p ?? '').trim()).join('|');
 }
 
 function displayAddress(address: string) {
@@ -40,11 +39,12 @@ export default function SellerFarms() {
   const [addrFarmName, setAddrFarmName] = useState('');
   const [district, setDistrict] = useState('');
   const [province, setProvince] = useState('');
-  const [postalCode, setPostalCode] = useState('');
   const [country, setCountry] = useState('');
   const [saving, setSaving] = useState(false);
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const availableCountries = ['South Africa', 'Botswana', 'Namibia'];
 
   // If the structured farm name is empty, default it from the main Name field for convenience
   useEffect(() => {
@@ -102,12 +102,12 @@ export default function SellerFarms() {
       toast({ title: 'Missing info', description: 'Please provide Farm Name.', variant: 'destructive' });
       return;
     }
-    if (!usedFarmName || !district.trim() || !province.trim() || !postalCode.trim() || !country.trim()) {
+    if (!usedFarmName || !district.trim() || !province.trim() || !country.trim()) {
       toast({ title: 'Missing info', description: 'Please fill all address fields.', variant: 'destructive' });
       return;
     }
 
-    const assembledAddress = buildPipedAddress(usedFarmName, district, province, postalCode, country);
+    const assembledAddress = buildPipedAddress(usedFarmName, district, province, country);
 
     setSaving(true);
     try {
@@ -117,7 +117,7 @@ export default function SellerFarms() {
         address: assembledAddress,
         city: district,
         province: province,
-        postal_code: postalCode || null,
+        postal_code: null,
       });
       if (error) throw error;
       toast({ title: 'Saved', description: 'Farm captured successfully.' });
@@ -125,7 +125,6 @@ export default function SellerFarms() {
       setAddrFarmName('');
       setDistrict('');
       setProvince('');
-      setPostalCode('');
       setCountry('');
       // refresh
       const { data, error: reloadErr } = await supabase
@@ -160,7 +159,7 @@ export default function SellerFarms() {
             </div>
             <div>
               <Label className="block mb-2">Address Fields</Label>
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <Label htmlFor="addr-farm-name" className="text-xs">Farm Name</Label>
                   <Input id="addr-farm-name" placeholder="e.g. My Farm Name" value={addrFarmName} onChange={(e) => setAddrFarmName(e.target.value)} />
@@ -174,12 +173,22 @@ export default function SellerFarms() {
                   <Input id="addr-province" placeholder="e.g. Gauteng" value={province} onChange={(e) => setProvince(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="addr-postal" className="text-xs">Postal Code</Label>
-                  <Input id="addr-postal" placeholder="e.g. 2196" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
-                </div>
-                <div>
                   <Label htmlFor="addr-country" className="text-xs">Country</Label>
-                  <Input id="addr-country" placeholder="e.g. South Africa" value={country} onChange={(e) => setCountry(e.target.value)} />
+                  <select
+                    id="addr-country"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                  >
+                    <option value="" disabled>
+                      Select country
+                    </option>
+                    {availableCountries.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>

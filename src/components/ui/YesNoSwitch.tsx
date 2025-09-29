@@ -6,14 +6,16 @@ interface YesNoSwitchProps {
   onChange: (value: boolean) => void;
   trueLabel?: string;
   falseLabel?: string;
+  disabled?: boolean;
 }
 
-export const YesNoSwitch = ({ value, onChange, trueLabel = 'Yes', falseLabel = 'No' }: YesNoSwitchProps) => {
+export const YesNoSwitch = ({ value, onChange, trueLabel = 'Yes', falseLabel = 'No', disabled = false }: YesNoSwitchProps) => {
   return (
     <div className="flex items-center space-x-2">
       <Button
         type="button"
         onClick={() => onChange(true)}
+        disabled={disabled}
         className={cn(
           "px-4 py-1 text-sm",
           value === true
@@ -26,6 +28,7 @@ export const YesNoSwitch = ({ value, onChange, trueLabel = 'Yes', falseLabel = '
       <Button
         type="button"
         onClick={() => onChange(false)}
+        disabled={disabled}
         className={cn(
           "px-4 py-1 text-sm",
           value === false
