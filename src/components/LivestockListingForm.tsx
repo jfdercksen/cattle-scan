@@ -762,6 +762,13 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         livestock_moved_location_to: data.livestock_moved_out_of_boundaries ? JSON.stringify(data.livestock_moved_location_to) : null,
         loading_points: JSON.stringify(data.loading_points),
         gln_document_url: data.gln_document_url,
+        previous_owner_declaration_url: data.loading_points?.some((point) => point.details?.previous_owner_declaration_url)
+          ? JSON.stringify(
+              data.loading_points
+                ?.map((point) => point.details?.previous_owner_declaration_url || null)
+                ?.filter((url) => url)
+            )
+          : null,
       };
 
       let result;

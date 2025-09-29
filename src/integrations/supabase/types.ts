@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
@@ -265,10 +265,9 @@ export type Database = {
       livestock_listings: {
         Row: {
           additional_r25_per_calf: boolean | null
+          additional_r25_per_head: boolean | null
           affidavit_file_path: string | null
           affidavit_required: boolean | null
-          additional_r25_per_head: boolean | null
-          gln_num: string | null
           assigned_load_master_id: string | null
           assigned_vet_id: string | null
           bred_or_bought: string
@@ -278,18 +277,19 @@ export type Database = {
           created_at: string
           declaration_livestock_kept_away: boolean | null
           declaration_livestock_south_africa: boolean | null
+          declaration_never_vaccinated_against_fmd: boolean | null
           declaration_no_animal_origin_feed: boolean | null
           declaration_no_cloven_hooved_animals: boolean | null
+          declaration_no_contact_with_non_resident_livestock: boolean | null
           declaration_no_foot_mouth_disease: boolean | null
           declaration_no_foot_mouth_disease_farm: boolean | null
           declaration_no_gene_editing: boolean | null
-          declaration_veterinary_products_registered: boolean | null
           declaration_no_rift_valley_fever_10km_12_months: boolean | null
-          declaration_no_contact_with_non_resident_livestock: boolean | null
-          declaration_never_vaccinated_against_fmd: boolean | null
+          declaration_veterinary_products_registered: boolean | null
           estimated_average_weight: number | null
           farm_birth_address: string | null
           farm_loading_address: string | null
+          gln_num: string | null
           grazing_green_feed: boolean | null
           growth_implant: boolean | null
           growth_implant_type: string | null
@@ -318,6 +318,7 @@ export type Database = {
           number_of_heifers: number | null
           number_sheep_loaded: number | null
           owner_name: string
+          previous_owner_declaration_url: string | null
           profile_id: string | null
           reference_id: string | null
           responsible_person_designation: string | null
@@ -335,10 +336,9 @@ export type Database = {
         }
         Insert: {
           additional_r25_per_calf?: boolean | null
+          additional_r25_per_head?: boolean | null
           affidavit_file_path?: string | null
           affidavit_required?: boolean | null
-          additional_r25_per_head: boolean | null
-          gln_num: string | null
           assigned_load_master_id?: string | null
           assigned_vet_id?: string | null
           bred_or_bought: string
@@ -348,18 +348,19 @@ export type Database = {
           created_at?: string
           declaration_livestock_kept_away?: boolean | null
           declaration_livestock_south_africa?: boolean | null
+          declaration_never_vaccinated_against_fmd?: boolean | null
           declaration_no_animal_origin_feed?: boolean | null
           declaration_no_cloven_hooved_animals?: boolean | null
+          declaration_no_contact_with_non_resident_livestock?: boolean | null
           declaration_no_foot_mouth_disease?: boolean | null
           declaration_no_foot_mouth_disease_farm?: boolean | null
           declaration_no_gene_editing?: boolean | null
-          declaration_veterinary_products_registered?: boolean | null
           declaration_no_rift_valley_fever_10km_12_months?: boolean | null
-          declaration_no_contact_with_non_resident_livestock?: boolean | null
-          declaration_never_vaccinated_against_fmd?: boolean | null
+          declaration_veterinary_products_registered?: boolean | null
           estimated_average_weight?: number | null
           farm_birth_address?: string | null
           farm_loading_address?: string | null
+          gln_num?: string | null
           grazing_green_feed?: boolean | null
           growth_implant?: boolean | null
           growth_implant_type?: string | null
@@ -388,6 +389,7 @@ export type Database = {
           number_of_heifers?: number | null
           number_sheep_loaded?: number | null
           owner_name: string
+          previous_owner_declaration_url?: string | null
           profile_id?: string | null
           reference_id?: string | null
           responsible_person_designation?: string | null
@@ -405,10 +407,9 @@ export type Database = {
         }
         Update: {
           additional_r25_per_calf?: boolean | null
+          additional_r25_per_head?: boolean | null
           affidavit_file_path?: string | null
           affidavit_required?: boolean | null
-          additional_r25_per_head: boolean | null
-          gln_num: string | null
           assigned_load_master_id?: string | null
           assigned_vet_id?: string | null
           bred_or_bought?: string
@@ -418,18 +419,19 @@ export type Database = {
           created_at?: string
           declaration_livestock_kept_away?: boolean | null
           declaration_livestock_south_africa?: boolean | null
+          declaration_never_vaccinated_against_fmd?: boolean | null
           declaration_no_animal_origin_feed?: boolean | null
           declaration_no_cloven_hooved_animals?: boolean | null
+          declaration_no_contact_with_non_resident_livestock?: boolean | null
           declaration_no_foot_mouth_disease?: boolean | null
           declaration_no_foot_mouth_disease_farm?: boolean | null
           declaration_no_gene_editing?: boolean | null
-          declaration_veterinary_products_registered?: boolean | null
           declaration_no_rift_valley_fever_10km_12_months?: boolean | null
-          declaration_no_contact_with_non_resident_livestock?: boolean | null
-          declaration_never_vaccinated_against_fmd?: boolean | null
+          declaration_veterinary_products_registered?: boolean | null
           estimated_average_weight?: number | null
           farm_birth_address?: string | null
           farm_loading_address?: string | null
+          gln_num?: string | null
           grazing_green_feed?: boolean | null
           growth_implant?: boolean | null
           growth_implant_type?: string | null
@@ -458,6 +460,7 @@ export type Database = {
           number_of_heifers?: number | null
           number_sheep_loaded?: number | null
           owner_name?: string
+          previous_owner_declaration_url?: string | null
           profile_id?: string | null
           reference_id?: string | null
           responsible_person_designation?: string | null
@@ -790,10 +793,10 @@ export type Database = {
           rift_valley_fever_case_in_10km: boolean | null
           sheep_mouthed: boolean | null
           sheep_visually_inspected: boolean | null
+          signed_location: string | null
           updated_at: string
           veterinarian_name: string
           veterinarian_registration_number: string
-          signed_location: string | null
         }
         Insert: {
           cattle_mouthed?: boolean | null
@@ -812,10 +815,10 @@ export type Database = {
           rift_valley_fever_case_in_10km?: boolean | null
           sheep_mouthed?: boolean | null
           sheep_visually_inspected?: boolean | null
+          signed_location?: string | null
           updated_at?: string
           veterinarian_name: string
           veterinarian_registration_number: string
-          signed_location?: string | null
         }
         Update: {
           cattle_mouthed?: boolean | null
@@ -834,10 +837,10 @@ export type Database = {
           rift_valley_fever_case_in_10km?: boolean | null
           sheep_mouthed?: boolean | null
           sheep_visually_inspected?: boolean | null
+          signed_location?: string | null
           updated_at?: string
           veterinarian_name?: string
           veterinarian_registration_number?: string
-          signed_location?: string | null
         }
         Relationships: [
           {
@@ -855,20 +858,20 @@ export type Database = {
     }
     Functions: {
       approve_user_by_admin: {
-        Args: { target_user_id: string; requesting_user_id: string }
+        Args: { requesting_user_id: string; target_user_id: string }
         Returns: {
-          id: string
+          created_at: string
           email: string
           first_name: string
+          id: string
           last_name: string
           role: string
           status: string
-          created_at: string
           updated_at: string
         }[]
       }
       can_user_access_company: {
-        Args: { user_uuid: string; target_company_id: string }
+        Args: { target_company_id: string; user_uuid: string }
         Returns: boolean
       }
       cleanup_expired_pending_invitations: {
@@ -886,21 +889,21 @@ export type Database = {
       get_company_users: {
         Args: { company_id_param: string; requesting_user_id: string }
         Returns: {
-          id: string
+          accepted_at: string
           company_id: string
-          user_id: string
+          created_at: string
+          id: string
+          invited_by: string
           relationship_type: string
           status: string
-          invited_by: string
-          created_at: string
-          accepted_at: string
+          user_company_name: string
           user_email: string
           user_first_name: string
+          user_id: string
           user_last_name: string
           user_role: string
-          user_status: string
-          user_company_name: string
           user_seller_entity_name: string
+          user_status: string
         }[]
       }
       get_current_user_role: {
@@ -930,21 +933,21 @@ export type Database = {
       get_user_profile: {
         Args: { user_id?: string }
         Returns: {
-          id: string
-          first_name: string
-          last_name: string
-          email: string
-          phone: string
-          role: Database["public"]["Enums"]["user_role"]
-          status: Database["public"]["Enums"]["user_status"]
-          profile_completed: boolean
-          seller_entity_name: string
           created_at: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          phone: string
+          profile_completed: boolean
+          role: Database["public"]["Enums"]["user_role"]
+          seller_entity_name: string
+          status: Database["public"]["Enums"]["user_status"]
           updated_at: string
         }[]
       }
       link_listing_invitations_for_user: {
-        Args: { user_id: string; user_email: string }
+        Args: { user_email: string; user_id: string }
         Returns: number
       }
       link_user_invitations: {

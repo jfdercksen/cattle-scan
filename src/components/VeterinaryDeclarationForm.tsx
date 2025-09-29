@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useForm, FormProvider, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +59,15 @@ const getTotalsFromLoadingPoints = (lp: unknown): { cattleTotal: number; sheepTo
   return { cattleTotal, sheepTotal };
 };
 
+const normalizeCount = (value: unknown, fallback: number): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+};
+
 interface VeterinaryDeclarationFormProps {
   listingId: string;
   onSuccess?: () => void;
@@ -74,6 +83,9 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
   const [vetProfile, setVetProfile] = useState<Tables<'profiles'> | null>(null);
   const [existingDeclaration, setExistingDeclaration] = useState<Tables<'veterinary_declarations'> | null>(null);
   const [signingLocation, setSigningLocation] = useState<string>('');
+  const [isEditingTotals, setIsEditingTotals] = useState(false);
+  const [pendingTotals, setPendingTotals] = useState<{ cattle: string; sheep: string }>({ cattle: '', sheep: '' });
+  const [isSavingTotals, setIsSavingTotals] = useState(false);
 
   const form = useForm<VeterinaryDeclarationFormData>({
     resolver: zodResolver(veterinaryDeclarationSchema),
@@ -194,6 +206,9 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
         return;
       }
 
+      const cattleCount = Number(data.number_cattle_loaded ?? 0);
+      const sheepCount = Number(data.number_sheep_loaded ?? 0);
+
       const dbData: Database['public']['Tables']['veterinary_declarations']['Insert'] = {
         reference_id: data.reference_id,
         veterinarian_name: data.veterinarian_name,
@@ -220,6 +235,8 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
       const listingUpdate = {
         status: 'available_for_loading',
         signed_location: (signingLocation || data.signed_location || listing?.signed_location || '') || null,
+        number_cattle_loaded: cattleCount,
+        number_sheep_loaded: sheepCount,
       } as Database['public']['Tables']['livestock_listings']['Update'];
 
       const { error: updateError } = await supabase
@@ -248,6 +265,39 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
     }
   };
 
+  const extractFirstErrorMessage = (errors: FieldErrors<VeterinaryDeclarationFormData>): string | null => {
+    const walk = (error: unknown): string | null => {
+      if (!error) return null;
+      if (Array.isArray(error)) {
+        for (const item of error) {
+          const message = walk(item);
+          if (message) return message;
+        }
+        return null;
+      }
+      if (typeof error === 'object') {
+        const maybeMessage = (error as { message?: string }).message;
+        if (maybeMessage) return maybeMessage;
+        for (const value of Object.values(error)) {
+          const message = walk(value);
+          if (message) return message;
+        }
+      }
+      return null;
+    };
+
+    return walk(errors);
+  };
+
+  const handleFormSubmit = form.handleSubmit(onSubmit, (errors) => {
+    const firstMessage = extractFirstErrorMessage(errors);
+    toast({
+      title: 'Please review the form',
+      description: firstMessage ?? 'Complete all required questions before submitting.',
+      variant: 'destructive',
+    });
+  });
+
   const handleCancel = () => {
     if (onCancel) {
       onCancel();
@@ -263,8 +313,73 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
   const readOnly = Boolean(existingDeclaration);
   // Compute derived totals for display and conditional UI
   const { cattleTotal, sheepTotal } = getTotalsFromLoadingPoints(listing.loading_points);
-  const displayCattleTotal = cattleTotal || listing.number_cattle_loaded || 0;
-  const displaySheepTotal = sheepTotal || listing.number_sheep_loaded || 0;
+  const derivedCattleTotal = cattleTotal || listing.number_cattle_loaded || 0;
+  const derivedSheepTotal = sheepTotal || listing.number_sheep_loaded || 0;
+  const cattleCount = normalizeCount(form.watch('number_cattle_loaded'), derivedCattleTotal);
+  const sheepCount = normalizeCount(form.watch('number_sheep_loaded'), derivedSheepTotal);
+
+  const beginEditTotals = () => {
+    const rawCattle = form.getValues('number_cattle_loaded');
+    const rawSheep = form.getValues('number_sheep_loaded');
+    const initialCattle = (rawCattle ?? derivedCattleTotal) || 0;
+    const initialSheep = (rawSheep ?? derivedSheepTotal) || 0;
+
+    setPendingTotals({
+      cattle: initialCattle > 0 ? String(initialCattle) : '',
+      sheep: initialSheep > 0 ? String(initialSheep) : '',
+    });
+    setIsEditingTotals(true);
+  };
+
+  const cancelEditTotals = () => {
+    setIsEditingTotals(false);
+    setPendingTotals({ cattle: '', sheep: '' });
+  };
+
+  const saveTotals = async () => {
+    if (readOnly) return;
+
+    const parsedCattle = pendingTotals.cattle.trim() === '' ? 0 : Number(pendingTotals.cattle);
+    const parsedSheep = pendingTotals.sheep.trim() === '' ? 0 : Number(pendingTotals.sheep);
+
+    if (!Number.isFinite(parsedCattle) || parsedCattle < 0) {
+      toast({ title: 'Invalid cattle total', description: 'Please enter a non-negative number.', variant: 'destructive' });
+      return;
+    }
+    if (!Number.isFinite(parsedSheep) || parsedSheep < 0) {
+      toast({ title: 'Invalid sheep total', description: 'Please enter a non-negative number.', variant: 'destructive' });
+      return;
+    }
+
+    setIsSavingTotals(true);
+    try {
+      const listingTotalsUpdate: Database['public']['Tables']['livestock_listings']['Update'] = {
+        number_cattle_loaded: parsedCattle,
+        number_sheep_loaded: parsedSheep,
+        additional_r25_per_head: listing?.additional_r25_per_head ?? null,
+        gln_num: listing?.gln_num ?? null,
+      };
+
+      const { error } = await supabase
+        .from('livestock_listings')
+        .update(listingTotalsUpdate)
+        .eq('id', listingId);
+
+      if (error) throw error;
+
+      form.setValue('number_cattle_loaded', parsedCattle, { shouldDirty: true, shouldValidate: true });
+      form.setValue('number_sheep_loaded', parsedSheep, { shouldDirty: true, shouldValidate: true });
+      setListing((prev) => (prev ? { ...prev, number_cattle_loaded: parsedCattle, number_sheep_loaded: parsedSheep } : prev));
+      setIsEditingTotals(false);
+      setPendingTotals({ cattle: '', sheep: '' });
+      toast({ title: 'Totals updated', description: 'Livestock totals have been updated.', variant: 'default' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to update totals.';
+      toast({ title: 'Update failed', description: message, variant: 'destructive' });
+    } finally {
+      setIsSavingTotals(false);
+    }
+  };
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
@@ -277,7 +392,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
       <CardContent>
         <FormProvider {...form}>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={handleFormSubmit} className="space-y-6">
               <div className="p-4 border rounded-md bg-gray-50">
                 <h3 className="text-lg font-semibold mb-2">Listing Information</h3>
                 <p><strong>Owner:</strong> {listing.owner_name}</p>
@@ -339,31 +454,99 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
               <Separator />
 
               <div className="space-y-4 p-4 border rounded-md bg-gray-50">
-                <h3 className="text-lg font-semibold">Livestock to be Loaded</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Only show cattle count if > 0 */}
-                  {displayCattleTotal > 0 && (
-                    <div>
-                      <p><strong>Total Cattle:</strong> {displayCattleTotal}</p>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <h3 className="text-lg font-semibold">Livestock to be Loaded</h3>
+                  {!readOnly && (
+                    <div className="flex gap-2">
+                      {isEditingTotals ? (
+                        <>
+                          <Button type="button" variant="outline" size="sm" onClick={cancelEditTotals} disabled={isSavingTotals}>
+                            Cancel
+                          </Button>
+                          <Button type="button" size="sm" onClick={saveTotals} disabled={isSavingTotals}>
+                            {isSavingTotals ? 'Saving...' : 'Save totals'}
+                          </Button>
+                        </>
+                      ) : (
+                        <Button type="button" variant="outline" size="sm" onClick={beginEditTotals}>
+                          Edit totals
+                        </Button>
+                      )}
                     </div>
                   )}
-
-                  {/* Only show sheep count if > 0 */}
-                  {displaySheepTotal > 0 && (
-                    <div>
-                      <p><strong>Total Sheep:</strong> {displaySheepTotal}</p>
-                    </div>
-                  )}
-
-                  <div>
-                    <Badge variant="outline">
-                      {LivestockCalculations.determineLivestockType(
-                        displayCattleTotal,
-                        displaySheepTotal
-                      ) || "No livestock"}
-                    </Badge>
-                  </div>
                 </div>
+
+                {isEditingTotals ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField
+                      name="number_cattle_loaded"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Total Cattle</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min={0}
+                              disabled={readOnly || isSavingTotals}
+                              value={pendingTotals.cattle}
+                              onChange={(event) => {
+                                setPendingTotals((prev) => ({ ...prev, cattle: event.target.value }));
+                                field.onChange(event.target.value === '' ? '' : Number(event.target.value));
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      name="number_sheep_loaded"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Total Sheep</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min={0}
+                              disabled={readOnly || isSavingTotals}
+                              value={pendingTotals.sheep}
+                              onChange={(event) => {
+                                setPendingTotals((prev) => ({ ...prev, sheep: event.target.value }));
+                                field.onChange(event.target.value === '' ? '' : Number(event.target.value));
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex items-end">
+                      <Badge variant="outline">
+                        {LivestockCalculations.determineLivestockType(cattleCount, sheepCount) || 'No livestock'}
+                      </Badge>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {cattleCount > 0 && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Total Cattle</p>
+                        <p className="text-xl font-semibold">{cattleCount}</p>
+                      </div>
+                    )}
+                    {sheepCount > 0 && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Total Sheep</p>
+                        <p className="text-xl font-semibold">{sheepCount}</p>
+                      </div>
+                    )}
+                    <div className="flex items-end">
+                      <Badge variant="outline">
+                        {LivestockCalculations.determineLivestockType(cattleCount, sheepCount) || 'No livestock'}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
 
                 {/* Loading Points Information */}
                 {listing?.loading_points && (() => {
@@ -438,21 +621,21 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                 })()}
 
                 {/* Mouthing Requirements Display */}
-                {displayCattleTotal > 0 && (
+                {cattleCount > 0 && (
                   <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
                     <h4 className="font-medium text-blue-900 mb-2">Cattle Mouthing Requirements</h4>
                     <p className="text-sm text-blue-800">
-                      {calculationEngine.calculateMouthingRequirement(displayCattleTotal).displayText}
+                      {calculationEngine.calculateMouthingRequirement(cattleCount).displayText}
                     </p>
                   </div>
                 )}
 
                 {/* Sheep Mouthing Requirements Display */}
-                {displaySheepTotal > 0 && (
+                {sheepCount > 0 && (
                   <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
                     <h4 className="font-medium text-green-900 mb-2">Sheep Mouthing Requirements</h4>
                     <p className="text-sm text-green-800">
-                      {Math.ceil(displaySheepTotal * 0.25)} sheep must be mouthed (25% of {displaySheepTotal} total sheep)
+                      {Math.ceil(sheepCount * 0.25)} sheep must be mouthed (25% of {sheepCount} total sheep)
                     </p>
                   </div>
                 )}
@@ -462,16 +645,17 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Cattle-related fields - Only show if cattle are loaded */}
-                {LivestockCalculations.shouldShowCattleFields(displayCattleTotal) && (
+                {LivestockCalculations.shouldShowCattleFields(cattleCount) && (
                   <>
                     <FormField
                       name="cattle_visually_inspected"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Have {displayCattleTotal} cattle visually been inspected?</FormLabel>
+                          <FormLabel>Have {cattleCount} cattle visually been inspected?</FormLabel>
                           <FormControl>
                             <YesNoSwitch value={field.value} onChange={field.onChange} disabled={readOnly} />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -480,11 +664,12 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>
-                            Have {calculationEngine.calculateMouthingRequirement(displayCattleTotal).requiredCount} cattle been mouthed? (25%)
+                            Have {calculationEngine.calculateMouthingRequirement(cattleCount).requiredCount} cattle been mouthed? (25%)
                           </FormLabel>
                           <FormControl>
-                            <YesNoSwitch value={field.value} onChange={field.onChange} />
+                            <YesNoSwitch value={field.value} onChange={field.onChange} disabled={readOnly} />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -492,16 +677,17 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                 )}
 
                 {/* Sheep-related fields - Only show if sheep are loaded */}
-                {LivestockCalculations.shouldShowSheepFields(displaySheepTotal) && (
+                {LivestockCalculations.shouldShowSheepFields(sheepCount) && (
                   <>
                     <FormField
                       name="sheep_visually_inspected"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Have {displaySheepTotal} sheep been visually inspected?</FormLabel>
+                          <FormLabel>Have {sheepCount} sheep been visually inspected?</FormLabel>
                           <FormControl>
-                            <YesNoSwitch value={field.value} onChange={field.onChange} />
+                            <YesNoSwitch value={field.value} onChange={field.onChange} disabled={readOnly} />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -509,10 +695,11 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                       name="sheep_mouthed"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Have {Math.ceil(displaySheepTotal * 0.25)} sheep been mouthed? (25%)</FormLabel>
+                          <FormLabel>Have {Math.ceil(sheepCount * 0.25)} sheep been mouthed? (25%)</FormLabel>
                           <FormControl>
-                            <YesNoSwitch value={field.value} onChange={field.onChange} />
+                            <YesNoSwitch value={field.value} onChange={field.onChange} disabled={readOnly} />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -524,10 +711,11 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                   name="foot_and_mouth_symptoms"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Were there any symptoms or lesions (old or new) of Foot and Mouth Disease observed during the inspection of the livestock?</FormLabel>
+                      <FormLabel>Were there any symptoms or lesions (old or new) typical of Foot and Mouth Disease observed during the inspection of the livestock?</FormLabel>
                       <FormControl>
                         <YesNoSwitch value={field.value} onChange={field.onChange} />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -535,10 +723,11 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                   name="lumpy_skin_disease_symptoms"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Were there any symptoms or lesions (old or new) of Lumpy Skin Disease observed during the inspection of the livestock?</FormLabel>
+                      <FormLabel>Were there any symptoms or lesions (old or new) typical of Lumpy Skin Disease observed during the inspection of the livestock?</FormLabel>
                       <FormControl>
                         <YesNoSwitch value={field.value} onChange={field.onChange} />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -550,6 +739,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                       <FormControl>
                         <YesNoSwitch value={field.value} onChange={field.onChange} />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -561,6 +751,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                       <FormControl>
                         <YesNoSwitch value={field.value} onChange={field.onChange} />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
