@@ -41,7 +41,6 @@ interface Address {
   farm_name: string;
   district: string;
   province: string;
-  postal_code?: string;
   country?: string;
 }
 
@@ -357,11 +356,11 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
             affidavit_file_path: getString(listingData.affidavit_file_path),
             breeder_name: getString(listingData.breeder_name),
             is_breeder_seller: getBoolean(listingData.is_breeder_seller),
-            farm_birth_address: safeJsonParse(getJsonValue(listingData.farm_birth_address), { farm_name: '', district: '', province: '', postal_code: '', country: '' }),
-            farm_loading_address: safeJsonParse(getJsonValue(listingData.farm_loading_address), { farm_name: '', district: '', province: '', postal_code: '', country: '' }),
+            farm_birth_address: safeJsonParse(getJsonValue(listingData.farm_birth_address), { farm_name: '', district: '', province: '', country: '' }),
+            farm_loading_address: safeJsonParse(getJsonValue(listingData.farm_loading_address), { farm_name: '', district: '', province: '', country: '' }),
             livestock_moved_out_of_boundaries: getBoolean(listingData.livestock_moved_out_of_boundaries),
-            livestock_moved_location: safeJsonParse(getJsonValue(listingData.livestock_moved_location), { farm_name: '', district: '', province: '', postal_code: '', country: '' }),
-            livestock_moved_location_to: safeJsonParse(getJsonValue(listingData.livestock_moved_location_to), { farm_name: '', district: '', province: '', postal_code: '', country: '' }),
+            livestock_moved_location: safeJsonParse(getJsonValue(listingData.livestock_moved_location), { farm_name: '', district: '', province: '', country: '' }),
+            livestock_moved_location_to: safeJsonParse(getJsonValue(listingData.livestock_moved_location_to), { farm_name: '', district: '', province: '', country: '' }),
             livestock_moved_year: getNumber(listingData.livestock_moved_year) || undefined,
             livestock_moved_month: getNumber(listingData.livestock_moved_month) || undefined,
             declaration_no_cloven_hooved_animals: getBoolean(listingData.declaration_no_cloven_hooved_animals),
@@ -434,7 +433,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
               const isLegacyPoint = (p: unknown): p is LegacyPoint =>
                 typeof p === 'object' && p !== null && 'is_loading_at_birth_farm' in p;
 
-              const fallbackAddress: Address = { farm_name: '', district: '', province: '', postal_code: '', country: '' };
+              const fallbackAddress: Address = { farm_name: '', district: '', province: '', country: '' };
 
               return points.map((point) => {
                 if (isLegacyPoint(point)) {
@@ -535,7 +534,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
           }
         } else if (profile) {
           // New listing: populate with blank addresses
-          const defaultAddress = { farm_name: '', district: '', province: '', postal_code: '', country: '' };
+          const defaultAddress = { farm_name: '', district: '', province: '', country: '' };
           const defaultLoadingPoint = {
             birth_address: defaultAddress,
             current_address: defaultAddress,
@@ -631,7 +630,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
           const replacer = (_k: string, v: unknown) => {
             if (typeof File !== 'undefined' && v instanceof File) return undefined;
             if (typeof Blob !== 'undefined' && v instanceof Blob) return undefined;
-            return v as any;
+            return v;
           };
           localStorage.setItem(draftKey, JSON.stringify(draft, replacer));
         } catch (e) {
@@ -658,7 +657,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
       const replacer = (_k: string, v: unknown) => {
         if (typeof File !== 'undefined' && v instanceof File) return undefined;
         if (typeof Blob !== 'undefined' && v instanceof Blob) return undefined;
-        return v as any;
+        return v;
       };
       localStorage.setItem(draftKey, JSON.stringify(draft, replacer));
     } catch (e) {

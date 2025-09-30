@@ -19,16 +19,19 @@ export class LivestockLocationManager {
         farm_name: '',
         district: '',
         province: '',
+        country: '',
       },
       current_address: {
         farm_name: '',
         district: '',
         province: '',
+        country: '',
       },
       loading_address: {
         farm_name: '',
         district: '',
         province: '',
+        country: '',
       },
       is_current_same_as_birth: false,
       is_loading_same_as_current: false,
@@ -120,6 +123,7 @@ export class LivestockLocationManager {
       this.form.setValue(`loading_points.${herdIndex}.${targetField}.farm_name`, sourceAddress.farm_name);
       this.form.setValue(`loading_points.${herdIndex}.${targetField}.district`, sourceAddress.district);
       this.form.setValue(`loading_points.${herdIndex}.${targetField}.province`, sourceAddress.province);
+      this.form.setValue(`loading_points.${herdIndex}.${targetField}.country`, sourceAddress.country ?? '');
 
     }
   }

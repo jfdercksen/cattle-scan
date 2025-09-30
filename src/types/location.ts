@@ -4,7 +4,6 @@ export interface FarmAddress {
   farm_name: string;
   district: string;
   province: string;
-  postal_code?: string;
   country?: string;
   coordinates?: {
     latitude: number;

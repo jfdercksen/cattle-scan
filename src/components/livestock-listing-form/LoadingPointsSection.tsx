@@ -21,6 +21,8 @@ import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
+const COUNTRY_OPTIONS = ['South Africa', 'Botswana', 'Namibia'];
+
 interface LoadingPointsSectionProps {
   fields: FieldArrayWithId<LivestockListingFormData, 'loading_points', 'id'>[];
   append: UseFieldArrayAppend<LivestockListingFormData, 'loading_points'>;
@@ -59,12 +61,12 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
 
   const parseFarmAddress = (addr: string) => {
     const parts = addr.split('|').map(p => p.trim());
+    const country = parts[4] || parts[3] || '';
     return {
       farm_name: parts[0] || '',
       district: parts[1] || '',
       province: parts[2] || '',
-      postal_code: parts[3] || '',
-      country: parts[4] || '',
+      country,
     };
   };
 
@@ -81,7 +83,6 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
     form.setValue(`loading_points.${herdIndex}.${section}.farm_name`, parsed.farm_name || farm.name);
     form.setValue(`loading_points.${herdIndex}.${section}.district`, parsed.district);
     form.setValue(`loading_points.${herdIndex}.${section}.province`, parsed.province);
-    form.setValue(`loading_points.${herdIndex}.${section}.postal_code`, parsed.postal_code);
     form.setValue(`loading_points.${herdIndex}.${section}.country`, parsed.country);
   };
 
@@ -91,21 +92,18 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
         farm_name: '',
         district: '',
         province: '',
-        postal_code: '',
         country: '',
       },
       current_address: {
         farm_name: '',
         district: '',
         province: '',
-        postal_code: '',
         country: '',
       },
       loading_address: {
         farm_name: '',
         district: '',
         province: '',
-        postal_code: '',
         country: '',
       },
       is_current_same_as_birth: false,
@@ -396,7 +394,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     </div>
                   </div>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-2 p-4 border rounded-md bg-blue-50">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-2 p-4 border rounded-md bg-blue-50">
                   <FormField
                     control={form.control}
                     name={`loading_points.${index}.birth_address.farm_name`}
@@ -438,25 +436,23 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                   />
                   <FormField
                     control={form.control}
-                    name={`loading_points.${index}.birth_address.postal_code`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Postal Code</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter postal code" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
                     name={`loading_points.${index}.birth_address.country`}
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-xs">Country</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter country" {...field} />
+                          <Select value={field.value || undefined} onValueChange={field.onChange}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select country" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {COUNTRY_OPTIONS.map((country) => (
+                                <SelectItem key={country} value={country}>
+                                  {country}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -487,9 +483,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                 />
 
                 {!form.watch(`loading_points.${index}.is_current_same_as_birth`) && (
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-2 p-4 border rounded-md bg-yellow-50">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-2 p-4 border rounded-md bg-yellow-50">
                     {farms.length > 0 && (
-                      <div className="md:col-span-5">
+                      <div className="md:col-span-4">
                         <Label className="text-xs">Use saved farm</Label>
                         <div className="mt-1 w-full md:w-96">
                           <Select onValueChange={(val) => handleSelectFarm(index, 'current_address', val)}>
@@ -546,25 +542,23 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     />
                     <FormField
                       control={form.control}
-                      name={`loading_points.${index}.current_address.postal_code`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Postal Code</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter postal code" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
                       name={`loading_points.${index}.current_address.country`}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs">Country</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter country" {...field} />
+                            <Select value={field.value || undefined} onValueChange={field.onChange}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select country" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {COUNTRY_OPTIONS.map((country) => (
+                                  <SelectItem key={country} value={country}>
+                                    {country}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -596,9 +590,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                 />
 
                 {!form.watch(`loading_points.${index}.is_loading_same_as_current`) && (
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-2 p-4 border rounded-md bg-green-50">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-2 p-4 border rounded-md bg-green-50">
                     {farms.length > 0 && (
-                      <div className="md:col-span-5">
+                      <div className="md:col-span-4">
                         <Label className="text-xs">Use saved farm</Label>
                         <div className="mt-1 w-full md:w-96">
                           <Select onValueChange={(val) => handleSelectFarm(index, 'loading_address', val)}>
@@ -655,25 +649,23 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     />
                     <FormField
                       control={form.control}
-                      name={`loading_points.${index}.loading_address.postal_code`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Postal Code</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter postal code" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
                       name={`loading_points.${index}.loading_address.country`}
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs">Country</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter country" {...field} />
+                            <Select value={field.value ?? undefined} onValueChange={field.onChange}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select country" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {COUNTRY_OPTIONS.map((country) => (
+                                  <SelectItem key={country} value={country}>
+                                    {country}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -726,7 +718,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                         </div>
                       </div>
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-2">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-2">
                       <FormField
                         control={form.control}
                         name={`loading_points.${index}.biosecurity.livestock_moved_location.farm_name`}
@@ -768,25 +760,23 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                       />
                       <FormField
                         control={form.control}
-                        name={`loading_points.${index}.biosecurity.livestock_moved_location.postal_code`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Postal Code</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter postal code" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
                         name={`loading_points.${index}.biosecurity.livestock_moved_location.country`}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-xs">Country</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter country" {...field} />
+                              <Select value={field.value || undefined} onValueChange={field.onChange}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select country" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {COUNTRY_OPTIONS.map((country) => (
+                                    <SelectItem key={country} value={country}>
+                                      {country}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -813,7 +803,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                           </div>
                         </div>
                       )}
-                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-2">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-2">
                         <FormField
                           control={form.control}
                           name={`loading_points.${index}.biosecurity.livestock_moved_location_to.farm_name`}
@@ -855,25 +845,23 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                         />
                         <FormField
                           control={form.control}
-                          name={`loading_points.${index}.biosecurity.livestock_moved_location_to.postal_code`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">Postal Code</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter postal code" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
                           name={`loading_points.${index}.biosecurity.livestock_moved_location_to.country`}
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-xs">Country</FormLabel>
                               <FormControl>
-                                <Input placeholder="Enter country" {...field} />
+                                <Select value={field.value || undefined} onValueChange={field.onChange}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select country" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {COUNTRY_OPTIONS.map((country) => (
+                                      <SelectItem key={country} value={country}>
+                                        {country}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </FormControl>
                               <FormMessage />
                             </FormItem>
