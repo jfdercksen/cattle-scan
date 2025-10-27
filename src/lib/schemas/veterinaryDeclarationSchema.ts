@@ -10,6 +10,7 @@ export const veterinaryDeclarationSchema = z.object({
   farm_district: z.string().optional(),
   farm_province: z.string().optional(),
   signed_location: z.string().optional(),
+  location_distance_note: z.string().optional(),
   cattle_visually_inspected: z.boolean().nullable().optional(),
   cattle_mouthed: z.boolean().nullable().optional(),
   sheep_visually_inspected: z.boolean().nullable().optional(),
@@ -38,7 +39,7 @@ export const veterinaryDeclarationSchema = z.object({
     if (data.cattle_mouthed === null || data.cattle_mouthed === undefined) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Please select Yes or No for cattle mouthing',
+        message: 'Please select Yes or No for cattle physical inspection (Mouth & feet)',
         path: ['cattle_mouthed'],
       });
     }
@@ -56,7 +57,7 @@ export const veterinaryDeclarationSchema = z.object({
     if (data.sheep_mouthed === null || data.sheep_mouthed === undefined) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Please select Yes or No for sheep mouthing',
+        message: 'Please select Yes or No for sheep physical inspection (Mouth & feet)',
         path: ['sheep_mouthed'],
       });
     }

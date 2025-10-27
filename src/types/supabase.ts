@@ -175,8 +175,11 @@ export type Database = {
       livestock_listings: {
         Row: {
           additional_r25_per_calf: boolean | null
+          additional_r25_per_head: boolean | null
           affidavit_file_path: string | null
           affidavit_required: boolean | null
+          gln_document_url: string | null
+          gln_num: string | null
           assigned_vet_id: string | null
           bred_or_bought: string
           breed: string
@@ -231,8 +234,11 @@ export type Database = {
         }
         Insert: {
           additional_r25_per_calf?: boolean | null
+          additional_r25_per_head?: boolean | null
           affidavit_file_path?: string | null
           affidavit_required?: boolean | null
+          gln_document_url?: string | null
+          gln_num?: string | null
           assigned_vet_id?: string | null
           bred_or_bought: string
           breed: string
@@ -287,8 +293,11 @@ export type Database = {
         }
         Update: {
           additional_r25_per_calf?: boolean | null
+          additional_r25_per_head?: boolean | null
           affidavit_file_path?: string | null
           affidavit_required?: boolean | null
+          gln_document_url?: string | null
+          gln_num?: string | null
           assigned_vet_id?: string | null
           bred_or_bought?: string
           breed?: string
@@ -602,12 +611,14 @@ export type Database = {
           foot_and_mouth_case_in_10km: boolean | null
           foot_and_mouth_symptoms: boolean | null
           id: number
+          location_distance_note: string | null
           lumpy_skin_disease_symptoms: boolean | null
           owner_of_livestock: string | null
           reference_id: string
           rift_valley_fever_case_in_10km: boolean | null
           sheep_mouthed: boolean | null
           sheep_visually_inspected: boolean | null
+          signed_location: string | null
           veterinarian_name: string | null
           veterinarian_registration_number: string | null
         }
@@ -622,12 +633,14 @@ export type Database = {
           foot_and_mouth_case_in_10km?: boolean | null
           foot_and_mouth_symptoms?: boolean | null
           id?: never
+          location_distance_note?: string | null
           lumpy_skin_disease_symptoms?: boolean | null
           owner_of_livestock?: string | null
           reference_id: string
           rift_valley_fever_case_in_10km?: boolean | null
           sheep_mouthed?: boolean | null
           sheep_visually_inspected?: boolean | null
+          signed_location?: string | null
           veterinarian_name?: string | null
           veterinarian_registration_number?: string | null
         }
@@ -642,12 +655,14 @@ export type Database = {
           foot_and_mouth_case_in_10km?: boolean | null
           foot_and_mouth_symptoms?: boolean | null
           id?: never
+          location_distance_note?: string | null
           lumpy_skin_disease_symptoms?: boolean | null
           owner_of_livestock?: string | null
           reference_id?: string
           rift_valley_fever_case_in_10km?: boolean | null
           sheep_mouthed?: boolean | null
           sheep_visually_inspected?: boolean | null
+          signed_location?: string | null
           veterinarian_name?: string | null
           veterinarian_registration_number?: string | null
         }

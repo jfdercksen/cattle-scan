@@ -102,6 +102,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
       foot_and_mouth_case_in_10km: null,
       rift_valley_fever_case_in_10km: null,
       signed_location: '',
+      location_distance_note: '',
     },
   });
 
@@ -159,6 +160,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
           baseValues.foot_and_mouth_case_in_10km = declarationRecord.foot_and_mouth_case_in_10km;
           baseValues.rift_valley_fever_case_in_10km = declarationRecord.rift_valley_fever_case_in_10km;
           baseValues.signed_location = declarationRecord.signed_location ?? baseValues.signed_location ?? '';
+          baseValues.location_distance_note = declarationRecord.location_distance_note ?? '';
           setSigningLocation(baseValues.signed_location || '');
         }
       }
@@ -224,6 +226,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
         foot_and_mouth_case_in_10km: data.foot_and_mouth_case_in_10km ?? false,
         rift_valley_fever_case_in_10km: data.rift_valley_fever_case_in_10km ?? false,
         signed_location: signingLocation || data.signed_location || null,
+        location_distance_note: data.location_distance_note || null,
       };
 
       const { error: insertError } = await supabase
@@ -386,7 +389,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
       <CardHeader>
         <CardTitle>Veterinary Declaration</CardTitle>
         <CardDescription>
-          I Dr. {vetProfile?.first_name} {vetProfile?.last_name}, a veterinarian registered with the South African Veterinary Council with registration number {vetProfile?.registration_number}, declare that I inspected the following livestock at the following address: {listing?.location}.
+          I Dr. {vetProfile?.first_name} {vetProfile?.last_name}, a veterinarian registered with the South African Veterinary Council with South African veterinarian council registration number {vetProfile?.registration_number}, declare that I inspected the following livestock at the following address: {listing?.location}.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -442,6 +445,17 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                     >
                       Get Location
                     </Button>
+                  </div>
+                  <div className="mt-2">
+                    <Label className="text-sm">Distance from plotted location (if no cell coverage)</Label>
+                    <Input
+                      value={form.watch('location_distance_note') || ''}
+                      onChange={(event) => {
+                        form.setValue('location_distance_note', event.target.value, { shouldValidate: true });
+                      }}
+                      placeholder="e.g., 2km north of plotted location"
+                      disabled={readOnly}
+                    />
                   </div>
                 </div>
                 {readOnly && (
@@ -620,22 +634,22 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                   return null;
                 })()}
 
-                {/* Mouthing Requirements Display */}
+                {/* Physical Inspection Requirements Display */}
                 {cattleCount > 0 && (
                   <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                    <h4 className="font-medium text-blue-900 mb-2">Cattle Mouthing Requirements</h4>
+                    <h4 className="font-medium text-blue-900 mb-2">Cattle Physical Inspection Requirements</h4>
                     <p className="text-sm text-blue-800">
-                      {calculationEngine.calculateMouthingRequirement(cattleCount).displayText}
+                      Have {cattleCount} cattle physically been inspected (Mouth & feet)
                     </p>
                   </div>
                 )}
 
-                {/* Sheep Mouthing Requirements Display */}
+                {/* Sheep Physical Inspection Requirements Display */}
                 {sheepCount > 0 && (
                   <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
-                    <h4 className="font-medium text-green-900 mb-2">Sheep Mouthing Requirements</h4>
+                    <h4 className="font-medium text-green-900 mb-2">Sheep Physical Inspection Requirements</h4>
                     <p className="text-sm text-green-800">
-                      {Math.ceil(sheepCount * 0.25)} sheep must be mouthed (25% of {sheepCount} total sheep)
+                      Have {sheepCount} sheep physically been inspected (Mouth & feet)
                     </p>
                   </div>
                 )}
@@ -664,7 +678,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>
-                            Have {calculationEngine.calculateMouthingRequirement(cattleCount).requiredCount} cattle been mouthed? (25%)
+                            Have {cattleCount} cattle physically been inspected (Mouth & feet)?
                           </FormLabel>
                           <FormControl>
                             <YesNoSwitch value={field.value} onChange={field.onChange} disabled={readOnly} />
@@ -695,7 +709,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                       name="sheep_mouthed"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Have {Math.ceil(sheepCount * 0.25)} sheep been mouthed? (25%)</FormLabel>
+                          <FormLabel>Have {sheepCount} sheep physically been inspected (Mouth & feet)?</FormLabel>
                           <FormControl>
                             <YesNoSwitch value={field.value} onChange={field.onChange} disabled={readOnly} />
                           </FormControl>
