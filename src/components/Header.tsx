@@ -3,11 +3,13 @@ import { Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/contexts/auth';
-import { useLanguage } from '@/contexts/languageContext';  
+import { useLanguage } from '@/contexts/languageContext';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export const Header = () => {
   const { language, setLanguage } = useLanguage();
   const { user, signOut, loading } = useAuth();
+  const { t } = useTranslation();
 
   return (
     <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
@@ -17,7 +19,7 @@ export const Header = () => {
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <Shield className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-slate-800">Cattle Scan</span>
+            <span className="text-xl font-bold text-slate-800">{t("header", "brand")}</span>
           </div>
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
@@ -39,10 +41,10 @@ export const Header = () => {
             <ThemeToggle />
             {loading ? null : (
               user ? (
-                <Button variant="outline" onClick={signOut}>Sign Out</Button>
+                <Button variant="outline" onClick={signOut}>{t("header", "signOutCta")}</Button>
               ) : (
                 <Link to="/auth">
-                  <Button variant="outline">Sign In</Button>
+                  <Button variant="outline">{t("header", "signInCta")}</Button>
                 </Link>
               )
             )}

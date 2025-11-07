@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SignaturePad } from "@/components/SignaturePad";
 import FileUploadManager, { type UploadResult } from "@/components/FileUploadManager";
 import type { Tables, TablesUpdate, Enums } from '@/integrations/supabase/types';
+import { useTranslation } from '@/i18n/useTranslation';
 
 type Profile = Tables<'profiles'>;
 
@@ -38,6 +39,7 @@ const ProfileCompletion = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, refreshProfile } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -124,8 +126,8 @@ const ProfileCompletion = () => {
     // Validate signature for sellers
     if (profile.role === 'seller' && !signature) {
       toast({
-        title: "Error",
-        description: "Digital signature is required to complete your profile.",
+        title: t('common', 'errorTitle'),
+        description: t('profileCompletionForm', 'toastSignatureRequired'),
         variant: "destructive"
       });
       return;
@@ -137,8 +139,8 @@ const ProfileCompletion = () => {
       // Validate required file uploads
       if (!formData.id_document_url) {
         toast({
-          title: "Error",
-          description: "ID document upload is required.",
+          title: t('common', 'errorTitle'),
+          description: t('profileCompletionForm', 'toastIdRequired'),
           variant: "destructive"
         });
         return;
@@ -146,8 +148,8 @@ const ProfileCompletion = () => {
 
       if (profile.role === 'seller' && !formData.brand_mark_url) {
         toast({
-          title: "Error",
-          description: "Brand mark photo upload is required for sellers.",
+          title: t('common', 'errorTitle'),
+          description: t('profileCompletionForm', 'toastBrandMarkRequired'),
           variant: "destructive"
         });
         return;
@@ -155,8 +157,8 @@ const ProfileCompletion = () => {
 
       if (profile.role === 'vet' && !formData.practice_letter_head_url) {
         toast({
-          title: "Error",
-          description: "Practice letterhead upload is required for veterinarians.",
+          title: t('common', 'errorTitle'),
+          description: t('profileCompletionForm', 'toastVetLetterheadRequired'),
           variant: "destructive"
         });
         return;
@@ -164,8 +166,8 @@ const ProfileCompletion = () => {
 
       if (profile.role === 'agent' && (!formData.appointment_letter_url || !formData.apac_registration_url)) {
         toast({
-          title: "Error",
-          description: "Appointment letter and APAC registration uploads are required for agents.",
+          title: t('common', 'errorTitle'),
+          description: t('profileCompletionForm', 'toastAgentDocumentsRequired'),
           variant: "destructive"
         });
         return;
@@ -218,8 +220,8 @@ const ProfileCompletion = () => {
       await refreshProfile();
 
       toast({
-        title: "Success",
-        description: "Profile completed successfully! Redirecting to your dashboard...",
+        title: t('common', 'successTitle'),
+        description: t('profileCompletionForm', 'toastSuccessDescription'),
         variant: "default"
       });
 
@@ -229,8 +231,8 @@ const ProfileCompletion = () => {
     } catch (error) {
       console.error('Profile completion error:', error);
       toast({
-        title: "Error",
-        description: "Failed to complete profile. Please try again.",
+        title: t('common', 'errorTitle'),
+        description: t('profileCompletionForm', 'toastErrorDescription'),
         variant: "destructive"
       });
     } finally {
@@ -241,14 +243,14 @@ const ProfileCompletion = () => {
   if (authLoading || profileLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">Loading...</div>
+        <div className="text-center">{t('common', 'loading')}</div>
       </div>
     );
   }
 
   if (!profile) return (
     <div className="min-h-screen bg-white flex items-center justify-center">
-      <div className="text-center">Could not load profile. Please try again.</div>
+      <div className="text-center">{t('profileCompletionForm', 'loadProfileError')}</div>
     </div>
   );
 
@@ -276,10 +278,10 @@ const ProfileCompletion = () => {
 
   const renderBiosecurityDeclarations = () => (
     <div className="space-y-4 border-t pt-4">
-      <h3 className="text-lg font-semibold">Responsible Person Declaration</h3>
+      <h3 className="text-lg font-semibold">{t('profileCompletionForm', 'biosecuritySectionTitle')}</h3>
 
       <div className="space-y-3">
-        {renderDeclaration("declaration_responsible_person_definition", "The responsible person is a person who is directly part of the management of daily operations of the farming enterprise and whom can attest to information as required. The responsible person must be 18 years and older.")}
+        {renderDeclaration("declaration_responsible_person_definition", t('profileCompletionForm', 'declarationResponsiblePerson'))}
       </div>
 
       <div className="space-y-4">
@@ -294,10 +296,10 @@ const ProfileCompletion = () => {
   const renderSellerFields = () => (
     <>
       <div className="space-y-4 border-t pt-4">
-        <h3 className="text-lg font-semibold">Livestock Owner Information</h3>
+        <h3 className="text-lg font-semibold">{t('profileCompletionForm', 'sellerSectionTitle')}</h3>
 
         <div>
-          <Label>The livestock is owned by a:</Label>
+          <Label>{t('profileCompletionForm', 'ownershipQuestion')}</Label>
           <RadioGroup
             value={formData.ownership_type}
             onValueChange={(value) => setFormData(prev => ({ ...prev, ownership_type: value }))}
@@ -305,25 +307,25 @@ const ProfileCompletion = () => {
           >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="sole_proprietor" id="sole_proprietor" />
-              <Label htmlFor="sole_proprietor">Sole Proprietor</Label>
+              <Label htmlFor="sole_proprietor">{t('profileCompletionForm', 'ownershipSoleProprietor')}</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="partnership" id="partnership" />
-              <Label htmlFor="partnership">Partnership</Label>
+              <Label htmlFor="partnership">{t('profileCompletionForm', 'ownershipPartnership')}</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="trust" id="trust" />
-              <Label htmlFor="trust">Trust</Label>
+              <Label htmlFor="trust">{t('profileCompletionForm', 'ownershipTrust')}</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="company" id="company" />
-              <Label htmlFor="company">Company</Label>
+              <Label htmlFor="company">{t('profileCompletionForm', 'ownershipCompany')}</Label>
             </div>
           </RadioGroup>
         </div>
 
         <div>
-          <Label htmlFor="entity_name">Name of Entity *</Label>
+          <Label htmlFor="entity_name">{t('profileCompletionForm', 'entityNameLabel')}</Label>
           <Input
             id="entity_name"
             value={formData.entity_name}
@@ -333,31 +335,31 @@ const ProfileCompletion = () => {
         </div>
 
         <div>
-          <Label>Title of the responsible person:</Label>
+          <Label>{t('profileCompletionForm', 'responsibleTitleLabel')}</Label>
           <Select value={formData.responsible_person_title} onValueChange={(value) => setFormData(prev => ({ ...prev, responsible_person_title: value }))}>
             <SelectTrigger>
-              <SelectValue placeholder="Select title" />
+              <SelectValue placeholder={t('profileCompletionForm', 'selectTitlePlaceholder')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="sole_proprietor">Sole Proprietor</SelectItem>
-              <SelectItem value="partner">Partner</SelectItem>
-              <SelectItem value="trustee">Trustee</SelectItem>
-              <SelectItem value="director">Director</SelectItem>
-              <SelectItem value="herd_manager">Herd Manager</SelectItem>
+              <SelectItem value="sole_proprietor">{t('profileCompletionForm', 'titleSoleProprietor')}</SelectItem>
+              <SelectItem value="partner">{t('profileCompletionForm', 'titlePartner')}</SelectItem>
+              <SelectItem value="trustee">{t('profileCompletionForm', 'titleTrustee')}</SelectItem>
+              <SelectItem value="director">{t('profileCompletionForm', 'titleDirector')}</SelectItem>
+              <SelectItem value="herd_manager">{t('profileCompletionForm', 'titleHerdManager')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <FileUploadManager
           documentType="affidavit"
-          label="Photo of I.D. or drivers licence of person offering livestock"
+          label={t('profileCompletionForm', 'idUploadLabelSeller')}
           required={true}
           onUploadComplete={(result) => handleFileUpload("id_document_url", result)}
           currentFileUrl={formData.id_document_url || undefined}
         />
         <FileUploadManager
           documentType="brand_photo"
-          label="Photo of brand mark of livestock owner"
+          label={t('profileCompletionForm', 'brandMarkUploadLabel')}
           required={true}
           onUploadComplete={(result) => handleFileUpload("brand_mark_url", result)}
           currentFileUrl={formData.brand_mark_url || undefined}
@@ -370,7 +372,7 @@ const ProfileCompletion = () => {
   const renderAgentFields = () => (
     <>
       <div>
-        <Label htmlFor="agency_represented">Agency Represented *</Label>
+        <Label htmlFor="agency_represented">{t('profileCompletionForm', 'agencyRepresentedLabel')}</Label>
         <Input
           id="agency_represented"
           value={formData.agency_represented}
@@ -381,21 +383,21 @@ const ProfileCompletion = () => {
 
       <FileUploadManager
         documentType="affidavit"
-        label="Photo of I.D. or drivers licence"
+        label={t('profileCompletionForm', 'idUploadLabel')}
         required={true}
         onUploadComplete={(result) => handleFileUpload("id_document_url", result)}
         currentFileUrl={formData.id_document_url || undefined}
       />
       <FileUploadManager
         documentType="affidavit"
-        label="Photo of agency appointment letter"
+        label={t('profileCompletionForm', 'appointmentLetterUploadLabel')}
         required={true}
         onUploadComplete={(result) => handleFileUpload("appointment_letter_url", result)}
         currentFileUrl={formData.appointment_letter_url || undefined}
       />
       <FileUploadManager
         documentType="affidavit"
-        label="Photo of APAC registration"
+        label={t('profileCompletionForm', 'apacUploadLabel')}
         required={true}
         onUploadComplete={(result) => handleFileUpload("apac_registration_url", result)}
         currentFileUrl={formData.apac_registration_url || undefined}
@@ -406,7 +408,7 @@ const ProfileCompletion = () => {
   const renderVetFields = () => (
     <>
       <div>
-        <Label htmlFor="registration_number">Registration Number *</Label>
+        <Label htmlFor="registration_number">{t('profileCompletionForm', 'registrationNumberLabel')}</Label>
         <Input
           id="registration_number"
           value={formData.registration_number}
@@ -416,14 +418,14 @@ const ProfileCompletion = () => {
       </div>
       <FileUploadManager
         documentType="affidavit"
-        label="Photo of I.D. or drivers licence"
+        label={t('profileCompletionForm', 'idUploadLabel')}
         required={true}
         onUploadComplete={(result) => handleFileUpload("id_document_url", result)}
         currentFileUrl={formData.id_document_url || undefined}
       />
       <FileUploadManager
         documentType="vet_letterhead"
-        label="Photo of practice letter head"
+        label={t('profileCompletionForm', 'practiceLetterheadUploadLabel')}
         required={true}
         onUploadComplete={(result) => handleFileUpload("practice_letter_head_url", result)}
         currentFileUrl={formData.practice_letter_head_url || undefined}
@@ -435,7 +437,7 @@ const ProfileCompletion = () => {
     <>
       <FileUploadManager
         documentType="affidavit"
-        label="Photo of I.D. or drivers licence"
+        label={t('profileCompletionForm', 'idUploadLabel')}
         required={true}
         onUploadComplete={(result) => handleFileUpload("id_document_url", result)}
         currentFileUrl={formData.id_document_url || undefined}
@@ -461,15 +463,15 @@ const ProfileCompletion = () => {
   const getRoleTitle = () => {
     switch (profile.role) {
       case 'seller':
-        return 'Seller Profile';
+        return t('profileCompletionForm', 'sellerTitle');
       case 'agent':
-        return 'Agent Profile';
+        return t('profileCompletionForm', 'agentTitle');
       case 'vet':
-        return 'Vet Profile';
+        return t('profileCompletionForm', 'vetTitle');
       case 'load_master':
-        return 'Load Master Profile';
+        return t('profileCompletionForm', 'loadMasterTitle');
       default:
-        return 'Profile Completion';
+        return t('profileCompletionForm', 'defaultTitle');
     }
   };
 
@@ -485,7 +487,7 @@ const ProfileCompletion = () => {
               {getRoleTitle()}
             </CardTitle>
             <CardDescription>
-              Please complete your profile to proceed with account verification
+              {t('profileCompletionForm', 'cardDescription')}
             </CardDescription>
           </div>
         </CardHeader>
@@ -494,17 +496,17 @@ const ProfileCompletion = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* User info display - read-only */}
             <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-              <h3 className="font-semibold text-gray-700">Your Information</h3>
-              <p className="text-sm text-gray-600">Name: {profile.first_name} {profile.last_name}</p>
-              <p className="text-sm text-gray-600">Email: {profile.email}</p>
-              {profile.phone && <p className="text-sm text-gray-600">Phone: {profile.phone}</p>}
+              <h3 className="font-semibold text-gray-700">{t('profileCompletionForm', 'userInfoHeading')}</h3>
+              <p className="text-sm text-gray-600">{`${t('profileCompletionForm', 'nameLabel')}: ${profile.first_name} ${profile.last_name}`}</p>
+              <p className="text-sm text-gray-600">{`${t('profileCompletionForm', 'emailLabel')}: ${profile.email}`}</p>
+              {profile.phone && <p className="text-sm text-gray-600">{`${t('profileCompletionForm', 'phoneLabel')}: ${profile.phone}`}</p>}
             </div>
 
             {/* Role-specific fields */}
             {getRoleSpecificFields()}
             {profile?.role === 'seller' && renderBiosecurityDeclarations()}
             <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? 'Submitting...' : 'Complete Profile'}
+              {submitting ? t('profileCompletionForm', 'buttonSubmitting') : t('profileCompletionForm', 'buttonSubmit')}
             </Button>
           </form>
         </CardContent>

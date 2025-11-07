@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from '@/i18n/useTranslation';
 
 interface FormStepperProps {
   steps: { title: string }[];
@@ -8,6 +9,8 @@ interface FormStepperProps {
 }
 
 export const FormStepper = ({ steps, currentStep, goToStep }: FormStepperProps) => {
+  const { t } = useTranslation();
+
   return (
     <>
       {/* Desktop: Horizontal tabs */}
@@ -38,12 +41,14 @@ export const FormStepper = ({ steps, currentStep, goToStep }: FormStepperProps) 
             className="flex items-center gap-1"
           >
             <ChevronLeft className="h-4 w-4" />
-            Prev
+            {t('formStepper', 'prevButton')}
           </Button>
           
           <div className="text-center">
             <div className="text-sm font-medium">
-              Step {currentStep + 1} of {steps.length}
+              {t('formStepper', 'stepIndicator')
+                .replace('{current}', String(currentStep + 1))
+                .replace('{total}', String(steps.length))}
             </div>
             <div className="text-xs text-muted-foreground">
               {steps[currentStep].title}
@@ -58,7 +63,7 @@ export const FormStepper = ({ steps, currentStep, goToStep }: FormStepperProps) 
             disabled={currentStep === steps.length - 1}
             className="flex items-center gap-1"
           >
-            Next
+            {t('formStepper', 'nextButton')}
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

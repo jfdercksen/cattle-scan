@@ -4,15 +4,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/auth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "@/i18n/useTranslation";
 import { User, Settings } from "lucide-react";
 
 const ProfileSection = () => {
-  const { user, profile, updateProfile, loading: authLoading } = useAuth();
+  const { user, profile, refreshProfile, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   
   const [loading, setLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -52,13 +53,13 @@ const ProfileSection = () => {
       <div className="space-y-8">
         <Card>
           <CardHeader>
-            <div className="h-8 bg-slate-200 rounded w-1/2 animate-pulse"></div>
-            <div className="h-4 bg-slate-200 rounded w-3/4 animate-pulse mt-2"></div>
+            <div className="h-8 bg-slate-200 rounded w-1/2 animate-pulse" aria-label={t('profileSection', 'loadingTitle')}></div>
+            <div className="h-4 bg-slate-200 rounded w-3/4 animate-pulse mt-2" aria-label={t('profileSection', 'loadingDescription')}></div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="h-10 bg-slate-200 rounded w-full animate-pulse"></div>
-            <div className="h-10 bg-slate-200 rounded w-full animate-pulse"></div>
-            <div className="h-10 bg-slate-200 rounded w-1/4 animate-pulse ml-auto"></div>
+            <div className="h-10 bg-slate-200 rounded w-full animate-pulse" aria-label={t('profileSection', 'loadingField')}></div>
+            <div className="h-10 bg-slate-200 rounded w-full animate-pulse" aria-label={t('profileSection', 'loadingField')}></div>
+            <div className="h-10 bg-slate-200 rounded w-1/4 animate-pulse ml-auto" aria-label={t('profileSection', 'loadingField')}></div>
           </CardContent>
         </Card>
       </div>
@@ -70,8 +71,8 @@ const ProfileSection = () => {
     
     if (!firstName.trim() || !lastName.trim()) {
       toast({
-        title: "Error",
-        description: "First name and last name are required",
+        title: t('common', 'errorTitle'),
+        description: t('profileSection', 'errorMissingNames'),
         variant: "destructive"
       });
       return;
@@ -80,35 +81,48 @@ const ProfileSection = () => {
     setLoading(true);
     
     try {
-      const { error } = await updateProfile({
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        phone: phone.trim() || null,
-        company_name: companyName.trim() || null,
-        address: address.trim() || null,
-        city: city.trim() || null,
-        province: province.trim() || null,
-        postal_code: postalCode.trim() || null,
-        language_preference: language as 'en' | 'af'
-      });
+      if (!user) {
+        toast({
+          title: t('common', 'errorTitle'),
+          description: t('profileSection', 'errorUnexpected'),
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          phone: phone.trim() || null,
+          company_name: companyName.trim() || null,
+          address: address.trim() || null,
+          city: city.trim() || null,
+          province: province.trim() || null,
+          postal_code: postalCode.trim() || null,
+          language_preference: language as 'en' | 'af'
+        })
+        .eq('id', user.id);
 
       if (error) {
         toast({
-          title: "Error",
+          title: t('common', 'errorTitle'),
           description: error.message,
           variant: "destructive"
         });
       } else {
+        await refreshProfile();
         toast({
-          title: "Success",
-          description: "Profile updated successfully",
+          title: t('common', 'successTitle'),
+          description: t('profileSection', 'toastProfileSuccess'),
           variant: "default"
         });
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "An unexpected error occurred",
+        title: t('common', 'errorTitle'),
+        description: t('profileSection', 'errorUnexpected'),
         variant: "destructive"
       });
     } finally {
@@ -121,8 +135,8 @@ const ProfileSection = () => {
     
     if (newPassword.length < 6) {
       toast({
-        title: "Error",
-        description: "New password must be at least 6 characters long",
+        title: t('common', 'errorTitle'),
+        description: t('profileSection', 'errorPasswordShort'),
         variant: "destructive"
       });
       return;
@@ -130,8 +144,8 @@ const ProfileSection = () => {
     
     if (newPassword !== confirmPassword) {
       toast({
-        title: "Error",
-        description: "New passwords do not match",
+        title: t('common', 'errorTitle'),
+        description: t('profileSection', 'errorPasswordMismatch'),
         variant: "destructive"
       });
       return;
@@ -146,14 +160,14 @@ const ProfileSection = () => {
 
       if (error) {
         toast({
-          title: "Error",
+          title: t('common', 'errorTitle'),
           description: error.message,
           variant: "destructive"
         });
       } else {
         toast({
-          title: "Success",
-          description: "Password updated successfully",
+          title: t('common', 'successTitle'),
+          description: t('profileSection', 'toastPasswordSuccess'),
           variant: "default"
         });
         setCurrentPassword('');
@@ -162,8 +176,8 @@ const ProfileSection = () => {
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "An unexpected error occurred",
+        title: t('common', 'errorTitle'),
+        description: t('profileSection', 'errorUnexpected'),
         variant: "destructive"
       });
     } finally {
@@ -182,17 +196,17 @@ const ProfileSection = () => {
         <CardHeader>
           <div className="flex items-center space-x-2">
             <User className="w-5 h-5" />
-            <CardTitle>Profile Information</CardTitle>
+            <CardTitle>{t('profileSection', 'profileCardTitle')}</CardTitle>
           </div>
           <CardDescription>
-            Update your personal information and preferences
+            {t('profileSection', 'profileCardDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleProfileUpdate} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="firstName">First Name *</Label>
+                <Label htmlFor="firstName">{t('profileSection', 'labelFirstName')}</Label>
                 <Input
                   id="firstName"
                   value={firstName}
@@ -202,7 +216,7 @@ const ProfileSection = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="lastName">Last Name *</Label>
+                <Label htmlFor="lastName">{t('profileSection', 'labelLastName')}</Label>
                 <Input
                   id="lastName"
                   value={lastName}
@@ -214,7 +228,7 @@ const ProfileSection = () => {
             </div>
             
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('profileSection', 'labelEmail')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -222,12 +236,12 @@ const ProfileSection = () => {
                 disabled
                 className="bg-gray-50"
               />
-              <p className="text-sm text-gray-500 mt-1">Email cannot be changed</p>
+              <p className="text-sm text-gray-500 mt-1">{t('profileSection', 'emailHint')}</p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="phone">Phone Number</Label>
+                <Label htmlFor="phone">{t('profileSection', 'labelPhone')}</Label>
                 <Input
                   id="phone"
                   type="tel"
@@ -237,7 +251,7 @@ const ProfileSection = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="companyName">Company Name</Label>
+                <Label htmlFor="companyName">{t('profileSection', 'labelCompany')}</Label>
                 <Input
                   id="companyName"
                   value={companyName}
@@ -248,7 +262,7 @@ const ProfileSection = () => {
             </div>
             
             <div>
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="address">{t('profileSection', 'labelAddress')}</Label>
               <Input
                 id="address"
                 value={address}
@@ -259,7 +273,7 @@ const ProfileSection = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="city">City</Label>
+                <Label htmlFor="city">{t('profileSection', 'labelCity')}</Label>
                 <Input
                   id="city"
                   value={city}
@@ -268,7 +282,7 @@ const ProfileSection = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="province">Province</Label>
+                <Label htmlFor="province">{t('profileSection', 'labelProvince')}</Label>
                 <Input
                   id="province"
                   value={province}
@@ -277,7 +291,7 @@ const ProfileSection = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="postalCode">Postal Code</Label>
+                <Label htmlFor="postalCode">{t('profileSection', 'labelPostalCode')}</Label>
                 <Input
                   id="postalCode"
                   value={postalCode}
@@ -288,20 +302,20 @@ const ProfileSection = () => {
             </div>
             
             <div>
-              <Label htmlFor="language">Language Preference</Label>
+              <Label htmlFor="language">{t('profileSection', 'labelLanguage')}</Label>
               <Select value={language} onValueChange={handleLanguageChange}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder={t('profileSection', 'labelLanguage')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="af">Afrikaans</SelectItem>
+                  <SelectItem value="en">{t('profileSection', 'languageEnglish')}</SelectItem>
+                  <SelectItem value="af">{t('profileSection', 'languageAfrikaans')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
             <Button type="submit" disabled={loading}>
-              {loading ? 'Updating...' : 'Update Profile'}
+              {loading ? t('profileSection', 'buttonUpdating') : t('profileSection', 'buttonUpdateProfile')}
             </Button>
           </form>
         </CardContent>
@@ -312,16 +326,16 @@ const ProfileSection = () => {
         <CardHeader>
           <div className="flex items-center space-x-2">
             <Settings className="w-5 h-5" />
-            <CardTitle>Change Password</CardTitle>
+            <CardTitle>{t('profileSection', 'passwordCardTitle')}</CardTitle>
           </div>
           <CardDescription>
-            Update your account password
+            {t('profileSection', 'passwordCardDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handlePasswordUpdate} className="space-y-4">
             <div>
-              <Label htmlFor="newPassword">New Password</Label>
+              <Label htmlFor="newPassword">{t('profileSection', 'labelNewPassword')}</Label>
               <Input
                 id="newPassword"
                 type="password"
@@ -333,7 +347,7 @@ const ProfileSection = () => {
             </div>
             
             <div>
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Label htmlFor="confirmPassword">{t('profileSection', 'labelConfirmPassword')}</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -345,7 +359,7 @@ const ProfileSection = () => {
             </div>
             
             <Button type="submit" disabled={passwordLoading}>
-              {passwordLoading ? 'Updating...' : 'Update Password'}
+              {passwordLoading ? t('profileSection', 'buttonUpdatingPassword') : t('profileSection', 'buttonUpdatePassword')}
             </Button>
           </form>
         </CardContent>

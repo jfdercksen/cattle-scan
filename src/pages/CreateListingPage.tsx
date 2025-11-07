@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { LivestockListingForm } from '@/components/LivestockListingForm';
 import { useAuth } from '@/contexts/auth';
 import type { Tables } from '@/integrations/supabase/types';
+import { useTranslation } from '@/i18n/useTranslation';
 
 const CreateListingPage = () => {
   const { invitationId } = useParams<{ invitationId: string }>();
@@ -12,6 +13,7 @@ const CreateListingPage = () => {
   const [invitation, setInvitation] = useState<Tables<'listing_invitations'> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const fetchInvitation = async () => {
@@ -33,10 +35,10 @@ const CreateListingPage = () => {
         if (data) {
           setInvitation(data);
         } else {
-          setError('Invitation not found or you do not have permission to view it.');
+          setError(t('createListingPage', 'invitationNotFound'));
         }
       } catch (err: unknown) {
-        setError('Failed to fetch invitation details.');
+        setError(t('createListingPage', 'fetchError'));
         console.error(err);
       } finally {
         setLoading(false);
@@ -44,6 +46,7 @@ const CreateListingPage = () => {
     };
 
     fetchInvitation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invitationId, user]);
 
   const handleSuccess = () => {
@@ -51,21 +54,28 @@ const CreateListingPage = () => {
   };
 
   if (loading) {
-    return <div className="container mx-auto p-4">Loading...</div>;
+    return <div className="container mx-auto p-4">{t('common', 'loading')}</div>;
   }
 
   if (error) {
-    return <div className="container mx-auto p-4 text-red-500">Error: {error}</div>;
+    return (
+      <div className="container mx-auto p-4 text-red-500">
+        {t('common', 'error')}: {error}
+      </div>
+    );
   }
 
   if (!invitation) {
-    return <div className="container mx-auto p-4">Invitation not found.</div>;
+    return <div className="container mx-auto p-4">{t('createListingPage', 'invitationMissing')}</div>;
   }
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Create Livestock Listing</h1>
-      <p className="mb-4">Complete the form below to create your listing for reference: <span className="font-mono bg-gray-100 p-1 rounded">{invitation.reference_id}</span></p>
+      <h1 className="text-2xl font-bold mb-4">{t('createListingPage', 'title')}</h1>
+      <p className="mb-4">
+        {t('createListingPage', 'description').replace('{reference}', invitation.reference_id)}{' '}
+        <span className="font-mono bg-gray-100 p-1 rounded">{invitation.reference_id}</span>
+      </p>
       <LivestockListingForm invitationId={invitation.id} referenceId={invitation.reference_id} onSuccess={handleSuccess} />
     </div>
   );

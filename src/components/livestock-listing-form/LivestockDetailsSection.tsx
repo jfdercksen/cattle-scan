@@ -23,17 +23,22 @@ import {
 } from '@/components/ui/select';
 import { defaultFieldVisibility, FormSection } from '@/lib/fieldVisibility';
 import { LivestockCalculations } from '@/lib/calculationEngine';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export const LivestockDetailsSection = () => {
   const form = useFormContext<LivestockListingFormData>();
   const { userProfile } = useUserProfile();
   const { setValue, watch, getValues } = form;
+  const { t } = useTranslation();
   const growthImplant = watch('growth_implant');
   const livestockType = watch('livestock_type');
-  const loadingPoints = watch('loading_points') || [];
+  const loadingPointsValues = watch('loading_points');
+  const loadingPointTotals: Array<{ number_of_cattle?: number; number_of_sheep?: number }> = Array.isArray(loadingPointsValues)
+    ? (loadingPointsValues as unknown as Array<{ number_of_cattle?: number; number_of_sheep?: number }>)
+    : [];
 
   // Calculate totals from loading points for conditional visibility
-  const { totalCattle, totalSheep } = LivestockCalculations.calculateTotalLivestock(loadingPoints);
+  const { totalCattle, totalSheep } = LivestockCalculations.calculateTotalLivestock(loadingPointTotals);
   
   // Determine if cattle or sheep fields should be shown
   const shouldShowCattleFields = livestockType === 'CATTLE' || livestockType === 'CATTLE AND SHEEP' || totalCattle > 0;
@@ -49,6 +54,19 @@ export const LivestockDetailsSection = () => {
   const [weighingFarmName, setWeighingFarmName] = useState('');
   const [weighingDistrict, setWeighingDistrict] = useState('');
   const [weighingProvince, setWeighingProvince] = useState('');
+
+  const getLivestockTypeLabel = (type?: string) => {
+    switch (type) {
+      case 'CATTLE AND SHEEP':
+        return t('livestockDetailsSection', 'livestockTypeOptionCattleAndSheep');
+      case 'CATTLE':
+        return t('livestockDetailsSection', 'livestockTypeOptionCattle');
+      case 'SHEEP':
+        return t('livestockDetailsSection', 'livestockTypeOptionSheep');
+      default:
+        return type || '';
+    }
+  };
 
   // Effect to parse the weighing location from the form into separate fields
   useEffect(() => {
@@ -73,24 +91,24 @@ export const LivestockDetailsSection = () => {
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
+      <h3 className="text-lg font-semibold mb-4">{t('livestockDetailsSection', 'basicInformationHeading')}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField
           control={form.control}
           name="livestock_type"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Livestock type</FormLabel>
+              <FormLabel>{t('livestockDetailsSection', 'livestockTypeLabel')}</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a livestock type" />
+                    <SelectValue placeholder={t('livestockDetailsSection', 'livestockTypePlaceholder')} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="CATTLE AND SHEEP">Cattle and Sheep</SelectItem>
-                  <SelectItem value="CATTLE">Cattle</SelectItem>
-                  <SelectItem value="SHEEP">Sheep</SelectItem>
+                  <SelectItem value="CATTLE AND SHEEP">{t('livestockDetailsSection', 'livestockTypeOptionCattleAndSheep')}</SelectItem>
+                  <SelectItem value="CATTLE">{t('livestockDetailsSection', 'livestockTypeOptionCattle')}</SelectItem>
+                  <SelectItem value="SHEEP">{t('livestockDetailsSection', 'livestockTypeOptionSheep')}</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -103,14 +121,16 @@ export const LivestockDetailsSection = () => {
           <div className="md:col-span-2">
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
               <div className="flex items-center gap-2">
-                <Badge variant="default">{livestockType}</Badge>
+                <Badge variant="default">{getLivestockTypeLabel(livestockType)}</Badge>
                 <span className="text-sm text-blue-800">
-                  Form fields will be shown based on your livestock type selection
+                  {t('livestockDetailsSection', 'livestockTypeIndicator')}
                 </span>
               </div>
               {(totalCattle > 0 || totalSheep > 0) && (
                 <div className="mt-2 text-xs text-blue-700">
-                  Current totals from loading points: {totalCattle} cattle, {totalSheep} sheep
+                  {t('livestockDetailsSection', 'livestockTypeTotals')
+                    .replace('{cattle}', totalCattle.toString())
+                    .replace('{sheep}', totalSheep.toString())}
                 </div>
               )}
             </div>
@@ -122,7 +142,7 @@ export const LivestockDetailsSection = () => {
           name="bred_or_bought"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Did the owner breed or buy in the livestock?</FormLabel>
+              <FormLabel>{t('livestockDetailsSection', 'bredOrBoughtLabel')}</FormLabel>
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
@@ -131,11 +151,11 @@ export const LivestockDetailsSection = () => {
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="BRED" id="bred" />
-                    <Label htmlFor="bred">Bred</Label>
+                    <Label htmlFor="bred">{t('livestockDetailsSection', 'bredOption')}</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="BOUGHT IN" id="bought" />
-                    <Label htmlFor="bought">Bought in</Label>
+                    <Label htmlFor="bought">{t('livestockDetailsSection', 'boughtOption')}</Label>
                   </div>
                 </RadioGroup>
               </FormControl>
@@ -149,24 +169,36 @@ export const LivestockDetailsSection = () => {
         {/* Weighing location - Hidden for initial launch as it's redundant with loading points */}
         {defaultFieldVisibility.isFieldVisible('weighing_location', FormSection.LIVESTOCK_DETAILS) && (
           <div className="md:col-span-2">
-            <Label>Where is the livestock going to be weighed?</Label>
+            <Label>{t('livestockDetailsSection', 'weighingQuestion')}</Label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
               <FormItem>
-                <FormLabel className="text-xs">Farm Name</FormLabel>
+                <FormLabel className="text-xs">{t('livestockDetailsSection', 'farmNameLabel')}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter farm name" value={weighingFarmName} onChange={(e) => setWeighingFarmName(e.target.value)} />
+                  <Input
+                    placeholder={t('livestockDetailsSection', 'farmNamePlaceholder')}
+                    value={weighingFarmName}
+                    onChange={(e) => setWeighingFarmName(e.target.value)}
+                  />
                 </FormControl>
               </FormItem>
               <FormItem>
-                <FormLabel className="text-xs">District</FormLabel>
+                <FormLabel className="text-xs">{t('livestockDetailsSection', 'districtLabel')}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter district" value={weighingDistrict} onChange={(e) => setWeighingDistrict(e.target.value)} />
+                  <Input
+                    placeholder={t('livestockDetailsSection', 'districtPlaceholder')}
+                    value={weighingDistrict}
+                    onChange={(e) => setWeighingDistrict(e.target.value)}
+                  />
                 </FormControl>
               </FormItem>
               <FormItem>
-                <FormLabel className="text-xs">Province</FormLabel>
+                <FormLabel className="text-xs">{t('livestockDetailsSection', 'provinceLabel')}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter province" value={weighingProvince} onChange={(e) => setWeighingProvince(e.target.value)} />
+                  <Input
+                    placeholder={t('livestockDetailsSection', 'provincePlaceholder')}
+                    value={weighingProvince}
+                    onChange={(e) => setWeighingProvince(e.target.value)}
+                  />
                 </FormControl>
               </FormItem>
             </div>
@@ -185,9 +217,9 @@ export const LivestockDetailsSection = () => {
             name="breed"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Breed of the livestock?</FormLabel>
+                <FormLabel>{t('livestockDetailsSection', 'breedQuestion')}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter breed" {...field} />
+                  <Input placeholder={t('livestockDetailsSection', 'breedPlaceholder')} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -202,7 +234,7 @@ export const LivestockDetailsSection = () => {
             name="estimated_average_weight"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Estimated current average weight of the livestock?</FormLabel>
+                <FormLabel>{t('livestockDetailsSection', 'estimatedWeightQuestion')}</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -219,14 +251,14 @@ export const LivestockDetailsSection = () => {
         )}
       </div>
 
-      <h3 className="text-lg font-semibold my-4">Livestock Details</h3>
+      <h3 className="text-lg font-semibold my-4">{t('livestockDetailsSection', 'livestockDetailsHeading')}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField
           control={form.control}
           name="total_livestock_offered"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Number of livestock offered</FormLabel>
+              <FormLabel>{t('livestockDetailsSection', 'totalLivestockLabel')}</FormLabel>
               <FormControl>
                 <Input
                   type="number"
@@ -247,7 +279,7 @@ export const LivestockDetailsSection = () => {
             name="number_of_heifers"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Number of heifers</FormLabel>
+                <FormLabel>{t('livestockDetailsSection', 'heifersLabel')}</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -272,7 +304,7 @@ export const LivestockDetailsSection = () => {
             render={({ field }) => (
               <FormItem>
                 <div className="flex items-center justify-between py-2 border-b">
-                  <FormLabel>Have the males been castrated?</FormLabel>
+                  <FormLabel>{t('livestockDetailsSection', 'castratedQuestion')}</FormLabel>
                   <FormControl>
                     <YesNoSwitch value={field.value} onChange={field.onChange} />
                   </FormControl>
@@ -290,7 +322,7 @@ export const LivestockDetailsSection = () => {
             name="mothers_status"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Is the livestock with their mothers or have they been weaned?</FormLabel>
+                <FormLabel>{t('livestockDetailsSection', 'mothersStatusQuestion')}</FormLabel>
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
@@ -299,11 +331,11 @@ export const LivestockDetailsSection = () => {
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="WITH MOTHERS" id="with-mothers" />
-                      <Label htmlFor="with-mothers">With mothers</Label>
+                      <Label htmlFor="with-mothers">{t('livestockDetailsSection', 'withMothersOption')}</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="ALREADY WEANED" id="weaned" />
-                      <Label htmlFor="weaned">Already weaned</Label>
+                      <Label htmlFor="weaned">{t('livestockDetailsSection', 'alreadyWeanedOption')}</Label>
                     </div>
                   </RadioGroup>
                 </FormControl>
@@ -320,9 +352,9 @@ export const LivestockDetailsSection = () => {
             name="weaned_duration"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>If already weaned for how long?</FormLabel>
+                <FormLabel>{t('livestockDetailsSection', 'weanedDurationQuestion')}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter weaned duration" {...field} />
+                  <Input placeholder={t('livestockDetailsSection', 'weanedDurationPlaceholder')} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -338,7 +370,7 @@ export const LivestockDetailsSection = () => {
             render={({ field }) => (
               <FormItem>
                 <div className="flex items-center justify-between py-2 border-b">
-                  <FormLabel>Is the livestock grazing green feed?</FormLabel>
+                  <FormLabel>{t('livestockDetailsSection', 'grazingQuestion')}</FormLabel>
                   <FormControl>
                     <YesNoSwitch value={field.value} onChange={field.onChange} />
                   </FormControl>
@@ -357,7 +389,7 @@ export const LivestockDetailsSection = () => {
             render={({ field }) => (
               <FormItem>
                 <div className="flex items-center justify-between py-2 border-b">
-                  <FormLabel>Did the livestock receive a growth implant?</FormLabel>
+                  <FormLabel>{t('livestockDetailsSection', 'growthImplantQuestion')}</FormLabel>
                   <FormControl>
                     <YesNoSwitch value={field.value} onChange={field.onChange} />
                   </FormControl>
@@ -375,9 +407,9 @@ export const LivestockDetailsSection = () => {
             name="growth_implant_type"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>If yes which one?</FormLabel>
+                <FormLabel>{t('livestockDetailsSection', 'growthImplantTypeQuestion')}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter growth implant type" {...field} />
+                  <Input placeholder={t('livestockDetailsSection', 'growthImplantTypePlaceholder')} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

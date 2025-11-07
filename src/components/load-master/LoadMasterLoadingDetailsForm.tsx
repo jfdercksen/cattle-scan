@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -19,6 +19,7 @@ import { LivestockCalculations } from '@/lib/calculationEngine';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
+import { useTranslation } from '@/i18n/useTranslation';
 
  // Types and helpers for parsing/loading points (aligned with View/Admin pages)
  type AddressLike = {
@@ -74,13 +75,18 @@ import type { Tables } from '@/integrations/supabase/types';
    });
  };
 
+type TranslationFn = ReturnType<typeof useTranslation>['t'];
+
 // Schema for Load Master loading details form
-const loadingDetailsSchema = z.object({
-  truck_registration_number: z.string().min(1, 'Truck registration number is required'),
-  loading_notes: z.string().optional(),
-  livestock_condition: z.string().optional(),
-  actual_loading_time: z.string().optional(),
-});
+const buildLoadingDetailsSchema = (t: TranslationFn) =>
+  z.object({
+    truck_registration_number: z
+      .string()
+      .min(1, t('loadMasterLoading', 'validationTruckRegistrationRequired')),
+    loading_notes: z.string().optional(),
+    livestock_condition: z.string().optional(),
+    actual_loading_time: z.string().optional(),
+  });
 
 type LoadingDetailsFormData = z.infer<typeof loadingDetailsSchema>;
 
@@ -98,6 +104,8 @@ export const LoadMasterLoadingDetailsForm = ({
   onCancel 
 }: LoadMasterLoadingDetailsFormProps) => {
   const { toast } = useToast();
+  const { t } = useTranslation();
+  const loadingDetailsSchema = useMemo(() => buildLoadingDetailsSchema(t), [t]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
   const [locationData, setLocationData] = useState<{
@@ -142,14 +150,17 @@ export const LoadMasterLoadingDetailsForm = ({
 
       setLocationData(locationInfo);
       toast({
-        title: 'Location Captured',
-        description: `Location captured with ${Math.round(position.coords.accuracy)}m accuracy`,
+        title: t('loadMasterLoading', 'toastLocationCapturedTitle'),
+        description: t('loadMasterLoading', 'toastLocationCapturedDescription').replace(
+          '{accuracy}',
+          String(Math.round(position.coords.accuracy))
+        ),
       });
     } catch (error) {
       console.error('Error capturing location:', error);
       toast({
-        title: 'Location Error',
-        description: 'Failed to capture location. You can still complete the loading without location data.',
+        title: t('loadMasterLoading', 'toastLocationErrorTitle'),
+        description: t('loadMasterLoading', 'toastLocationErrorDescription'),
         variant: 'destructive',
       });
     } finally {
@@ -219,8 +230,8 @@ export const LoadMasterLoadingDetailsForm = ({
       await sendLoadingCompletionNotifications(listing, loadingCompletionData);
 
       toast({
-        title: 'Success',
-        description: 'Loading completed successfully. All parties have been notified.',
+        title: t('common', 'successTitle'),
+        description: t('loadMasterLoading', 'toastSuccessDescription'),
       });
 
       if (onSuccess) {
@@ -229,8 +240,8 @@ export const LoadMasterLoadingDetailsForm = ({
     } catch (error) {
       console.error('Error submitting loading details:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to complete loading. Please try again.',
+        title: t('common', 'errorTitle'),
+        description: t('loadMasterLoading', 'toastErrorDescription'),
         variant: 'destructive',
       });
     } finally {
@@ -239,7 +250,25 @@ export const LoadMasterLoadingDetailsForm = ({
   };
 
   // Send notifications when loading is completed
-  const sendLoadingCompletionNotifications = async (listing: Tables<'livestock_listings'>, completionData: any) => {
+  type LoadingCompletionData = {
+    loading_notes?: string | null;
+    livestock_condition?: string | null;
+    actual_loading_time?: string | null;
+    completed_by?: string | null;
+    completed_at?: string | null;
+    geolocation?: {
+      latitude: number;
+      longitude: number;
+      accuracy: number;
+      timestamp: string;
+    } | null;
+    truck_registration_number?: string;
+  };
+
+  const sendLoadingCompletionNotifications = async (
+    listing: Tables<'livestock_listings'>,
+    completionData: LoadingCompletionData
+  ) => {
     try {
       // Get company details for notification context
       const { data: company } = await supabase
@@ -269,7 +298,7 @@ export const LoadMasterLoadingDetailsForm = ({
       // Prepare notification data
       const notificationData = {
         reference_id: listing.reference_id,
-        company_name: company?.name || 'Unknown Company',
+        company_name: company?.name || t('loadMasterLoading', 'unknownCompany'),
         seller_name: `${seller?.first_name} ${seller?.last_name}`,
         seller_email: seller?.email,
         vet_email: vet?.email,
@@ -277,7 +306,7 @@ export const LoadMasterLoadingDetailsForm = ({
         completion_time: completionData.completed_at,
         loading_location: completionData.geolocation ? 
           `${completionData.geolocation.latitude}, ${completionData.geolocation.longitude}` : 
-          'Location not captured'
+          t('loadMasterLoading', 'locationNotCaptured')
       };
 
       // Log notification details (in production, this would send actual emails)
@@ -323,28 +352,42 @@ export const LoadMasterLoadingDetailsForm = ({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Loading Details - {listing.reference_id}</CardTitle>
+          <CardTitle>
+            {t('loadMasterLoading', 'title').replace('{reference}', listing.reference_id)}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {/* Livestock Summary */}
           <div className="mb-6 p-4 border rounded-md bg-gray-50">
-            <h4 className="text-lg font-semibold mb-3">Livestock Summary</h4>
+            <h4 className="text-lg font-semibold mb-3">
+              {t('loadMasterLoading', 'livestockSummaryHeading')}
+            </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {totalCattle > 0 && (
                 <div>
-                  <p><strong>Total Cattle:</strong> {totalCattle}</p>
+                  <p>
+                    <strong>{t('loadMasterLoading', 'totalCattleLabel')}</strong> {totalCattle}
+                  </p>
                 </div>
               )}
 
               {totalSheep > 0 && (
                 <div>
-                  <p><strong>Total Sheep:</strong> {totalSheep}</p>
+                  <p>
+                    <strong>{t('loadMasterLoading', 'totalSheepLabel')}</strong> {totalSheep}
+                  </p>
                 </div>
               )}
 
               <div>
                 <Badge variant="outline">
-                  {livestockType || "No livestock"}
+                  {livestockType === 'CATTLE'
+                    ? t('loadMasterLoading', 'livestockTypeCattle')
+                    : livestockType === 'SHEEP'
+                      ? t('loadMasterLoading', 'livestockTypeSheep')
+                      : livestockType === 'CATTLE AND SHEEP'
+                        ? t('loadMasterLoading', 'livestockTypeMixed')
+                        : t('loadMasterLoading', 'noLivestockBadge')}
                 </Badge>
               </div>
             </div>
@@ -352,7 +395,9 @@ export const LoadMasterLoadingDetailsForm = ({
             {/* Loading Points Information */}
             {parsedLoadingPoints.length > 0 && (
               <div className="mt-4">
-                <h5 className="font-medium mb-3">Loading Points</h5>
+                <h5 className="font-medium mb-3">
+                  {t('loadMasterLoading', 'loadingPointsHeading')}
+                </h5>
                 <div className="space-y-2">
                   {parsedLoadingPoints.map((point, index) => {
                     const d = point.details;
@@ -365,28 +410,33 @@ export const LoadMasterLoadingDetailsForm = ({
                     return (
                       <div key={index} className="p-3 bg-white border rounded-md">
                         <div className="flex justify-between items-start mb-2">
-                          <h6 className="font-medium text-sm">Loading Point {index + 1}</h6>
+                          <h6 className="font-medium text-sm">
+                            {t('loadMasterLoading', 'loadingPointLabel').replace('{number}', String(index + 1))}
+                          </h6>
                           <div className="flex gap-2">
                             {isCattle && (
                               <Badge variant="secondary" className="text-xs">
-                                {total} Cattle
+                                {t('loadMasterLoading', 'badgeLivestockCountCattle').replace('{count}', String(total))}
                               </Badge>
                             )}
                             {isSheep && (
                               <Badge variant="secondary" className="text-xs">
-                                {total} Sheep
+                                {t('loadMasterLoading', 'badgeLivestockCountSheep').replace('{count}', String(total))}
                               </Badge>
                             )}
                           </div>
                         </div>
                         <div className="text-xs text-gray-600 mb-1">
-                          <strong>Counts:</strong> Males {males} • Females {females}
+                          <strong>{t('loadMasterLoading', 'countsLabel')}</strong>{' '}
+                          {t('loadMasterLoading', 'countsSummary')
+                            .replace('{males}', String(males))
+                            .replace('{females}', String(females))}
                         </div>
                         <div className="text-xs text-gray-600">
-                          <strong>Loading Address:</strong>{' '}
+                          <strong>{t('loadMasterLoading', 'loadingAddressLabel')}</strong>{' '}
                           {point.is_loading_same_as_current
-                            ? 'Same as current address'
-                            : `${point.loading_address?.farm_name || 'N/A'}, ${point.loading_address?.district || 'N/A'}, ${point.loading_address?.province || 'N/A'}`}
+                            ? t('loadMasterLoading', 'loadingAddressSame')
+                            : `${point.loading_address?.farm_name?.trim() || t('common', 'notAvailable')}, ${point.loading_address?.district?.trim() || t('common', 'notAvailable')}, ${point.loading_address?.province?.trim() || t('common', 'notAvailable')}`}
                         </div>
                       </div>
                     );
@@ -406,9 +456,12 @@ export const LoadMasterLoadingDetailsForm = ({
                   name="truck_registration_number"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Truck Registration Number *</FormLabel>
+                      <FormLabel>{t('loadMasterLoading', 'truckRegistrationLabel')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter truck registration number" {...field} />
+                        <Input
+                          placeholder={t('loadMasterLoading', 'truckRegistrationPlaceholder')}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -420,7 +473,7 @@ export const LoadMasterLoadingDetailsForm = ({
                   name="actual_loading_time"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Actual Loading Time</FormLabel>
+                      <FormLabel>{t('loadMasterLoading', 'actualLoadingTimeLabel')}</FormLabel>
                       <FormControl>
                         <Input type="datetime-local" {...field} />
                       </FormControl>
@@ -438,10 +491,10 @@ export const LoadMasterLoadingDetailsForm = ({
                 name="livestock_condition"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Livestock Condition</FormLabel>
+                    <FormLabel>{t('loadMasterLoading', 'livestockConditionLabel')}</FormLabel>
                     <FormControl>
                       <Textarea 
-                        placeholder="Describe the condition of the livestock during loading..."
+                        placeholder={t('loadMasterLoading', 'livestockConditionPlaceholder')}
                         {...field} 
                       />
                     </FormControl>
@@ -456,10 +509,10 @@ export const LoadMasterLoadingDetailsForm = ({
                 name="loading_notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Loading Notes</FormLabel>
+                    <FormLabel>{t('loadMasterLoading', 'loadingNotesLabel')}</FormLabel>
                     <FormControl>
                       <Textarea 
-                        placeholder="Any additional notes about the loading process..."
+                        placeholder={t('loadMasterLoading', 'loadingNotesPlaceholder')}
                         {...field} 
                       />
                     </FormControl>
@@ -470,20 +523,27 @@ export const LoadMasterLoadingDetailsForm = ({
 
               {/* Geolocation Section */}
               <div className="border rounded-md p-4 bg-gray-50">
-                <h4 className="text-sm font-medium mb-3">Location Verification</h4>
+                <h4 className="text-sm font-medium mb-3">
+                  {t('loadMasterLoading', 'locationSectionHeading')}
+                </h4>
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     {locationData ? (
                       <div className="text-sm text-green-600">
-                        ✓ Location captured: {locationData.latitude.toFixed(6)}, {locationData.longitude.toFixed(6)}
+                        ✓{' '}
+                        {t('loadMasterLoading', 'locationCapturedStatus')
+                          .replace('{latitude}', locationData.latitude.toFixed(6))
+                          .replace('{longitude}', locationData.longitude.toFixed(6))}
                         <br />
                         <span className="text-gray-500">
-                          Accuracy: {Math.round(locationData.accuracy)}m | {new Date(locationData.timestamp).toLocaleString()}
+                          {t('loadMasterLoading', 'locationCapturedDetails')
+                            .replace('{accuracy}', String(Math.round(locationData.accuracy)))
+                            .replace('{timestamp}', new Date(locationData.timestamp).toLocaleString())}
                         </span>
                       </div>
                     ) : (
                       <div className="text-sm text-gray-600">
-                        Capture your current location to verify loading completion
+                        {t('loadMasterLoading', 'locationCapturePrompt')}
                       </div>
                     )}
                   </div>
@@ -494,7 +554,11 @@ export const LoadMasterLoadingDetailsForm = ({
                     onClick={captureLocation}
                     disabled={isCapturingLocation}
                   >
-                    {isCapturingLocation ? 'Capturing...' : locationData ? 'Update Location' : 'Capture Location'}
+                    {isCapturingLocation
+                      ? t('loadMasterLoading', 'capturingLocation')
+                      : locationData
+                        ? t('loadMasterLoading', 'updateLocationButton')
+                        : t('loadMasterLoading', 'captureLocationButton')}
                   </Button>
                 </div>
               </div>
@@ -502,11 +566,13 @@ export const LoadMasterLoadingDetailsForm = ({
               <div className="flex justify-end space-x-4">
                 {onCancel && (
                   <Button type="button" variant="outline" onClick={onCancel}>
-                    Cancel
+                    {t('common', 'cancel')}
                   </Button>
                 )}
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Completing Loading...' : 'Complete Loading'}
+                  {isSubmitting
+                    ? t('loadMasterLoading', 'submittingLabel')
+                    : t('loadMasterLoading', 'submitButton')}
                 </Button>
               </div>
             </form>

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Stethoscope, LogOut, FileText, Building2, Users, BarChart3, Activity } from "lucide-react";
+import { Stethoscope, FileText, Building2, BarChart3, Activity } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { useCompany } from '@/contexts/companyContext';
 import { useToast } from '@/hooks/use-toast';
@@ -16,17 +16,19 @@ import { Tables } from '@/integrations/supabase/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProfileSection from "@/components/ProfileSection";
 import { CompanySelector } from '@/components/CompanySelector';
-import { MultiTenantDashboardController } from '@/services/multiTenantDashboardController';
+import { MultiTenantDashboardController, DashboardData } from '@/services/multiTenantDashboardController';
+import { useTranslation } from '@/i18n/useTranslation';
 
 const VetDashboard = () => {
   const [assignments, setAssignments] = useState<Tables<'livestock_listings'>[]>([]);
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
-  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { user, profile, loading: authLoading, needsProfileCompletion } = useAuth();
+  const { user, profile, loading: authLoading, initialized, needsProfileCompletion } = useAuth();
   const { currentCompany, userCompanies } = useCompany();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const fetchAssignments = useCallback(async () => {
     if (!profile) return;
@@ -50,14 +52,15 @@ const VetDashboard = () => {
     if (error) {
       console.error('Error fetching assignments:', error);
       toast({
-        title: "Error",
-        description: "Failed to load assignments",
+        title: t('vetDashboard', 'toastErrorTitle'),
+        description: t('vetDashboard', 'toastAssignmentsError'),
         variant: "destructive",
       });
     } else {
       setAssignments(data || []);
     }
-  }, [profile, currentCompany, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, currentCompany]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -69,13 +72,13 @@ const VetDashboard = () => {
         if (result.error) {
           throw result.error;
         }
-        setDashboardData(result.data);
+        setDashboardData(result.data ?? null);
         await fetchAssignments();
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         toast({
-          title: "Error",
-          description: "Failed to load dashboard data",
+          title: t('vetDashboard', 'toastErrorTitle'),
+          description: t('vetDashboard', 'toastDashboardError'),
           variant: "destructive",
         });
       } finally {
@@ -84,16 +87,17 @@ const VetDashboard = () => {
     };
 
     fetchDashboardData();
-  }, [user, profile, currentCompany, authLoading, fetchAssignments, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, profile, currentCompany, authLoading, fetchAssignments]);
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || !initialized) return;
     if (!user) {
       navigate('/auth');
     } else if (profile && profile.role !== 'vet') {
       navigate('/');
     }
-  }, [user, profile, authLoading, navigate]);
+  }, [user, profile, authLoading, initialized, navigate]);
 
   const handleDeclarationSuccess = () => {
     setSelectedListingId(null);
@@ -104,10 +108,10 @@ const VetDashboard = () => {
     setSelectedListingId(null);
   };
 
-  if (authLoading || loading || !profile) {
+  if (authLoading || !initialized || loading || !profile) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">Loading...</div>
+        <div className="text-center">{t('common', 'loading')}</div>
       </div>
     );
   }
@@ -120,11 +124,11 @@ const VetDashboard = () => {
     return <VeterinaryDeclarationForm listingId={selectedListingId} onSuccess={handleDeclarationSuccess} onCancel={handleCancelDeclaration} />;
   }
 
-  const stats = dashboardData?.stats || {
+  const stats = {
     pendingDeclarations: assignments.length,
     completedDeclarations: 0,
-    totalAssignments: 0,
-    activeCompanies: userCompanies.length
+    totalAssignments: dashboardData?.listings?.length ?? assignments.length,
+    activeCompanies: userCompanies.length,
   };
 
   return (
@@ -133,8 +137,8 @@ const VetDashboard = () => {
         {/* Header with Company Selector */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-800">Veterinary Dashboard</h1>
-            <p className="text-slate-600 mt-1">Manage livestock declarations and inspections</p>
+            <h1 className="text-3xl font-bold text-slate-800">{t('vetDashboard', 'title')}</h1>
+            <p className="text-slate-600 mt-1">{t('vetDashboard', 'description')}</p>
           </div>
           <div className="flex items-center space-x-4">
           </div>
@@ -142,8 +146,8 @@ const VetDashboard = () => {
 
         <Tabs defaultValue="dashboard" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="dashboard">{t('vetDashboard', 'tabDashboard')}</TabsTrigger>
+            <TabsTrigger value="profile">{t('vetDashboard', 'tabProfile')}</TabsTrigger>
           </TabsList>
           
           <TabsContent value="dashboard">
@@ -151,52 +155,54 @@ const VetDashboard = () => {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Declarations</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t('vetDashboard', 'statsPendingTitle')}</CardTitle>
                   <FileText className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.pendingDeclarations}</div>
                   <p className="text-xs text-muted-foreground">
-                    Awaiting completion
+                    {t('vetDashboard', 'statsPendingDescription')}
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Completed</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t('vetDashboard', 'statsCompletedTitle')}</CardTitle>
                   <Activity className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.completedDeclarations}</div>
                   <p className="text-xs text-muted-foreground">
-                    This month
+                    {t('vetDashboard', 'statsCompletedDescription')}
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Assignments</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t('vetDashboard', 'statsTotalAssignmentsTitle')}</CardTitle>
                   <BarChart3 className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalAssignments}</div>
                   <p className="text-xs text-muted-foreground">
-                    {currentCompany ? `From ${currentCompany.companyName}` : 'All companies'}
+                    {currentCompany
+                      ? t('vetDashboard', 'statsTotalAssignmentsDescriptionCompany').replace('{company}', currentCompany.companyName)
+                      : t('vetDashboard', 'statsTotalAssignmentsDescriptionAll')}
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Active Companies</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t('vetDashboard', 'statsActiveCompaniesTitle')}</CardTitle>
                   <Building2 className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.activeCompanies}</div>
                   <p className="text-xs text-muted-foreground">
-                    Associated companies
+                    {t('vetDashboard', 'statsActiveCompaniesDescription')}
                   </p>
                 </CardContent>
               </Card>
@@ -208,7 +214,7 @@ const VetDashboard = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <FileText className="w-5 h-5 mr-2" />
-                    Pending Declarations
+                    {t('vetDashboard', 'cardPendingTitle')}
                     {currentCompany && (
                       <Badge variant="secondary" className="ml-2">
                         {currentCompany.companyName}
@@ -216,7 +222,7 @@ const VetDashboard = () => {
                     )}
                   </CardTitle>
                   <CardDescription>
-                    Livestock listings requiring your veterinary declaration.
+                    {t('vetDashboard', 'cardPendingDescription')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -224,10 +230,10 @@ const VetDashboard = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Reference ID</TableHead>
-                          <TableHead>Owner</TableHead>
-                          <TableHead>Location</TableHead>
-                          <TableHead></TableHead>
+                          <TableHead>{t('vetDashboard', 'tableReferenceId')}</TableHead>
+                          <TableHead>{t('vetDashboard', 'tableOwner')}</TableHead>
+                          <TableHead>{t('vetDashboard', 'tableLocation')}</TableHead>
+                          <TableHead className="text-right">{t('vetDashboard', 'tableActions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -237,7 +243,9 @@ const VetDashboard = () => {
                             <TableCell>{listing.owner_name}</TableCell>
                             <TableCell>{listing.location}</TableCell>
                             <TableCell className="text-right">
-                              <Button onClick={() => setSelectedListingId(listing.id)}>Complete Declaration</Button>
+                              <Button onClick={() => setSelectedListingId(listing.id)}>
+                                {t('vetDashboard', 'buttonCompleteDeclaration')}
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -246,9 +254,11 @@ const VetDashboard = () => {
                   ) : (
                     <div className="text-center py-8">
                       <Stethoscope className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                      <p className="text-slate-500">No pending declarations</p>
+                      <p className="text-slate-500">{t('vetDashboard', 'emptyStateTitle')}</p>
                       <p className="text-sm text-slate-400 mt-1">
-                        {currentCompany ? `No assignments from ${currentCompany.companyName}` : 'No assignments available'}
+                        {currentCompany
+                          ? t('vetDashboard', 'emptyStateSubtitleCompany').replace('{company}', currentCompany.companyName)
+                          : t('vetDashboard', 'emptyStateSubtitleAll')}
                       </p>
                     </div>
                   )}

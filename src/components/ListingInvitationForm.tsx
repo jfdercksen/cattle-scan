@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -15,19 +15,51 @@ import { useCompany } from '@/contexts/companyContext';
 import { CompanyService } from '@/services/companyService';
 import { nanoid } from 'nanoid';
 import type { Tables } from '@/integrations/supabase/types';
+import { useTranslation } from '@/i18n/useTranslation';
 
 type Profile = Tables<'profiles'>;
-type CompanyUser = { profiles: Profile };
 
-const invitationSchema = z.object({
-  seller_id: z.string().optional(),
-  seller_email: z.string().email('Invalid email address').optional(),
-}).refine(data => data.seller_id || data.seller_email, {
-  message: 'Either select a seller or enter an email',
-  path: ['seller_id'],
-});
+type CompanyUserOption = {
+  profiles: {
+    id: string;
+    email: string | null;
+    status?: string | null;
+    seller_entity_name?: string | null;
+  };
+};
 
-type InvitationFormData = z.infer<typeof invitationSchema>;
+type TranslationFn = ReturnType<typeof useTranslation>['t'];
+
+const buildInvitationSchema = (t: TranslationFn) =>
+  z
+    .object({
+      seller_id: z.string().optional(),
+      seller_email: z
+        .string()
+        .optional()
+        .refine(
+          (value) => {
+            if (!value || value.trim() === '') {
+              return true;
+            }
+            return /.+@.+\..+/.test(value.trim());
+          },
+          { message: t('adminInvitations', 'validationEmail') }
+        ),
+    })
+    .refine(
+      (data) => {
+        const hasSellerId = !!data.seller_id;
+        const hasEmail = !!data.seller_email && data.seller_email.trim() !== '';
+        return hasSellerId || hasEmail;
+      },
+      {
+        message: t('adminInvitations', 'validationSelectOrEmail'),
+        path: ['seller_id'],
+      }
+    );
+
+type InvitationFormData = z.infer<ReturnType<typeof buildInvitationSchema>>;
 
 interface ListingInvitationFormProps {
   onSuccess: () => void;
@@ -37,13 +69,19 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
   const { user } = useAuth();
   const { currentCompany } = useCompany();
   const { toast } = useToast();
-  const [sellers, setSellers] = useState<CompanyUser[]>([]);
+  const { t } = useTranslation();
+  const invitationSchema = useMemo(() => buildInvitationSchema(t), [t]);
+  const [sellers, setSellers] = useState<CompanyUserOption[]>([]);
   const [loadingSellers, setLoadingSellers] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [referenceId, setReferenceId] = useState(() => nanoid(10).toUpperCase());
 
   const form = useForm<InvitationFormData>({
     resolver: zodResolver(invitationSchema),
+    defaultValues: {
+      seller_id: undefined,
+      seller_email: '',
+    },
   });
 
   useEffect(() => {
@@ -59,18 +97,27 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
         const { data, error } = await CompanyService.getCompanyUsers(currentCompany.companyId);
         if (error) throw error;
         
-        // Filter for sellers with approved status
-        const approvedSellers = (data || []).filter(user => 
-          user.relationship_type === 'seller' && 
-          user.profiles.status === 'approved'
-        );
-        
+        const approvedSellers = (data || [])
+          .filter((user) =>
+            user.relationship_type === 'seller' &&
+            user.profiles?.status === 'approved' &&
+            user.profiles?.id
+          )
+          .map((user) => ({
+            profiles: {
+              id: user.profiles!.id,
+              email: user.profiles!.email ?? null,
+              status: user.profiles!.status,
+              seller_entity_name: user.profiles!.seller_entity_name,
+            },
+          }));
+
         setSellers(approvedSellers);
       } catch (error) {
         console.error('Error fetching sellers:', error);
         toast({
-          title: 'Error',
-          description: 'Failed to load sellers.',
+          title: t('common', 'errorTitle'),
+          description: t('adminInvitations', 'loadSellersError'),
           variant: 'destructive',
         });
       } finally {
@@ -78,16 +125,25 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
       }
     };
     fetchSellers();
-  }, [currentCompany, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentCompany]);
 
   const onSubmit = async (data: InvitationFormData) => {
     if (!user) {
-      toast({ title: 'Authentication Error', description: 'You must be logged in to create an invitation.', variant: 'destructive' });
+      toast({
+        title: t('common', 'errorTitle'),
+        description: t('adminInvitations', 'authErrorDescription'),
+        variant: 'destructive',
+      });
       return;
     }
 
     if (!currentCompany) {
-      toast({ title: 'Company Required', description: 'You must have a company selected to create invitations.', variant: 'destructive' });
+      toast({
+        title: t('common', 'errorTitle'),
+        description: t('adminInvitations', 'companyRequiredDescription'),
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -106,13 +162,20 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
 
       if (error) throw error;
 
-      toast({ title: 'Success', description: 'Invitation sent successfully.' });
+      toast({
+        title: t('common', 'successTitle'),
+        description: t('adminInvitations', 'invitationSuccess'),
+      });
       onSuccess();
-      form.reset();
+      form.reset({ seller_id: undefined, seller_email: '' });
       setReferenceId(nanoid(10).toUpperCase());
     } catch (error) {
       console.error('Error creating invitation:', error);
-      toast({ title: 'Error', description: 'Failed to send invitation.', variant: 'destructive' });
+      toast({
+        title: t('common', 'errorTitle'),
+        description: t('adminInvitations', 'invitationError'),
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -121,12 +184,12 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create Listing Invitation</CardTitle>
-        <CardDescription>Invite a seller to list their livestock. A unique reference ID will be generated.</CardDescription>
+        <CardTitle>{t('adminInvitations', 'formTitle')}</CardTitle>
+        <CardDescription>{t('adminInvitations', 'formDescription')}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-4">
-          <Label>Reference ID</Label>
+          <Label>{t('adminInvitations', 'referenceLabel')}</Label>
           <Input type="text" value={referenceId} readOnly className="font-mono" />
         </div>
 
@@ -137,17 +200,17 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
               name="seller_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Select an Existing Seller</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loadingSellers}>
+                  <FormLabel>{t('adminInvitations', 'selectExistingSellerLabel')}</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={loadingSellers}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a registered seller" />
+                        <SelectValue placeholder={t('adminInvitations', 'selectSellerPlaceholder')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {sellers.map((seller) => (
                         <SelectItem key={seller.profiles.id} value={seller.profiles.id}>
-                          {seller.profiles.seller_entity_name || 'Unnamed Seller'} ({seller.profiles.email})
+                          {seller.profiles.seller_entity_name || t('adminInvitations', 'unnamedSeller')} ({seller.profiles.email})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -157,16 +220,16 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
               )}
             />
 
-            <div className="text-center my-4 font-semibold">OR</div>
+            <div className="text-center my-4 font-semibold">{t('adminInvitations', 'orSeparator')}</div>
 
             <FormField
               control={form.control}
               name="seller_email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Invite a New Seller by Email</FormLabel>
+                  <FormLabel>{t('adminInvitations', 'inviteByEmailLabel')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter seller's email address" {...field} />
+                    <Input placeholder={t('adminInvitations', 'emailPlaceholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -174,7 +237,7 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
             />
 
             <Button type="submit" disabled={isSubmitting} className="w-full">
-              {isSubmitting ? 'Sending Invitation...' : 'Send Invitation'}
+              {isSubmitting ? t('adminInvitations', 'submittingLabel') : t('adminInvitations', 'submitButton')}
             </Button>
           </form>
         </Form>

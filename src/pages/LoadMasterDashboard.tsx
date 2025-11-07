@@ -13,6 +13,7 @@ import { LoadMasterLoadingDetailsForm } from "@/components/load-master/LoadMaste
 // Using local derived totals from loading_points.details
 import ProfileCompletion from '@/components/ProfileCompletionForm';
 import type { Tables } from '@/integrations/supabase/types';
+import { useTranslation } from '@/i18n/useTranslation';
 
 type LivestockListing = Tables<'livestock_listings'> & {
     profiles?: {
@@ -66,8 +67,9 @@ const computeTotalsFromLoadingPoints = (lp: unknown): { totalCattle: number; tot
 
 const LoadMasterDashboard = () => {
     const navigate = useNavigate();
-    const { user, profile, loading, signOut, needsProfileCompletion } = useAuth();
+    const { user, profile, loading, initialized, signOut, needsProfileCompletion } = useAuth();
     const { toast } = useToast();
+    const { t } = useTranslation();
 
     const [assignedListings, setAssignedListings] = useState<LivestockListing[]>([]);
     const [completedListings, setCompletedListings] = useState<LivestockListing[]>([]);
@@ -76,13 +78,13 @@ const LoadMasterDashboard = () => {
     const [showLoadingForm, setShowLoadingForm] = useState(false);
 
     useEffect(() => {
-        if (loading) return;
+        if (loading || !initialized) return;
         if (!user) {
             navigate('/auth');
         } else if (profile && profile.role !== 'load_master') {
             navigate('/');
         }
-    }, [user, profile, loading, navigate]);
+    }, [user, profile, loading, initialized, navigate]);
 
     // Fetch assigned listings for the Load Master
     useEffect(() => {
@@ -150,8 +152,8 @@ const LoadMasterDashboard = () => {
         } catch (error) {
             console.error('Error fetching assigned listings:', error);
             toast({
-                title: 'Error',
-                description: 'Failed to load assigned listings. Please try again.',
+                title: t('common', 'errorTitle'),
+                description: t('loadMasterDashboard', 'toastLoadErrorDescription'),
                 variant: 'destructive',
             });
         } finally {
@@ -174,21 +176,21 @@ const LoadMasterDashboard = () => {
         setSelectedListing(null);
         fetchAssignedListings(); // Refresh the listings
         toast({
-            title: 'Success',
-            description: 'Loading completed successfully!',
+            title: t('common', 'successTitle'),
+            description: t('loadMasterDashboard', 'toastSuccessDescription'),
         });
     };
 
     const getListingStatusBadge = (status: string) => {
         switch (status) {
             case 'vet_completed':
-                return <Badge variant="secondary">Ready for Loading</Badge>;
+                return <Badge variant="secondary">{t('loadMasterDashboard', 'statusReadyBadge')}</Badge>;
             case 'available_for_loading':
-                return <Badge variant="default">Available for Loading</Badge>;
+                return <Badge variant="default">{t('loadMasterDashboard', 'statusAvailableBadge')}</Badge>;
             case 'assigned_to_load_master':
-                return <Badge variant="default">Assigned to You</Badge>;
+                return <Badge variant="default">{t('loadMasterDashboard', 'statusAssignedBadge')}</Badge>;
             case 'loading_completed':
-                return <Badge variant="outline">Loading Completed</Badge>;
+                return <Badge variant="outline">{t('loadMasterDashboard', 'statusCompletedBadge')}</Badge>;
             default:
                 return <Badge variant="secondary">{status}</Badge>;
         }
@@ -201,21 +203,41 @@ const LoadMasterDashboard = () => {
                 return parsed.map((point, index) => {
                     const d = point.details;
                     const total = (d?.number_of_males ?? 0) + (d?.number_of_females ?? 0);
-                    if (!d?.livestock_type || total <= 0) return `Point ${index + 1}: 0`;
-                    const label = d.livestock_type === 'CATTLE' ? 'cattle' : 'sheep';
-                    return `Point ${index + 1}: ${total} ${label}`;
+                    if (!d?.livestock_type || total <= 0) {
+                        return t('loadMasterDashboard', 'pointSummaryZero').replace('{index}', String(index + 1));
+                    }
+                    const label = d.livestock_type === 'CATTLE'
+                        ? t('loadMasterDashboard', 'pointLabelCattle')
+                        : t('loadMasterDashboard', 'pointLabelSheep');
+                    return t('loadMasterDashboard', 'pointSummary')
+                        .replace('{index}', String(index + 1))
+                        .replace('{count}', String(total))
+                        .replace('{animal}', label);
                 }).join('; ');
             }
         } catch (error) {
             console.error('Error parsing loading points:', error);
         }
-        return 'No loading points';
+        return t('loadMasterDashboard', 'noLoadingPoints');
     };
+
+    const profileStatusLabel = (() => {
+        switch (profile?.status) {
+            case 'pending':
+                return t('adminDashboard', 'statusPending');
+            case 'approved':
+                return t('adminDashboard', 'statusApproved');
+            case 'suspended':
+                return t('adminDashboard', 'statusSuspended');
+            default:
+                return profile?.status ?? t('common', 'notAvailable');
+        }
+    })();
 
     if (loading || !profile) {
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
-                <div className="text-center">Loading...</div>
+                <div className="text-center">{t('common', 'loading')}</div>
             </div>
         );
     }
@@ -229,8 +251,8 @@ const LoadMasterDashboard = () => {
             <div className="container mx-auto px-4 py-8">
                 <div className="flex justify-between items-center mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Load Master Dashboard</h1>
-                        <p className="text-gray-600">Welcome back, {profile.first_name}!</p>
+                        <h1 className="text-3xl font-bold text-gray-900">{t('loadMasterDashboard', 'heading')}</h1>
+                        <p className="text-gray-600">{t('loadMasterDashboard', 'welcomeMessage').replace('{name}', profile.first_name ?? '')}</p>
                     </div>
                 </div>
 
@@ -240,15 +262,15 @@ const LoadMasterDashboard = () => {
                         <CardHeader>
                             <CardTitle className="flex items-center">
                                 <Package className="w-5 h-5 mr-2" />
-                                Assigned Listings
+                                {t('loadMasterDashboard', 'assignedCardTitle')}
                             </CardTitle>
                             <CardDescription>
-                                Listings ready for loading
+                                {t('loadMasterDashboard', 'assignedCardDescription')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{assignedListings.length}</div>
-                            <p className="text-sm text-gray-600">Ready for loading</p>
+                            <p className="text-sm text-gray-600">{t('loadMasterDashboard', 'assignedCardFooter')}</p>
                         </CardContent>
                     </Card>
 
@@ -256,30 +278,30 @@ const LoadMasterDashboard = () => {
                         <CardHeader>
                             <CardTitle className="flex items-center">
                                 <Truck className="w-5 h-5 mr-2" />
-                                Completed Loadings
+                                {t('loadMasterDashboard', 'completedCardTitle')}
                             </CardTitle>
                             <CardDescription>
-                                Successfully completed loadings
+                                {t('loadMasterDashboard', 'completedCardDescription')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{completedListings.length}</div>
-                            <p className="text-sm text-gray-600">Completed this period</p>
+                            <p className="text-sm text-gray-600">{t('loadMasterDashboard', 'completedCardFooter')}</p>
                         </CardContent>
                     </Card>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Profile Status</CardTitle>
+                            <CardTitle>{t('loadMasterDashboard', 'profileCardTitle')}</CardTitle>
                             <CardDescription>
-                                Your account status: {profile.status}
+                                {t('loadMasterDashboard', 'profileCardDescription').replace('{status}', profileStatusLabel)}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="text-sm text-gray-600">
-                                {profile.status === 'pending' && "Your account is pending approval"}
-                                {profile.status === 'approved' && "Your account is approved and active"}
-                                {profile.status === 'suspended' && "Your account has been suspended"}
+                                {profile.status === 'pending' && t('loadMasterDashboard', 'profileStatusPending')}
+                                {profile.status === 'approved' && t('loadMasterDashboard', 'profileStatusApproved')}
+                                {profile.status === 'suspended' && t('loadMasterDashboard', 'profileStatusSuspended')}
                             </div>
                         </CardContent>
                     </Card>
@@ -292,10 +314,10 @@ const LoadMasterDashboard = () => {
                             <div>
                                 <CardTitle className="flex items-center">
                                     <Package className="w-5 h-5 mr-2" />
-                                    Assigned Listings - Ready for Loading
+                                    {t('loadMasterDashboard', 'assignedSectionTitle')}
                                 </CardTitle>
                                 <CardDescription>
-                                    Livestock listings that have been vet-approved and assigned to you for loading
+                                    {t('loadMasterDashboard', 'assignedSectionDescription')}
                                 </CardDescription>
                             </div>
                             <Button
@@ -305,28 +327,28 @@ const LoadMasterDashboard = () => {
                                 disabled={loadingData}
                             >
                                 <RefreshCw className={`w-4 h-4 mr-2 ${loadingData ? 'animate-spin' : ''}`} />
-                                Refresh
+                                {t('loadMasterDashboard', 'refreshButton')}
                             </Button>
                         </div>
                     </CardHeader>
                     <CardContent>
                         {loadingData ? (
-                            <div className="text-center py-8">Loading assigned listings...</div>
+                            <div className="text-center py-8">{t('loadMasterDashboard', 'loadingAssignedMessage')}</div>
                         ) : assignedListings.length === 0 ? (
                             <div className="text-center py-8 text-gray-500">
-                                No listings currently assigned for loading
+                                {t('loadMasterDashboard', 'emptyAssignedMessage')}
                             </div>
                         ) : (
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Reference ID</TableHead>
-                                        <TableHead>Seller</TableHead>
-                                        <TableHead>Company</TableHead>
-                                        <TableHead>Livestock</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Created</TableHead>
-                                        <TableHead>Actions</TableHead>
+                                        <TableHead>{t('loadMasterDashboard', 'tableReference')}</TableHead>
+                                        <TableHead>{t('loadMasterDashboard', 'tableSeller')}</TableHead>
+                                        <TableHead>{t('loadMasterDashboard', 'tableCompany')}</TableHead>
+                                        <TableHead>{t('loadMasterDashboard', 'tableLivestock')}</TableHead>
+                                        <TableHead>{t('loadMasterDashboard', 'tableStatus')}</TableHead>
+                                        <TableHead>{t('loadMasterDashboard', 'tableCreated')}</TableHead>
+                                        <TableHead>{t('loadMasterDashboard', 'tableActions')}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -342,11 +364,15 @@ const LoadMasterDashboard = () => {
                                                         {listing.profiles?.first_name} {listing.profiles?.last_name}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell>{listing.companies?.name || 'N/A'}</TableCell>
+                                                <TableCell>{listing.companies?.name || t('common', 'notAvailable')}</TableCell>
                                                 <TableCell>
                                                     <div className="text-sm">
-                                                        {totalCattle > 0 && <div>{totalCattle} Cattle</div>}
-                                                        {totalSheep > 0 && <div>{totalSheep} Sheep</div>}
+                                                        {totalCattle > 0 && (
+                                                            <div>{t('loadMasterDashboard', 'livestockCountCattle').replace('{count}', String(totalCattle))}</div>
+                                                        )}
+                                                        {totalSheep > 0 && (
+                                                            <div>{t('loadMasterDashboard', 'livestockCountSheep').replace('{count}', String(totalSheep))}</div>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>{getListingStatusBadge(listing.status)}</TableCell>
@@ -363,7 +389,7 @@ const LoadMasterDashboard = () => {
                                                         disabled={listing.status === 'loading_completed'}
                                                     >
                                                         <Truck className="w-4 h-4 mr-2" />
-                                                        Start Loading
+                                                        {t('loadMasterDashboard', 'startLoadingButton')}
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
@@ -380,27 +406,27 @@ const LoadMasterDashboard = () => {
                     <CardHeader>
                         <CardTitle className="flex items-center">
                             <Truck className="w-5 h-5 mr-2" />
-                            Completed Loadings
+                            {t('loadMasterDashboard', 'completedSectionTitle')}
                         </CardTitle>
                         <CardDescription>
-                            Recently completed loading operations
+                            {t('loadMasterDashboard', 'completedSectionDescription')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         {completedListings.length === 0 ? (
                             <div className="text-center py-8 text-gray-500">
-                                No completed loadings yet
+                                {t('loadMasterDashboard', 'emptyCompletedMessage')}
                             </div>
                         ) : (
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Reference ID</TableHead>
-                                        <TableHead>Seller</TableHead>
-                                        <TableHead>Company</TableHead>
-                                        <TableHead>Livestock</TableHead>
-                                        <TableHead>Truck Registration</TableHead>
-                                        <TableHead>Completed</TableHead>
+                                        <TableHead>{t('loadMasterDashboard', 'tableReference')}</TableHead>
+                                        <TableHead>{t('loadMasterDashboard', 'tableSeller')}</TableHead>
+                                        <TableHead>{t('loadMasterDashboard', 'tableCompany')}</TableHead>
+                                        <TableHead>{t('loadMasterDashboard', 'tableLivestock')}</TableHead>
+                                        <TableHead>{t('loadMasterDashboard', 'tableTruckRegistration')}</TableHead>
+                                        <TableHead>{t('loadMasterDashboard', 'tableCompleted')}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -416,14 +442,18 @@ const LoadMasterDashboard = () => {
                                                         {listing.profiles?.first_name} {listing.profiles?.last_name}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell>{listing.companies?.name || 'N/A'}</TableCell>
+                                                <TableCell>{listing.companies?.name || t('common', 'notAvailable')}</TableCell>
                                                 <TableCell>
                                                     <div className="text-sm">
-                                                        {totalCattle > 0 && <div>{totalCattle} Cattle</div>}
-                                                        {totalSheep > 0 && <div>{totalSheep} Sheep</div>}
+                                                        {totalCattle > 0 && (
+                                                            <div>{t('loadMasterDashboard', 'livestockCountCattle').replace('{count}', String(totalCattle))}</div>
+                                                        )}
+                                                        {totalSheep > 0 && (
+                                                            <div>{t('loadMasterDashboard', 'livestockCountSheep').replace('{count}', String(totalSheep))}</div>
+                                                        )}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell>{listing.truck_registration_number || 'N/A'}</TableCell>
+                                                <TableCell>{listing.truck_registration_number || t('common', 'notAvailable')}</TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center text-sm text-gray-600">
                                                         <Calendar className="w-4 h-4 mr-1" />
@@ -443,7 +473,7 @@ const LoadMasterDashboard = () => {
                 <Dialog open={showLoadingForm} onOpenChange={setShowLoadingForm}>
                     <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle>Complete Loading Details</DialogTitle>
+                            <DialogTitle>{t('loadMasterDashboard', 'dialogTitle')}</DialogTitle>
                         </DialogHeader>
                         {selectedListing && (
                             <LoadMasterLoadingDetailsForm

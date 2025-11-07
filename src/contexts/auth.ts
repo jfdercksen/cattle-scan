@@ -9,6 +9,8 @@ export interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  initialized: boolean;
+  isLoadingProfile: boolean;
   needsProfileCompletion: () => boolean;
   getRoleRedirectPath: () => string;
   signUp: (email: string, password: string, metadata: Record<string, string>) => Promise<{ error: AuthError | null }>;

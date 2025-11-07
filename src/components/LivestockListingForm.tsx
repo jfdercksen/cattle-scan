@@ -23,6 +23,7 @@ import { SignatureSection } from './livestock-listing-form/SignatureSection';
 import { VetSelectionSection } from './livestock-listing-form/VetSelectionSection';
 import { OfferTermsSection } from './livestock-listing-form/OfferTermsSection';
 import { FormStepper } from './livestock-listing-form/FormStepper';
+import { useTranslation } from '@/i18n/useTranslation';
 
 /**
  * FIELD VISIBILITY NOTE:
@@ -120,6 +121,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
   const [currentStep, setCurrentStep] = useState(0);
   const [invitingCompanyName, setInvitingCompanyName] = useState<string | undefined>(undefined);
   const draftKey = `livestock_listing_draft:${invitationId}`;
+  const { t } = useTranslation();
 
   const form = useForm<LivestockListingFormData>({
     resolver: zodResolver(livestockListingSchema),
@@ -199,7 +201,8 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
     if (getValues('number_sheep_loaded') !== totalSheep) {
       setValue('number_sheep_loaded', totalSheep, { shouldDirty: true, shouldValidate: true });
     }
-  }, [totalCattle, totalSheep, getValues, setValue]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalCattle, totalSheep]);
 
 
   useEffect(() => {
@@ -213,7 +216,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         .then(({ data, error }) => {
           if (error) {
             console.error('Error fetching profile:', error);
-            toast({ title: 'Error', description: 'Could not load your profile.', variant: 'destructive' });
+            toast({ title: t('common', 'errorTitle'), description: t('livestockListingForm', 'toastProfileLoadErrorDescription'), variant: 'destructive' });
             setProfile(null);
           } else {
             setProfile(data);
@@ -223,18 +226,19 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
     } else if (!authLoading) {
       setProfileLoading(false);
     }
-  }, [user, authLoading, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading]);
 
   const formSections = [
     // { title: "Livestock Details", component: <LivestockDetailsSection /> },
     // { title: "Biosecurity", component: <BiosecuritySection /> },
-    { title: "Movement Tracker", component: <LoadingPointsSection fields={fields} append={append} remove={remove} /> },
+    { title: t('livestockListingForm', 'movementTrackerTitle'), component: <LoadingPointsSection fields={fields} append={append} remove={remove} /> },
 
-    { title: "Veterinarian", component: <VetSelectionSection /> },
-    { title: "Premiums", component: <OfferTermsSection companyName={invitingCompanyName} /> },
-    { title: "Declarations", component: <DeclarationsSection companyName={invitingCompanyName} /> },
+    { title: t('livestockListingForm', 'veterinarianTitle'), component: <VetSelectionSection /> },
+    { title: t('offerTermsSection', 'heading'), component: <OfferTermsSection companyName={invitingCompanyName} /> },
+    { title: t('declarationsSection', 'heading'), component: <DeclarationsSection companyName={invitingCompanyName} /> },
     {
-      title: "Signature",
+      title: t('signatureSection', 'heading'),
       component: <SignatureSection signature={signature} setSignature={setSignature} />,
     },
   ];
@@ -284,8 +288,8 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         if (invitationError) {
           console.error('Error fetching invitation data:', invitationError);
           toast({
-            title: 'Error',
-            description: 'Failed to load invitation data.',
+            title: t('common', 'errorTitle'),
+            description: t('livestockListingForm', 'toastInvitationLoadErrorDescription'),
             variant: 'destructive',
           });
           return;
@@ -308,8 +312,8 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         if (listingError) {
           console.error('Error fetching listing data:', listingError);
           toast({
-            title: 'Error',
-            description: 'Failed to load existing listing data.',
+            title: t('common', 'errorTitle'),
+            description: t('livestockListingForm', 'toastListingLoadErrorDescription'),
             variant: 'destructive',
           });
           return;
@@ -604,8 +608,8 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
       } catch (error) {
         console.error('Error loading initial data:', error);
         toast({
-          title: 'Error',
-          description: 'Failed to load initial listing data.',
+          title: t('common', 'errorTitle'),
+          description: t('livestockListingForm', 'toastInitialDataErrorDescription'),
           variant: 'destructive',
         });
       }
@@ -613,7 +617,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
 
     loadInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invitationId, form, profile]);
+  }, [invitationId]);
 
   // Auto-save draft to localStorage (debounced)
   useEffect(() => {
@@ -642,7 +646,8 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
       if (saveTimer) window.clearTimeout(saveTimer);
       subscription.unsubscribe();
     };
-  }, [watch, draftKey, signature, currentStep]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey, signature, currentStep]);
 
   // Persist signature and step changes even if no form fields changed
   useEffect(() => {
@@ -668,20 +673,24 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
   const onInvalid = (errors: FieldErrors<LivestockListingFormData>) => {
     console.error('Form validation errors:', errors);
     toast({
-      title: 'Incomplete Form',
-      description: 'Please go back through the steps and make sure all required fields are completed.',
+      title: t('livestockListingForm', 'toastIncompleteTitle'),
+      description: t('livestockListingForm', 'toastIncompleteDescription'),
       variant: 'destructive',
     });
   };
 
   const onSubmit = async (data: LivestockListingFormData) => {
     if (!profile || !user) {
-      toast({ title: 'Error', description: 'User profile not found.', variant: 'destructive' });
+      toast({ title: t('common', 'errorTitle'), description: t('livestockListingForm', 'toastUserProfileNotFoundDescription'), variant: 'destructive' });
       return;
     }
 
     if (!signature) {
-      toast({ title: 'Signature Required', description: 'Please provide your digital signature.', variant: 'destructive' });
+      toast({
+        title: t('livestockListingForm', 'toastSignatureRequiredTitle'),
+        description: t('livestockListingForm', 'toastSignatureRequiredDescription'),
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -785,8 +794,10 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
       if (result.error) throw result.error;
 
       toast({
-        title: 'Success!',
-        description: `Livestock listing ${existingListingId ? 'updated' : 'created'} successfully.`,
+        title: t('common', 'successTitle'),
+        description: existingListingId
+          ? t('livestockListingForm', 'toastSuccessDescriptionUpdated')
+          : t('livestockListingForm', 'toastSuccessDescriptionCreated'),
       });
 
       if (onSuccess) {
@@ -800,7 +811,11 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
       }
     } catch (error) {
       console.error('Submission error:', error);
-      toast({ title: 'Error', description: 'There was an error submitting the form. Please try again.', variant: 'destructive' });
+      toast({
+        title: t('common', 'errorTitle'),
+        description: t('livestockListingForm', 'toastSubmissionErrorDescription'),
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -809,13 +824,17 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
   if (authLoading || profileLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <p>Loading form...</p>
+        <p>{t('livestockListingForm', 'loadingMessage')}</p>
       </div>
     );
   }
 
   if (!user || !profile) {
-    toast({ title: 'Authentication Error', description: 'You must be logged in to create a listing.', variant: 'destructive' });
+    toast({
+      title: t('livestockListingForm', 'toastAuthenticationErrorTitle'),
+      description: t('livestockListingForm', 'toastAuthenticationErrorDescription'),
+      variant: 'destructive',
+    });
     navigate('/auth');
     return null;
   }
@@ -823,9 +842,13 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
   return (
     <Card className="w-full max-w-6xl mx-auto">
       <CardHeader className="px-4 md:px-6">
-        <CardTitle className="text-lg md:text-xl">{existingListingId ? 'Edit' : 'Create'} Livestock Listing</CardTitle>
+        <CardTitle className="text-lg md:text-xl">
+          {existingListingId
+            ? t('livestockListingForm', 'cardTitleEdit')
+            : t('livestockListingForm', 'cardTitleCreate')}
+        </CardTitle>
         <CardDescription className="text-sm md:text-base">
-          Submit your livestock details and biosecurity attestation to sell to Chelmar
+          {t('livestockListingForm', 'cardDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-4 md:px-6">
@@ -837,12 +860,12 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
                 name="reference_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Reference ID</FormLabel>
+                    <FormLabel>{t('livestockListingForm', 'referenceIdLabel')}</FormLabel>
                     <FormControl>
                       <Input {...field} readOnly className="font-mono bg-gray-100" />
                     </FormControl>
                     <FormDescription>
-                      This is the unique reference for your listing invitation.
+                      {t('livestockListingForm', 'referenceIdDescription')}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -852,22 +875,26 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
 
               {/* Responsible Person Information */}
               <div>
-                <h3 className="text-lg font-semibold mb-4">Responsible Person Information</h3>
+                <h3 className="text-lg font-semibold mb-4">
+                  {t('livestockListingForm', 'responsiblePersonHeading')}
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                   <div>
-                    <Label className="text-sm font-medium">Name</Label>
+                    <Label className="text-sm font-medium">{t('livestockListingForm', 'nameLabel')}</Label>
                     <p className="text-sm text-gray-700">{`${profile?.first_name || ''} ${profile?.last_name || ''}`.trim()}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium">Designation</Label>
+                    <Label className="text-sm font-medium">{t('livestockListingForm', 'designationLabel')}</Label>
                     <p className="text-sm text-gray-700">{profile?.role}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium">Company</Label>
-                    <p className="text-sm text-gray-700">{profile?.company_name || 'Not specified'}</p>
+                    <Label className="text-sm font-medium">{t('livestockListingForm', 'companyLabel')}</Label>
+                    <p className="text-sm text-gray-700">
+                      {profile?.company_name || t('livestockListingForm', 'companyFallback')}
+                    </p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium">Email</Label>
+                    <Label className="text-sm font-medium">{t('common', 'email')}</Label>
                     <p className="text-sm text-gray-700">{profile?.email}</p>
                   </div>
                 </div>
@@ -883,7 +910,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
 
               <div className="flex justify-between items-center mt-8">
                 <Button type="button" variant="ghost" onClick={() => navigate('/seller-dashboard')}>
-                  Cancel
+                  {t('common', 'cancel')}
                 </Button>
 
                 <div className="flex items-center space-x-4">
@@ -891,16 +918,22 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
                   <div className="hidden md:flex items-center space-x-4">
                     {currentStep > 0 && (
                       <Button type="button" variant="outline" onClick={prevStep}>
-                        Back
+                        {t('livestockListingForm', 'backButton')}
                       </Button>
                     )}
                     {currentStep < formSections.length - 1 ? (
                       <Button type="button" onClick={nextStep}>
-                        Next
+                        {t('livestockListingForm', 'nextButton')}
                       </Button>
                     ) : (
                       <Button type="submit" disabled={isSubmitting || !signature}>
-                        {isSubmitting ? (existingListingId ? 'Updating...' : 'Submitting...') : (existingListingId ? 'Update Listing' : 'Submit Listing')}
+                        {isSubmitting
+                          ? existingListingId
+                            ? t('livestockListingForm', 'updatingLabel')
+                            : t('livestockListingForm', 'submittingLabel')
+                          : existingListingId
+                            ? t('livestockListingForm', 'updateButton')
+                            : t('livestockListingForm', 'submitButton')}
                       </Button>
                     )}
                   </div>
@@ -909,7 +942,13 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
                   <div className="md:hidden">
                     {currentStep === formSections.length - 1 && (
                       <Button type="submit" disabled={isSubmitting || !signature}>
-                        {isSubmitting ? (existingListingId ? 'Updating...' : 'Submitting...') : (existingListingId ? 'Update Listing' : 'Submit Listing')}
+                        {isSubmitting
+                          ? existingListingId
+                            ? t('livestockListingForm', 'updatingLabel')
+                            : t('livestockListingForm', 'submittingLabel')
+                          : existingListingId
+                            ? t('livestockListingForm', 'updateButton')
+                            : t('livestockListingForm', 'submitButton')}
                       </Button>
                     )}
                   </div>

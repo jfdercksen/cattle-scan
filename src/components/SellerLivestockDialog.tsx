@@ -1,11 +1,12 @@
 
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { SellerLivestockTable } from './SellerLivestockTable';
 import { LivestockListingDetailsDialog } from './LivestockListingDetailsDialog';
 import { LivestockListingForm } from './LivestockListingForm';
 import type { Tables } from '@/integrations/supabase/types';
+import { useTranslation } from '@/i18n/useTranslation';
+import type { ComponentType } from 'react';
 
 type LivestockListing = Tables<'livestock_listings'>;
 
@@ -19,6 +20,12 @@ export const SellerLivestockDialog = ({ open, onOpenChange }: SellerLivestockDia
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const { t } = useTranslation();
+  const LivestockListingFormComponent = LivestockListingForm as unknown as ComponentType<{
+    listing?: LivestockListing | null;
+    onClose?: () => void;
+    onSuccess?: () => void;
+  } & Partial<{ invitationId: string; referenceId: string }>>;
 
   const handleViewListing = (listing: LivestockListing) => {
     setSelectedListing(listing);
@@ -41,7 +48,7 @@ export const SellerLivestockDialog = ({ open, onOpenChange }: SellerLivestockDia
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>My Livestock Listings</DialogTitle>
+            <DialogTitle>{t('sellerLivestockDialog', 'title')}</DialogTitle>
           </DialogHeader>
           
           <SellerLivestockTable 
@@ -60,7 +67,7 @@ export const SellerLivestockDialog = ({ open, onOpenChange }: SellerLivestockDia
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          <LivestockListingForm
+          <LivestockListingFormComponent
             listing={selectedListing}
             onClose={() => setEditDialogOpen(false)}
             onSuccess={handleEditSuccess}

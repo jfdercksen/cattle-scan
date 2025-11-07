@@ -20,8 +20,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
+import { useTranslation } from '@/i18n/useTranslation';
 
-const COUNTRY_OPTIONS = ['South Africa', 'Botswana', 'Namibia'];
+const COUNTRY_OPTIONS = [
+  'South Africa',
+  'Botswana',
+  'Namibia',
+  'Zimbabwe',
+  'Mozambique',
+  'Lesotho',
+  'Eswatini',
+];
 
 interface LoadingPointsSectionProps {
   fields: FieldArrayWithId<LivestockListingFormData, 'loading_points', 'id'>[];
@@ -34,6 +43,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
   const livestockType = form.watch('livestock_type');
   const locationManager = useLivestockLocationManager();
   const { user } = useAuth();
+  const { t } = useTranslation();
   type Farm = Tables<'farms'>;
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loadingFarms, setLoadingFarms] = useState(true);
@@ -148,13 +158,15 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-4">Livestock Location & Loading Points</h3>
+      <h3 className="text-lg font-semibold mb-4">{t('loadingPointsSection', 'heading')}</h3>
       <div className="space-y-4">
         {fields.map((field, index) => (
           <Card key={field.id} className="relative">
             <CardHeader>
               <div className="flex items-center justify-between pr-20">
-                <CardTitle>Herd {index + 1}</CardTitle>
+                <CardTitle>
+                  {t('loadingPointsSection', 'herdTitle').replace('{index}', String(index + 1))}
+                </CardTitle>
                 {index > 0 && (
                   <Button
                     type="button"
@@ -162,7 +174,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     size="sm"
                     onClick={() => copyFromAbove(index)}
                   >
-                    Complete From Above
+                    {t('loadingPointsSection', 'copyFromAbove')}
                   </Button>
                 )}
               </div>
@@ -170,23 +182,23 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
             <CardContent className="space-y-6">
               {/* Per-Herd Livestock Details */}
               <div>
-                <h4 className="text-base font-medium">Herd Livestock Details</h4>
+                <h4 className="text-base font-medium">{t('loadingPointsSection', 'herdDetailsHeading')}</h4>
                 <div className="grid grid-cols-1 gap-4 mt-2">
                   <FormField
                     control={form.control}
                     name={`loading_points.${index}.details.livestock_type`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Herd livestock type</FormLabel>
+                        <FormLabel>{t('loadingPointsSection', 'herdLivestockTypeLabel')}</FormLabel>
                         <FormControl>
                           <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-row space-x-4">
                             <div className="flex items-center space-x-2">
                               <RadioGroupItem value="CATTLE" id={`herd-cattle-${index}`} />
-                              <Label htmlFor={`herd-cattle-${index}`}>Cattle</Label>
+                              <Label htmlFor={`herd-cattle-${index}`}>{t('loadingPointsSection', 'herdLivestockTypeOptionCattle')}</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                               <RadioGroupItem value="SHEEP" id={`herd-sheep-${index}`} />
-                              <Label htmlFor={`herd-sheep-${index}`}>Sheep</Label>
+                              <Label htmlFor={`herd-sheep-${index}`}>{t('loadingPointsSection', 'herdLivestockTypeOptionSheep')}</Label>
                             </div>
                           </RadioGroup>
                         </FormControl>
@@ -200,16 +212,16 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     name={`loading_points.${index}.details.bred_or_bought`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Did you breed or buy in?</FormLabel>
+                        <FormLabel>{t('loadingPointsSection', 'bredOrBoughtLabel')}</FormLabel>
                         <FormControl>
                           <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-row space-x-4">
                             <div className="flex items-center space-x-2">
                               <RadioGroupItem value="BRED" id={`bred-${index}`} />
-                              <Label htmlFor={`bred-${index}`}>Bred</Label>
+                              <Label htmlFor={`bred-${index}`}>{t('loadingPointsSection', 'bredOption')}</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                               <RadioGroupItem value="BOUGHT IN" id={`bought-${index}`} />
-                              <Label htmlFor={`bought-${index}`}>Bought in</Label>
+                              <Label htmlFor={`bought-${index}`}>{t('loadingPointsSection', 'boughtOption')}</Label>
                             </div>
                           </RadioGroup>
                         </FormControl>
@@ -225,7 +237,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                         name={`loading_points.${index}.details.previous_owner_declaration_name`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Declaration from Previous Owner</FormLabel>
+                            <FormLabel>{t('loadingPointsSection', 'declarationLabel')}</FormLabel>
                             <FormControl>
                               <Input
                                 type="file"
@@ -270,7 +282,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
 
                       {form.watch(`loading_points.${index}.details.previous_owner_declaration_url`) && (
                         <div className="text-sm">
-                          <strong>Uploaded:</strong> {form.watch(`loading_points.${index}.details.previous_owner_declaration_name`)}
+                          <strong>{t('loadingPointsSection', 'uploadedLabel')}</strong> {form.watch(`loading_points.${index}.details.previous_owner_declaration_name`)}
                         </div>
                       )}
                     </div>
@@ -283,7 +295,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     render={({ field }) => (
                       <FormItem>
                         <div className="flex items-center justify-between rounded-md border p-2 h-full">
-                          <FormLabel>Is the breeder the seller?</FormLabel>
+                          <FormLabel>{t('loadingPointsSection', 'breederSellerQuestion')}</FormLabel>
                           <FormControl>
                             <YesNoSwitch value={field.value} onChange={field.onChange} />
                           </FormControl>
@@ -299,9 +311,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                       name={`loading_points.${index}.biosecurity.breeder_name`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Breeder Name</FormLabel>
+                          <FormLabel>{t('loadingPointsSection', 'breederNameLabel')}</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter breeder name" {...field} />
+                            <Input placeholder={t('loadingPointsSection', 'breederNamePlaceholder')} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -314,9 +326,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     name={`loading_points.${index}.details.breed`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Breed</FormLabel>
+                        <FormLabel>{t('loadingPointsSection', 'breedLabel')}</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter breed" {...field} />
+                          <Input placeholder={t('loadingPointsSection', 'breedPlaceholder')} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -328,7 +340,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     name={`loading_points.${index}.details.number_of_males`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Number of males</FormLabel>
+                        <FormLabel>{t('loadingPointsSection', 'malesLabel')}</FormLabel>
                         <FormControl>
                           <Input type="number" min="0" value={field.value} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
                         </FormControl>
@@ -342,7 +354,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     name={`loading_points.${index}.details.number_of_females`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Number of females</FormLabel>
+                        <FormLabel>{t('loadingPointsSection', 'femalesLabel')}</FormLabel>
                         <FormControl>
                           <Input type="number" min="0" value={field.value} onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)} />
                         </FormControl>
@@ -360,7 +372,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                       render={({ field }) => (
                         <FormItem>
                           <div className="flex items-center justify-between py-2 border-b">
-                            <FormLabel>Have the males been castrated?</FormLabel>
+                            <FormLabel>{t('loadingPointsSection', 'castratedQuestion')}</FormLabel>
                             <FormControl>
                               <YesNoSwitch value={field.value} onChange={field.onChange} />
                             </FormControl>
@@ -376,14 +388,14 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
 
               {/* Birth Address Section */}
               <div>
-                <Label className="text-base font-medium">Birth Address - Where was the livestock born?</Label>
+                <Label className="text-base font-medium">{t('loadingPointsSection', 'birthAddressHeading')}</Label>
                 {farms.length > 0 && (
                   <div className="mt-2">
-                    <Label className="text-xs">Use saved farm</Label>
+                    <Label className="text-xs">{t('loadingPointsSection', 'useSavedFarmLabel')}</Label>
                     <div className="mt-1 w-full md:w-96">
                       <Select onValueChange={(val) => handleSelectFarm(index, 'birth_address', val)}>
                         <SelectTrigger>
-                          <SelectValue placeholder={loadingFarms ? 'Loading saved farms...' : 'Select a saved farm'} />
+                          <SelectValue placeholder={loadingFarms ? t('loadingPointsSection', 'savedFarmPlaceholderLoading') : t('loadingPointsSection', 'savedFarmPlaceholderSelect')} />
                         </SelectTrigger>
                         <SelectContent>
                           {farms.map((f) => (
@@ -400,9 +412,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     name={`loading_points.${index}.birth_address.farm_name`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs">Farm Name</FormLabel>
+                        <FormLabel className="text-xs">{t('loadingPointsSection', 'farmNameLabel')}</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter farm name" {...field} />
+                          <Input placeholder={t('loadingPointsSection', 'farmNamePlaceholder')} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -413,9 +425,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     name={`loading_points.${index}.birth_address.district`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs">District</FormLabel>
+                        <FormLabel className="text-xs">{t('loadingPointsSection', 'districtLabel')}</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter district" {...field} />
+                          <Input placeholder={t('loadingPointsSection', 'districtPlaceholder')} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -426,9 +438,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     name={`loading_points.${index}.birth_address.province`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs">Province</FormLabel>
+                        <FormLabel className="text-xs">{t('loadingPointsSection', 'provinceLabel')}</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter province" {...field} />
+                          <Input placeholder={t('loadingPointsSection', 'provincePlaceholder')} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -439,11 +451,11 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     name={`loading_points.${index}.birth_address.country`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs">Country</FormLabel>
+                        <FormLabel className="text-xs">{t('loadingPointsSection', 'countryLabel')}</FormLabel>
                         <FormControl>
                           <Select value={field.value || undefined} onValueChange={field.onChange}>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select country" />
+                              <SelectValue placeholder={t('loadingPointsSection', 'countryPlaceholder')} />
                             </SelectTrigger>
                             <SelectContent>
                               {COUNTRY_OPTIONS.map((country) => (
@@ -464,7 +476,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
               {/* Current Address Section */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <Label className="text-base font-medium">Current Address - Where is the livestock currently located?</Label>
+                  <Label className="text-base font-medium">{t('loadingPointsSection', 'currentAddressHeading')}</Label>
                 </div>
                 <FormField
                   control={form.control}
@@ -472,7 +484,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                   render={({ field }) => (
                     <FormItem>
                       <div className="flex items-center justify-between rounded-md border p-2 mb-2">
-                        <FormLabel className="text-sm">Current location is the same as birth address</FormLabel>
+                        <FormLabel className="text-sm">{t('loadingPointsSection', 'currentSameAsBirthLabel')}</FormLabel>
                         <FormControl>
                           <YesNoSwitch value={field.value} onChange={field.onChange} />
                         </FormControl>
@@ -486,11 +498,11 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-2 p-4 border rounded-md bg-yellow-50">
                     {farms.length > 0 && (
                       <div className="md:col-span-4">
-                        <Label className="text-xs">Use saved farm</Label>
+                        <Label className="text-xs">{t('loadingPointsSection', 'useSavedFarmLabel')}</Label>
                         <div className="mt-1 w-full md:w-96">
                           <Select onValueChange={(val) => handleSelectFarm(index, 'current_address', val)}>
                             <SelectTrigger>
-                              <SelectValue placeholder={loadingFarms ? 'Loading saved farms...' : 'Select a saved farm'} />
+                              <SelectValue placeholder={loadingFarms ? t('loadingPointsSection', 'savedFarmPlaceholderLoading') : t('loadingPointsSection', 'savedFarmPlaceholderSelect')} />
                             </SelectTrigger>
                             <SelectContent>
                               {farms.map((f) => (
@@ -506,9 +518,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                       name={`loading_points.${index}.current_address.farm_name`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs">Farm Name</FormLabel>
+                          <FormLabel className="text-xs">{t('loadingPointsSection', 'farmNameLabel')}</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter farm name" {...field} />
+                            <Input placeholder={t('loadingPointsSection', 'farmNamePlaceholder')} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -519,9 +531,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                       name={`loading_points.${index}.current_address.district`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs">District</FormLabel>
+                          <FormLabel className="text-xs">{t('loadingPointsSection', 'districtLabel')}</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter district" {...field} />
+                            <Input placeholder={t('loadingPointsSection', 'districtPlaceholder')} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -532,9 +544,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                       name={`loading_points.${index}.current_address.province`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs">Province</FormLabel>
+                          <FormLabel className="text-xs">{t('loadingPointsSection', 'provinceLabel')}</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter province" {...field} />
+                            <Input placeholder={t('loadingPointsSection', 'provincePlaceholder')} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -545,11 +557,11 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                       name={`loading_points.${index}.current_address.country`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs">Country</FormLabel>
+                          <FormLabel className="text-xs">{t('loadingPointsSection', 'countryLabel')}</FormLabel>
                           <FormControl>
                             <Select value={field.value || undefined} onValueChange={field.onChange}>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select country" />
+                                <SelectValue placeholder={t('loadingPointsSection', 'countryPlaceholder')} />
                               </SelectTrigger>
                               <SelectContent>
                                 {COUNTRY_OPTIONS.map((country) => (
@@ -571,7 +583,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
               {/* Loading Address Section */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <Label className="text-base font-medium">Loading Address - Where will the livestock be loaded?</Label>
+                  <Label className="text-base font-medium">{t('loadingPointsSection', 'loadingAddressHeading')}</Label>
                 </div>
                 <FormField
                   control={form.control}
@@ -579,7 +591,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                   render={({ field }) => (
                     <FormItem>
                       <div className="flex items-center justify-between rounded-md border p-2 mb-2">
-                        <FormLabel className="text-sm">Loading location is the same as current address</FormLabel>
+                        <FormLabel className="text-sm">{t('loadingPointsSection', 'loadingSameAsCurrentLabel')}</FormLabel>
                         <FormControl>
                           <YesNoSwitch value={field.value} onChange={field.onChange} />
                         </FormControl>
@@ -593,11 +605,11 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-2 p-4 border rounded-md bg-green-50">
                     {farms.length > 0 && (
                       <div className="md:col-span-4">
-                        <Label className="text-xs">Use saved farm</Label>
+                        <Label className="text-xs">{t('loadingPointsSection', 'useSavedFarmLabel')}</Label>
                         <div className="mt-1 w-full md:w-96">
                           <Select onValueChange={(val) => handleSelectFarm(index, 'loading_address', val)}>
                             <SelectTrigger>
-                              <SelectValue placeholder={loadingFarms ? 'Loading saved farms...' : 'Select a saved farm'} />
+                              <SelectValue placeholder={loadingFarms ? t('loadingPointsSection', 'savedFarmPlaceholderLoading') : t('loadingPointsSection', 'savedFarmPlaceholderSelect')} />
                             </SelectTrigger>
                             <SelectContent>
                               {farms.map((f) => (
@@ -613,9 +625,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                       name={`loading_points.${index}.loading_address.farm_name`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs">Farm Name</FormLabel>
+                          <FormLabel className="text-xs">{t('loadingPointsSection', 'farmNameLabel')}</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter farm name" {...field} />
+                            <Input placeholder={t('loadingPointsSection', 'farmNamePlaceholder')} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -626,9 +638,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                       name={`loading_points.${index}.loading_address.district`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs">District</FormLabel>
+                          <FormLabel className="text-xs">{t('loadingPointsSection', 'districtLabel')}</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter district" {...field} />
+                            <Input placeholder={t('loadingPointsSection', 'districtPlaceholder')} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -639,9 +651,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                       name={`loading_points.${index}.loading_address.province`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs">Province</FormLabel>
+                          <FormLabel className="text-xs">{t('loadingPointsSection', 'provinceLabel')}</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter province" {...field} />
+                            <Input placeholder={t('loadingPointsSection', 'provincePlaceholder')} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -652,11 +664,11 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                       name={`loading_points.${index}.loading_address.country`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs">Country</FormLabel>
+                          <FormLabel className="text-xs">{t('loadingPointsSection', 'countryLabel')}</FormLabel>
                           <FormControl>
                             <Select value={field.value ?? undefined} onValueChange={field.onChange}>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select country" />
+                                <SelectValue placeholder={t('loadingPointsSection', 'countryPlaceholder')} />
                               </SelectTrigger>
                               <SelectContent>
                                 {COUNTRY_OPTIONS.map((country) => (
@@ -679,7 +691,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
 
               {/* Per-Herd Biosecurity Details */}
               <div>
-                <h4 className="text-base font-medium">Herd Biosecurity</h4>
+                <h4 className="text-base font-medium">{t('loadingPointsSection', 'herdBiosecurityHeading')}</h4>
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -687,7 +699,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     render={({ field }) => (
                       <FormItem>
                         <div className="flex items-center justify-between rounded-md border p-2 h-full">
-                          <FormLabel>Has the livestock been moved out of the property boundaries?</FormLabel>
+                          <FormLabel>{t('loadingPointsSection', 'movedOutQuestion')}</FormLabel>
                           <FormControl>
                             <YesNoSwitch value={field.value} onChange={field.onChange} />
                           </FormControl>
@@ -700,14 +712,14 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
 
                 {form.watch(`loading_points.${index}.biosecurity.livestock_moved_out_of_boundaries`) && (
                   <div className="mt-4">
-                    <Label>Location where livestock was moved from</Label>
+                    <Label>{t('loadingPointsSection', 'movedFromLabel')}</Label>
                     {farms.length > 0 && (
                       <div className="mt-2">
-                        <Label className="text-xs">Use saved farm</Label>
+                        <Label className="text-xs">{t('loadingPointsSection', 'useSavedFarmLabel')}</Label>
                         <div className="mt-1 w-full md:w-96">
                           <Select onValueChange={(val) => handleSelectFarm(index, 'biosecurity.livestock_moved_location', val)}>
                             <SelectTrigger>
-                              <SelectValue placeholder={loadingFarms ? 'Loading saved farms...' : 'Select a saved farm'} />
+                              <SelectValue placeholder={loadingFarms ? t('loadingPointsSection', 'savedFarmPlaceholderLoading') : t('loadingPointsSection', 'savedFarmPlaceholderSelect')} />
                             </SelectTrigger>
                             <SelectContent>
                               {farms.map((f) => (
@@ -724,9 +736,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                         name={`loading_points.${index}.biosecurity.livestock_moved_location.farm_name`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs">Farm Name</FormLabel>
+                            <FormLabel className="text-xs">{t('loadingPointsSection', 'farmNameLabel')}</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter farm name" {...field} />
+                              <Input placeholder={t('loadingPointsSection', 'farmNamePlaceholder')} {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -737,9 +749,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                         name={`loading_points.${index}.biosecurity.livestock_moved_location.district`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs">District</FormLabel>
+                            <FormLabel className="text-xs">{t('loadingPointsSection', 'districtLabel')}</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter district" {...field} />
+                              <Input placeholder={t('loadingPointsSection', 'districtPlaceholder')} {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -750,9 +762,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                         name={`loading_points.${index}.biosecurity.livestock_moved_location.province`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs">Province</FormLabel>
+                            <FormLabel className="text-xs">{t('loadingPointsSection', 'provinceLabel')}</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter province" {...field} />
+                              <Input placeholder={t('loadingPointsSection', 'provincePlaceholder')} {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -763,11 +775,11 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                         name={`loading_points.${index}.biosecurity.livestock_moved_location.country`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs">Country</FormLabel>
+                            <FormLabel className="text-xs">{t('loadingPointsSection', 'countryLabel')}</FormLabel>
                             <FormControl>
                               <Select value={field.value || undefined} onValueChange={field.onChange}>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select country" />
+                                  <SelectValue placeholder={t('loadingPointsSection', 'countryPlaceholder')} />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {COUNTRY_OPTIONS.map((country) => (
@@ -785,14 +797,14 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     </div>
 
                     <div className="mt-4">
-                      <Label>Location where livestock was moved to</Label>
+                      <Label>{t('loadingPointsSection', 'movedToLabel')}</Label>
                       {farms.length > 0 && (
                         <div className="mt-2">
-                          <Label className="text-xs">Use saved farm</Label>
+                          <Label className="text-xs">{t('loadingPointsSection', 'useSavedFarmLabel')}</Label>
                           <div className="mt-1 w-full md:w-96">
                             <Select onValueChange={(val) => handleSelectFarm(index, 'biosecurity.livestock_moved_location_to', val)}>
                               <SelectTrigger>
-                                <SelectValue placeholder={loadingFarms ? 'Loading saved farms...' : 'Select a saved farm'} />
+                                <SelectValue placeholder={loadingFarms ? t('loadingPointsSection', 'savedFarmPlaceholderLoading') : t('loadingPointsSection', 'savedFarmPlaceholderSelect')} />
                               </SelectTrigger>
                               <SelectContent>
                                 {farms.map((f) => (
@@ -809,9 +821,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                           name={`loading_points.${index}.biosecurity.livestock_moved_location_to.farm_name`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs">Farm Name</FormLabel>
+                              <FormLabel className="text-xs">{t('loadingPointsSection', 'farmNameLabel')}</FormLabel>
                               <FormControl>
-                                <Input placeholder="Enter farm name" {...field} />
+                                <Input placeholder={t('loadingPointsSection', 'farmNamePlaceholder')} {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -822,9 +834,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                           name={`loading_points.${index}.biosecurity.livestock_moved_location_to.district`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs">District</FormLabel>
+                              <FormLabel className="text-xs">{t('loadingPointsSection', 'districtLabel')}</FormLabel>
                               <FormControl>
-                                <Input placeholder="Enter district" {...field} />
+                                <Input placeholder={t('loadingPointsSection', 'districtPlaceholder')} {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -835,9 +847,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                           name={`loading_points.${index}.biosecurity.livestock_moved_location_to.province`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs">Province</FormLabel>
+                              <FormLabel className="text-xs">{t('loadingPointsSection', 'provinceLabel')}</FormLabel>
                               <FormControl>
-                                <Input placeholder="Enter province" {...field} />
+                                <Input placeholder={t('loadingPointsSection', 'provincePlaceholder')} {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -848,11 +860,11 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                           name={`loading_points.${index}.biosecurity.livestock_moved_location_to.country`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs">Country</FormLabel>
+                              <FormLabel className="text-xs">{t('loadingPointsSection', 'countryLabel')}</FormLabel>
                               <FormControl>
                                 <Select value={field.value || undefined} onValueChange={field.onChange}>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select country" />
+                                    <SelectValue placeholder={t('loadingPointsSection', 'countryPlaceholder')} />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {COUNTRY_OPTIONS.map((country) => (
@@ -871,16 +883,21 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                     </div>
 
                     <div className="mt-4">
-                      <Label>When was the livestock moved there?</Label>
+                      <Label>{t('loadingPointsSection', 'movedWhenLabel')}</Label>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                         <FormField
                           control={form.control}
                           name={`loading_points.${index}.biosecurity.livestock_moved_year`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs">Year</FormLabel>
+                              <FormLabel className="text-xs">{t('loadingPointsSection', 'movedYearLabel')}</FormLabel>
                               <FormControl>
-                                <Input type="number" placeholder="Enter year" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))} />
+                                <Input
+                                  type="number"
+                                  placeholder={t('loadingPointsSection', 'movedYearPlaceholder')}
+                                  value={field.value ?? ''}
+                                  onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -891,9 +908,14 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                           name={`loading_points.${index}.biosecurity.livestock_moved_month`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs">Month</FormLabel>
+                              <FormLabel className="text-xs">{t('loadingPointsSection', 'movedMonthLabel')}</FormLabel>
                               <FormControl>
-                                <Input type="number" placeholder="Enter month" value={field.value ?? ''} onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))} />
+                                <Input
+                                  type="number"
+                                  placeholder={t('loadingPointsSection', 'movedMonthPlaceholder')}
+                                  value={field.value ?? ''}
+                                  onChange={(e) => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -906,16 +928,16 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                           name={`loading_points.${index}.biosecurity.livestock_moved_how`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>How were they moved?</FormLabel>
+                              <FormLabel>{t('loadingPointsSection', 'movedHowLabel')}</FormLabel>
                               <FormControl>
                                 <Select value={field.value} onValueChange={field.onChange}>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select movement method" />
+                                    <SelectValue placeholder={t('loadingPointsSection', 'movedHowPlaceholder')} />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="Transport Contractor">Transport Contractor</SelectItem>
-                                    <SelectItem value="Own Truck">Own Truck</SelectItem>
-                                    <SelectItem value="On Foot">On Foot</SelectItem>
+                                    <SelectItem value="Transport Contractor">{t('loadingPointsSection', 'movedHowOptionContractor')}</SelectItem>
+                                    <SelectItem value="Own Truck">{t('loadingPointsSection', 'movedHowOptionOwnTruck')}</SelectItem>
+                                    <SelectItem value="On Foot">{t('loadingPointsSection', 'movedHowOptionOnFoot')}</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </FormControl>
@@ -937,7 +959,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                 onClick={() => remove(index)}
                 className="absolute top-6 right-4"
               >
-                Remove
+                {t('loadingPointsSection', 'removeButton')}
               </Button>
             )}
           </Card>
@@ -946,7 +968,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
 
       <div className="flex gap-2 mt-4">
         <Button type="button" onClick={addLoadingPoint}>
-          Add Another Herd
+          {t('loadingPointsSection', 'addAnotherButton')}
         </Button>
       </div>
 

@@ -30,7 +30,7 @@ interface CompanyProviderProps {
 }
 
 export const CompanyProvider: React.FC<CompanyProviderProps> = ({ children }) => {
-  const { user, profile } = useAuth();
+  const { user, profile, initialized } = useAuth();
   
   const [currentCompany, setCurrentCompany] = useState<CompanyContext | null>(null);
   const [userCompanies, setUserCompanies] = useState<CompanyContext[]>([]);
@@ -39,6 +39,10 @@ export const CompanyProvider: React.FC<CompanyProviderProps> = ({ children }) =>
 
   // Initialize company context when user changes
   useEffect(() => {
+    if (!initialized) {
+      return;
+    }
+    
     if (user && profile) {
       initializeCompanyContext();
     } else {
@@ -48,7 +52,7 @@ export const CompanyProvider: React.FC<CompanyProviderProps> = ({ children }) =>
       setCompanies([]);
       setLoading(false);
     }
-  }, [user, profile]);
+  }, [user, profile, initialized]);
 
   const initializeCompanyContext = async () => {
     if (!user || !profile) return;

@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CompanyService } from "@/services/companyService";
 import { useAuth } from "@/contexts/auth";
 import { Building2, Loader2 } from "lucide-react";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface CompanyRegistrationFormProps {
   onSuccess?: (companyId: string) => void;
@@ -24,6 +25,7 @@ export const CompanyRegistrationForm: React.FC<CompanyRegistrationFormProps> = (
   const navigate = useNavigate();
   const { user, refreshProfile } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -47,8 +49,8 @@ export const CompanyRegistrationForm: React.FC<CompanyRegistrationFormProps> = (
     
     if (!user) {
       toast({
-        title: "Error",
-        description: "You must be logged in to create a company",
+        title: t('common', 'errorTitle'),
+        description: t('companyRegistration', 'loginRequired'),
         variant: "destructive"
       });
       return;
@@ -56,8 +58,8 @@ export const CompanyRegistrationForm: React.FC<CompanyRegistrationFormProps> = (
 
     if (!formData.name.trim()) {
       toast({
-        title: "Error",
-        description: "Company name is required",
+        title: t('common', 'errorTitle'),
+        description: t('companyRegistration', 'nameRequired'),
         variant: "destructive"
       });
       return;
@@ -84,12 +86,12 @@ export const CompanyRegistrationForm: React.FC<CompanyRegistrationFormProps> = (
       }
 
       if (!company) {
-        throw new Error('Failed to create company');
+        throw new Error(t('companyRegistration', 'createFailed'));
       }
 
       toast({
-        title: "Success",
-        description: `Company "${company.name}" has been created successfully`,
+        title: t('common', 'successTitle'),
+        description: t('companyRegistration', 'successDescription').replace('{company}', company.name),
       });
 
       // Refresh user profile to update any role changes
@@ -105,11 +107,15 @@ export const CompanyRegistrationForm: React.FC<CompanyRegistrationFormProps> = (
           navigate('/company-management');
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating company:', error);
+      const fallback = t('companyRegistration', 'createFailed');
+      const description = error instanceof Error && error.message && error.message !== fallback
+        ? error.message
+        : fallback;
       toast({
-        title: "Error",
-        description: error.message || "Failed to create company",
+        title: t('common', 'errorTitle'),
+        description,
         variant: "destructive"
       });
     } finally {
@@ -122,38 +128,43 @@ export const CompanyRegistrationForm: React.FC<CompanyRegistrationFormProps> = (
       <CardHeader>
         <CardTitle className="flex items-center">
           <Building2 className="w-5 h-5 mr-2" />
-          {isFirstTimeSetup ? 'Welcome! Set up your company' : 'Create New Company'}
+          {isFirstTimeSetup
+            ? t('companyRegistration', 'firstTimeTitle')
+            : t('companyRegistration', 'defaultTitle')}
         </CardTitle>
         <CardDescription>
           {isFirstTimeSetup 
-            ? 'As the first user, you\'ll become a super admin. Let\'s set up your company to get started.'
-            : 'Create a new livestock trading company and become its administrator.'
+            ? t('companyRegistration', 'firstTimeDescription')
+            : t('companyRegistration', 'defaultDescription')
           }
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="name">Company Name *</Label>
+            <Label htmlFor="name">
+              {t('companyRegistration', 'companyNameLabel')}
+              <span className="text-red-500"> *</span>
+            </Label>
             <Input
               id="name"
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              placeholder="e.g., Chalma Beef, Sparta Beef Master"
+              placeholder={t('companyRegistration', 'companyNamePlaceholder')}
               required
               disabled={loading}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t('companyRegistration', 'descriptionLabel')}</Label>
             <Textarea
               id="description"
               name="description"
               value={formData.description}
               onChange={handleInputChange}
-              placeholder="Brief description of your livestock trading company"
+              placeholder={t('companyRegistration', 'descriptionPlaceholder')}
               rows={3}
               disabled={loading}
             />
@@ -161,39 +172,39 @@ export const CompanyRegistrationForm: React.FC<CompanyRegistrationFormProps> = (
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="phone">{t('companyRegistration', 'phoneLabel')}</Label>
               <Input
                 id="phone"
                 name="phone"
                 type="tel"
                 value={formData.phone}
                 onChange={handleInputChange}
-                placeholder="+27 XX XXX XXXX"
+                placeholder={t('companyRegistration', 'phonePlaceholder')}
                 disabled={loading}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="registration_number">Registration Number</Label>
+              <Label htmlFor="registration_number">{t('companyRegistration', 'registrationLabel')}</Label>
               <Input
                 id="registration_number"
                 name="registration_number"
                 value={formData.registration_number}
                 onChange={handleInputChange}
-                placeholder="Company registration number"
+                placeholder={t('companyRegistration', 'registrationPlaceholder')}
                 disabled={loading}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="address">Business Address</Label>
+            <Label htmlFor="address">{t('companyRegistration', 'addressLabel')}</Label>
             <Textarea
               id="address"
               name="address"
               value={formData.address}
               onChange={handleInputChange}
-              placeholder="Full business address including city and postal code"
+              placeholder={t('companyRegistration', 'addressPlaceholder')}
               rows={3}
               disabled={loading}
             />
@@ -207,12 +218,14 @@ export const CompanyRegistrationForm: React.FC<CompanyRegistrationFormProps> = (
                 onClick={() => onCancel ? onCancel() : navigate(-1)}
                 disabled={loading}
               >
-                Cancel
+                {t('common', 'cancel')}
               </Button>
             )}
             <Button type="submit" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {isFirstTimeSetup ? 'Set Up Company' : 'Create Company'}
+              {isFirstTimeSetup
+                ? t('companyRegistration', 'submitSetup')
+                : t('companyRegistration', 'submitCreate')}
             </Button>
           </div>
         </form>

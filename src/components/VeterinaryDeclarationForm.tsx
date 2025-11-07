@@ -17,6 +17,7 @@ import { veterinaryDeclarationSchema, VeterinaryDeclarationFormData } from '@/li
 import { YesNoSwitch } from './ui/YesNoSwitch';
 import { Tables } from '@/integrations/supabase/types';
 import { calculationEngine, LivestockCalculations } from '@/lib/calculationEngine';
+import { useTranslation } from '@/i18n/useTranslation';
 
 // Minimal helpers to parse loading points and compute derived totals
 type LoadingPointDetails = {
@@ -86,6 +87,26 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
   const [isEditingTotals, setIsEditingTotals] = useState(false);
   const [pendingTotals, setPendingTotals] = useState<{ cattle: string; sheep: string }>({ cattle: '', sheep: '' });
   const [isSavingTotals, setIsSavingTotals] = useState(false);
+  const { t } = useTranslation();
+
+  const formatMessage = (template: string, replacements: Record<string, string | number>) => {
+    return Object.entries(replacements).reduce((result, [key, value]) => {
+      return result.replace(new RegExp(`\\{${key}\\}`, 'g'), String(value));
+    }, template);
+  };
+
+  const getLivestockTypeLabel = (type: ReturnType<typeof LivestockCalculations.determineLivestockType>) => {
+    switch (type) {
+      case 'CATTLE':
+        return t('veterinaryDeclarationForm', 'livestockTypeCattle');
+      case 'SHEEP':
+        return t('veterinaryDeclarationForm', 'livestockTypeSheep');
+      case 'CATTLE AND SHEEP':
+        return t('veterinaryDeclarationForm', 'livestockTypeBoth');
+      default:
+        return t('veterinaryDeclarationForm', 'livestockTypeNone');
+    }
+  };
 
   const form = useForm<VeterinaryDeclarationFormData>({
     resolver: zodResolver(veterinaryDeclarationSchema),
@@ -117,8 +138,8 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
 
     if (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to fetch listing data.',
+        title: t('common', 'errorTitle'),
+        description: t('veterinaryDeclarationForm', 'loadListingErrorDescription'),
         variant: 'destructive',
       });
     } else {
@@ -167,7 +188,8 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
 
       form.reset(baseValues);
     }
-  }, [listingId, form, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listingId, form]);
 
   useEffect(() => {
     fetchListing();
@@ -182,7 +204,11 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
         .eq('id', user.id)
         .single();
       if (error) {
-        toast({ title: 'Error', description: 'Failed to fetch vet profile.', variant: 'destructive' });
+        toast({
+          title: t('common', 'errorTitle'),
+          description: t('veterinaryDeclarationForm', 'loadVetProfileErrorDescription'),
+          variant: 'destructive',
+        });
       } else {
         setVetProfile(data);
         form.reset({
@@ -193,17 +219,26 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
       }
     };
     fetchVetProfile();
-  }, [user, form, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, form]);
 
   const onSubmit = async (data: VeterinaryDeclarationFormData) => {
     if (existingDeclaration) {
-      toast({ title: 'Already Submitted', description: 'This declaration has already been submitted and cannot be edited.', variant: 'destructive' });
+      toast({
+        title: t('veterinaryDeclarationForm', 'alreadySubmittedTitle'),
+        description: t('veterinaryDeclarationForm', 'alreadySubmittedDescription'),
+        variant: 'destructive',
+      });
       return;
     }
     setIsSubmitting(true);
     try {
       if (!data.reference_id) {
-        toast({ title: 'Error', description: 'Reference ID is missing.', variant: 'destructive' });
+        toast({
+          title: t('common', 'errorTitle'),
+          description: t('veterinaryDeclarationForm', 'missingReferenceDescription'),
+          variant: 'destructive',
+        });
         setIsSubmitting(false);
         return;
       }
@@ -249,7 +284,10 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
 
       if (updateError) throw updateError;
 
-      toast({ title: 'Success', description: 'Veterinary declaration submitted successfully.' });
+      toast({
+        title: t('common', 'successTitle'),
+        description: t('veterinaryDeclarationForm', 'submissionSuccessDescription'),
+      });
       if (onSuccess) {
         onSuccess();
       } else {
@@ -259,8 +297,8 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
       console.error('Submission error:', error);
       toast({
-        title: 'Submission Failed',
-        description: `Could not submit the declaration. Reason: ${errorMessage}`,
+        title: t('veterinaryDeclarationForm', 'submissionFailedTitle'),
+        description: formatMessage(t('veterinaryDeclarationForm', 'submissionFailedDescription'), { reason: errorMessage }),
         variant: 'destructive',
       });
     } finally {
@@ -295,8 +333,8 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
   const handleFormSubmit = form.handleSubmit(onSubmit, (errors) => {
     const firstMessage = extractFirstErrorMessage(errors);
     toast({
-      title: 'Please review the form',
-      description: firstMessage ?? 'Complete all required questions before submitting.',
+      title: t('veterinaryDeclarationForm', 'formReviewTitle'),
+      description: firstMessage ?? t('veterinaryDeclarationForm', 'formReviewDescription'),
       variant: 'destructive',
     });
   });
@@ -310,7 +348,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
   };
 
   if (!listing) {
-    return <div>Loading...</div>;
+    return <div>{t('common', 'loading')}</div>;
   }
 
   const readOnly = Boolean(existingDeclaration);
@@ -320,6 +358,15 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
   const derivedSheepTotal = sheepTotal || listing.number_sheep_loaded || 0;
   const cattleCount = normalizeCount(form.watch('number_cattle_loaded'), derivedCattleTotal);
   const sheepCount = normalizeCount(form.watch('number_sheep_loaded'), derivedSheepTotal);
+  const livestockType = LivestockCalculations.determineLivestockType(cattleCount, sheepCount);
+  const livestockTypeLabel = getLivestockTypeLabel(livestockType);
+
+  const vetFullName = `${vetProfile?.first_name ?? ''} ${vetProfile?.last_name ?? ''}`.trim();
+  const headerDescription = formatMessage(t('veterinaryDeclarationForm', 'description'), {
+    fullName: vetFullName || t('common', 'notAvailable'),
+    registrationNumber: vetProfile?.registration_number || t('common', 'notAvailable'),
+    location: listing.location || t('common', 'notAvailable'),
+  });
 
   const beginEditTotals = () => {
     const rawCattle = form.getValues('number_cattle_loaded');
@@ -346,11 +393,19 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
     const parsedSheep = pendingTotals.sheep.trim() === '' ? 0 : Number(pendingTotals.sheep);
 
     if (!Number.isFinite(parsedCattle) || parsedCattle < 0) {
-      toast({ title: 'Invalid cattle total', description: 'Please enter a non-negative number.', variant: 'destructive' });
+      toast({
+        title: t('veterinaryDeclarationForm', 'invalidCattleTotalTitle'),
+        description: t('veterinaryDeclarationForm', 'invalidCattleTotalDescription'),
+        variant: 'destructive',
+      });
       return;
     }
     if (!Number.isFinite(parsedSheep) || parsedSheep < 0) {
-      toast({ title: 'Invalid sheep total', description: 'Please enter a non-negative number.', variant: 'destructive' });
+      toast({
+        title: t('veterinaryDeclarationForm', 'invalidSheepTotalTitle'),
+        description: t('veterinaryDeclarationForm', 'invalidSheepTotalDescription'),
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -375,10 +430,18 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
       setListing((prev) => (prev ? { ...prev, number_cattle_loaded: parsedCattle, number_sheep_loaded: parsedSheep } : prev));
       setIsEditingTotals(false);
       setPendingTotals({ cattle: '', sheep: '' });
-      toast({ title: 'Totals updated', description: 'Livestock totals have been updated.', variant: 'default' });
+      toast({
+        title: t('veterinaryDeclarationForm', 'totalsUpdatedTitle'),
+        description: t('veterinaryDeclarationForm', 'totalsUpdatedDescription'),
+        variant: 'default',
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to update totals.';
-      toast({ title: 'Update failed', description: message, variant: 'destructive' });
+      toast({
+        title: t('common', 'errorTitle'),
+        description: message || t('veterinaryDeclarationForm', 'updateFailedDescription'),
+        variant: 'destructive',
+      });
     } finally {
       setIsSavingTotals(false);
     }
@@ -387,22 +450,20 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <CardTitle>Veterinary Declaration</CardTitle>
-        <CardDescription>
-          I Dr. {vetProfile?.first_name} {vetProfile?.last_name}, a veterinarian registered with the South African Veterinary Council with South African veterinarian council registration number {vetProfile?.registration_number}, declare that I inspected the following livestock at the following address: {listing?.location}.
-        </CardDescription>
+        <CardTitle>{t('veterinaryDeclarationForm', 'title')}</CardTitle>
+        <CardDescription>{headerDescription}</CardDescription>
       </CardHeader>
       <CardContent>
         <FormProvider {...form}>
           <Form {...form}>
             <form onSubmit={handleFormSubmit} className="space-y-6">
               <div className="p-4 border rounded-md bg-gray-50">
-                <h3 className="text-lg font-semibold mb-2">Listing Information</h3>
-                <p><strong>Owner:</strong> {listing.owner_name}</p>
-                <p><strong>Location:</strong> {listing.location}</p>
-                <p><strong>Reference ID:</strong> {listing.reference_id}</p>
+                <h3 className="text-lg font-semibold mb-2">{t('veterinaryDeclarationForm', 'listingInfoHeading')}</h3>
+                <p><strong>{t('veterinaryDeclarationForm', 'ownerLabel')}:</strong> {listing.owner_name}</p>
+                <p><strong>{t('veterinaryDeclarationForm', 'locationLabel')}:</strong> {listing.location}</p>
+                <p><strong>{t('veterinaryDeclarationForm', 'referenceLabel')}:</strong> {listing.reference_id}</p>
                 <div className="mt-3 space-y-2">
-                  <Label className="text-sm font-semibold">Inspection Location</Label>
+                  <Label className="text-sm font-semibold">{t('veterinaryDeclarationForm', 'inspectionLocationLabel')}</Label>
                   <div className="flex flex-col md:flex-row md:items-center md:gap-2">
                     <Input
                       value={signingLocation}
@@ -411,7 +472,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                         setSigningLocation(value);
                         form.setValue('signed_location', value, { shouldValidate: true });
                       }}
-                      placeholder="Lat: -26.00000, Lon: 28.00000"
+                      placeholder={t('veterinaryDeclarationForm', 'locationPlaceholder')}
                       disabled={readOnly}
                     />
                     <Button
@@ -420,22 +481,32 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                       disabled={readOnly}
                       onClick={() => {
                         if (!navigator.geolocation) {
-                          toast({ title: 'Error', description: 'Geolocation is not supported by your browser.', variant: 'destructive' });
+                          toast({
+                            title: t('common', 'errorTitle'),
+                            description: t('veterinaryDeclarationForm', 'locationErrorDescription'),
+                            variant: 'destructive',
+                          });
                           return;
                         }
-                        toast({ title: 'Capturing Location', description: 'Attempting to retrieve your GPS coordinates.' });
+                        toast({
+                          title: t('veterinaryDeclarationForm', 'locationCaptureTitle'),
+                          description: t('veterinaryDeclarationForm', 'locationCaptureDescription'),
+                        });
                         navigator.geolocation.getCurrentPosition(
                           (position) => {
                             const formatted = `Lat: ${position.coords.latitude.toFixed(5)}, Lon: ${position.coords.longitude.toFixed(5)}`;
                             setSigningLocation(formatted);
                             form.setValue('signed_location', formatted, { shouldValidate: true });
-                            toast({ title: 'Location Captured', description: formatted });
+                            toast({
+                              title: t('veterinaryDeclarationForm', 'locationCapturedTitle'),
+                              description: formatMessage(t('veterinaryDeclarationForm', 'locationCapturedDescription'), { coordinates: formatted }),
+                            });
                           },
                           (error) => {
                             console.error('Geolocation error:', error);
                             toast({
-                              title: 'Location Error',
-                              description: error.message || 'Unable to retrieve your location. Please enter it manually.',
+                              title: t('veterinaryDeclarationForm', 'locationErrorTitle'),
+                              description: error.message || t('veterinaryDeclarationForm', 'locationErrorDescription'),
                               variant: 'destructive',
                             });
                           },
@@ -443,24 +514,24 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                         );
                       }}
                     >
-                      Get Location
+                      {t('signatureSection', 'getLocationButton')}
                     </Button>
                   </div>
                   <div className="mt-2">
-                    <Label className="text-sm">Distance from plotted location (if no cell coverage)</Label>
+                    <Label className="text-sm">{t('veterinaryDeclarationForm', 'distanceLabel')}</Label>
                     <Input
                       value={form.watch('location_distance_note') || ''}
                       onChange={(event) => {
                         form.setValue('location_distance_note', event.target.value, { shouldValidate: true });
                       }}
-                      placeholder="e.g., 2km north of plotted location"
+                      placeholder={t('veterinaryDeclarationForm', 'distancePlaceholder')}
                       disabled={readOnly}
                     />
                   </div>
                 </div>
                 {readOnly && (
                   <p className="mt-3 text-sm text-blue-700 bg-blue-100 border border-blue-200 rounded-md p-2">
-                    This declaration has already been submitted and is view-only.
+                    {t('veterinaryDeclarationForm', 'readOnlyNotice')}
                   </p>
                 )}
               </div>
@@ -469,21 +540,21 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
 
               <div className="space-y-4 p-4 border rounded-md bg-gray-50">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                  <h3 className="text-lg font-semibold">Livestock to be Loaded</h3>
+                  <h3 className="text-lg font-semibold">{t('veterinaryDeclarationForm', 'livestockSectionHeading')}</h3>
                   {!readOnly && (
                     <div className="flex gap-2">
                       {isEditingTotals ? (
                         <>
                           <Button type="button" variant="outline" size="sm" onClick={cancelEditTotals} disabled={isSavingTotals}>
-                            Cancel
+                            {t('common', 'cancel')}
                           </Button>
                           <Button type="button" size="sm" onClick={saveTotals} disabled={isSavingTotals}>
-                            {isSavingTotals ? 'Saving...' : 'Save totals'}
+                            {isSavingTotals ? t('common', 'saving') : t('veterinaryDeclarationForm', 'saveTotalsButton')}
                           </Button>
                         </>
                       ) : (
                         <Button type="button" variant="outline" size="sm" onClick={beginEditTotals}>
-                          Edit totals
+                          {t('veterinaryDeclarationForm', 'editTotalsButton')}
                         </Button>
                       )}
                     </div>
@@ -496,7 +567,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                       name="number_cattle_loaded"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Total Cattle</FormLabel>
+                          <FormLabel>{t('veterinaryDeclarationForm', 'totalCattleLabel')}</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
@@ -517,7 +588,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                       name="number_sheep_loaded"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Total Sheep</FormLabel>
+                          <FormLabel>{t('veterinaryDeclarationForm', 'totalSheepLabel')}</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
@@ -536,7 +607,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                     />
                     <div className="flex items-end">
                       <Badge variant="outline">
-                        {LivestockCalculations.determineLivestockType(cattleCount, sheepCount) || 'No livestock'}
+                        {livestockTypeLabel}
                       </Badge>
                     </div>
                   </div>
@@ -544,19 +615,19 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {cattleCount > 0 && (
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Total Cattle</p>
+                        <p className="text-sm font-medium text-gray-600">{t('veterinaryDeclarationForm', 'totalCattleLabel')}</p>
                         <p className="text-xl font-semibold">{cattleCount}</p>
                       </div>
                     )}
                     {sheepCount > 0 && (
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Total Sheep</p>
+                        <p className="text-sm font-medium text-gray-600">{t('veterinaryDeclarationForm', 'totalSheepLabel')}</p>
                         <p className="text-xl font-semibold">{sheepCount}</p>
                       </div>
                     )}
                     <div className="flex items-end">
                       <Badge variant="outline">
-                        {LivestockCalculations.determineLivestockType(cattleCount, sheepCount) || 'No livestock'}
+                        {livestockTypeLabel}
                       </Badge>
                     </div>
                   </div>
@@ -588,36 +659,38 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                               return (
                                 <div key={index} className="p-3 bg-white border rounded-md">
                                   <div className="flex justify-between items-start mb-2">
-                                    <h5 className="font-medium text-sm">Loading Point {index + 1}</h5>
+                                    <h5 className="font-medium text-sm">
+                                      {formatMessage(t('veterinaryDeclarationForm', 'loadingPointLabel'), { index: index + 1 })}
+                                    </h5>
                                     <div className="flex gap-2">
                                       {hasCattle && (
                                         <Badge variant="secondary" className="text-xs">
-                                          {cattleCount} Cattle
+                                          {formatMessage(t('veterinaryDeclarationForm', 'loadingPointCattleBadge'), { count: cattleCount })}
                                         </Badge>
                                       )}
                                       {hasSheep && (
                                         <Badge variant="secondary" className="text-xs">
-                                          {sheepCount} Sheep
+                                          {formatMessage(t('veterinaryDeclarationForm', 'loadingPointSheepBadge'), { count: sheepCount })}
                                         </Badge>
                                       )}
                                     </div>
                                   </div>
                                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-gray-600">
                                     <div>
-                                      <strong>Birth:</strong> {point.birth_address?.farm_name || 'N/A'}, {point.birth_address?.district || 'N/A'}, {point.birth_address?.province || 'N/A'}
+                                      <strong>{t('veterinaryDeclarationForm', 'birthLabel')}</strong> {point.birth_address?.farm_name || t('common', 'notAvailable')}, {point.birth_address?.district || t('common', 'notAvailable')}, {point.birth_address?.province || t('common', 'notAvailable')}
                                     </div>
                                     <div>
-                                      <strong>Current:</strong> {
+                                      <strong>{t('veterinaryDeclarationForm', 'currentLabel')}</strong> {
                                         point.is_current_same_as_birth 
-                                          ? 'Same as birth address'
-                                          : `${point.current_address?.farm_name || 'N/A'}, ${point.current_address?.district || 'N/A'}, ${point.current_address?.province || 'N/A'}`
+                                          ? t('veterinaryDeclarationForm', 'sameAsBirth')
+                                          : `${point.current_address?.farm_name || t('common', 'notAvailable')}, ${point.current_address?.district || t('common', 'notAvailable')}, ${point.current_address?.province || t('common', 'notAvailable')}`
                                       }
                                     </div>
                                     <div>
-                                      <strong>Loading:</strong> {
+                                      <strong>{t('veterinaryDeclarationForm', 'loadingLabel')}</strong> {
                                         point.is_loading_same_as_current 
-                                          ? 'Same as current address'
-                                          : `${point.loading_address?.farm_name || 'N/A'}, ${point.loading_address?.district || 'N/A'}, ${point.loading_address?.province || 'N/A'}`
+                                          ? t('veterinaryDeclarationForm', 'sameAsCurrent')
+                                          : `${point.loading_address?.farm_name || t('common', 'notAvailable')}, ${point.loading_address?.district || t('common', 'notAvailable')}, ${point.loading_address?.province || t('common', 'notAvailable')}`
                                       }
                                     </div>
                                   </div>
@@ -637,9 +710,9 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                 {/* Physical Inspection Requirements Display */}
                 {cattleCount > 0 && (
                   <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                    <h4 className="font-medium text-blue-900 mb-2">Cattle Physical Inspection Requirements</h4>
+                    <h4 className="font-medium text-blue-900 mb-2">{t('veterinaryDeclarationForm', 'cattleInspectionHeading')}</h4>
                     <p className="text-sm text-blue-800">
-                      Have {cattleCount} cattle physically been inspected (Mouth & feet)
+                      {formatMessage(t('veterinaryDeclarationForm', 'cattleInspectionText'), { count: cattleCount })}
                     </p>
                   </div>
                 )}
@@ -647,9 +720,9 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                 {/* Sheep Physical Inspection Requirements Display */}
                 {sheepCount > 0 && (
                   <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
-                    <h4 className="font-medium text-green-900 mb-2">Sheep Physical Inspection Requirements</h4>
+                    <h4 className="font-medium text-green-900 mb-2">{t('veterinaryDeclarationForm', 'sheepInspectionHeading')}</h4>
                     <p className="text-sm text-green-800">
-                      Have {sheepCount} sheep physically been inspected (Mouth & feet)
+                      {formatMessage(t('veterinaryDeclarationForm', 'sheepInspectionText'), { count: sheepCount })}
                     </p>
                   </div>
                 )}
@@ -665,7 +738,9 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                       name="cattle_visually_inspected"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Have {cattleCount} cattle visually been inspected?</FormLabel>
+                          <FormLabel>
+                            {formatMessage(t('veterinaryDeclarationForm', 'cattleVisualQuestion'), { count: cattleCount })}
+                          </FormLabel>
                           <FormControl>
                             <YesNoSwitch value={field.value} onChange={field.onChange} disabled={readOnly} />
                           </FormControl>
@@ -678,7 +753,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>
-                            Have {cattleCount} cattle physically been inspected (Mouth & feet)?
+                            {formatMessage(t('veterinaryDeclarationForm', 'cattlePhysicalQuestion'), { count: cattleCount })}
                           </FormLabel>
                           <FormControl>
                             <YesNoSwitch value={field.value} onChange={field.onChange} disabled={readOnly} />
@@ -697,7 +772,9 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                       name="sheep_visually_inspected"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Have {sheepCount} sheep been visually inspected?</FormLabel>
+                          <FormLabel>
+                            {formatMessage(t('veterinaryDeclarationForm', 'sheepVisualQuestion'), { count: sheepCount })}
+                          </FormLabel>
                           <FormControl>
                             <YesNoSwitch value={field.value} onChange={field.onChange} disabled={readOnly} />
                           </FormControl>
@@ -709,7 +786,9 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                       name="sheep_mouthed"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Have {sheepCount} sheep physically been inspected (Mouth & feet)?</FormLabel>
+                          <FormLabel>
+                            {formatMessage(t('veterinaryDeclarationForm', 'sheepPhysicalQuestion'), { count: sheepCount })}
+                          </FormLabel>
                           <FormControl>
                             <YesNoSwitch value={field.value} onChange={field.onChange} disabled={readOnly} />
                           </FormControl>
@@ -725,7 +804,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                   name="foot_and_mouth_symptoms"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Were there any symptoms or lesions (old or new) typical of Foot and Mouth Disease observed during the inspection of the livestock?</FormLabel>
+                      <FormLabel>{t('veterinaryDeclarationForm', 'footAndMouthQuestion')}</FormLabel>
                       <FormControl>
                         <YesNoSwitch value={field.value} onChange={field.onChange} />
                       </FormControl>
@@ -737,7 +816,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                   name="lumpy_skin_disease_symptoms"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Were there any symptoms or lesions (old or new) typical of Lumpy Skin Disease observed during the inspection of the livestock?</FormLabel>
+                      <FormLabel>{t('veterinaryDeclarationForm', 'lumpySkinQuestion')}</FormLabel>
                       <FormControl>
                         <YesNoSwitch value={field.value} onChange={field.onChange} />
                       </FormControl>
@@ -749,7 +828,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                   name="foot_and_mouth_case_in_10km"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>According to my knowledge there has been no case of Foot and Mouth disease within 10 km from the livestock inspection point.</FormLabel>
+                      <FormLabel>{t('veterinaryDeclarationForm', 'footAndMouthAreaQuestion')}</FormLabel>
                       <FormControl>
                         <YesNoSwitch value={field.value} onChange={field.onChange} />
                       </FormControl>
@@ -761,7 +840,7 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
                   name="rift_valley_fever_case_in_10km"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>According to my knowledge there has been no case of Rift Valley Fever within 10 km from the livestock inspection point.</FormLabel>
+                      <FormLabel>{t('veterinaryDeclarationForm', 'riftValleyAreaQuestion')}</FormLabel>
                       <FormControl>
                         <YesNoSwitch value={field.value} onChange={field.onChange} />
                       </FormControl>
@@ -773,10 +852,14 @@ export const VeterinaryDeclarationForm = ({ listingId, onSuccess, onCancel }: Ve
 
               <div className="flex justify-end space-x-4 mt-8">
                 <Button type="button" variant="outline" onClick={handleCancel}>
-                  Cancel
+                  {t('common', 'cancel')}
                 </Button>
                 <Button type="submit" disabled={isSubmitting || readOnly}>
-                  {readOnly ? 'Declaration Submitted' : isSubmitting ? 'Submitting...' : 'Submit Declaration'}
+                  {readOnly
+                    ? t('veterinaryDeclarationForm', 'declarationSubmittedLabel')
+                    : isSubmitting
+                      ? t('veterinaryDeclarationForm', 'submittingLabel')
+                      : t('veterinaryDeclarationForm', 'submitButtonLabel')}
                 </Button>
               </div>
             </form>

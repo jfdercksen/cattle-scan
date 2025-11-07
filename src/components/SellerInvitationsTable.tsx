@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
 import type { Tables } from '@/integrations/supabase/types';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '@/i18n/useTranslation';
 
 type ListingInvitation = Tables<'listing_invitations'>;
 type LivestockListing = Tables<'livestock_listings'>;
@@ -16,21 +17,65 @@ type InvitationWithListing = ListingInvitation & {
   livestock_listings: Pick<LivestockListing, 'id' | 'status'>[];
 };
 
-const formatStatus = (status: string) => {
-  if (!status) return '';
-  return status
-    .replace(/_/g, ' ')
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
-
 export const SellerInvitationsTable = () => {
   const [invitations, setInvitations] = useState<InvitationWithListing[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
+
+  const formatInvitationStatus = (status: string | null | undefined) => {
+    if (!status) return '';
+    const normalized = status.toLowerCase();
+    switch (normalized) {
+      case 'pending':
+        return t('sellerInvitations', 'statusPending');
+      case 'accepted':
+        return t('sellerInvitations', 'statusAccepted');
+      case 'declined':
+        return t('sellerInvitations', 'statusDeclined');
+      case 'cancelled':
+      case 'canceled':
+        return t('sellerInvitations', 'statusCancelled');
+      case 'expired':
+        return t('sellerInvitations', 'statusExpired');
+      default:
+        return status
+          .replace(/_/g, ' ')
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+    }
+  };
+
+  const formatListingStatus = (status: string | null | undefined) => {
+    const resolved = status ?? 'Not Started';
+    const normalized = resolved.toLowerCase().replace(/\s+/g, '_');
+
+    switch (normalized) {
+      case 'not_started':
+        return t('sellerInvitations', 'listingStatusNotStarted');
+      case 'draft':
+        return t('sellerInvitations', 'listingStatusDraft');
+      case 'submitted_to_vet':
+        return t('sellerInvitations', 'listingStatusSubmittedToVet');
+      case 'in_progress':
+        return t('sellerInvitations', 'listingStatusInProgress');
+      case 'completed':
+        return t('sellerInvitations', 'listingStatusCompleted');
+      case 'approved':
+        return t('sellerInvitations', 'listingStatusApproved');
+      case 'rejected':
+        return t('sellerInvitations', 'listingStatusRejected');
+      default:
+        return resolved
+          .replace(/_/g, ' ')
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+    }
+  };
 
   useEffect(() => {
     const fetchInvitations = async () => {
@@ -47,8 +92,8 @@ export const SellerInvitationsTable = () => {
       } catch (error) {
         console.error('Error fetching invitations:', error);
         toast({
-          title: "Error",
-          description: "Failed to load invitations.",
+          title: t('sellerInvitations', 'fetchErrorTitle'),
+          description: t('sellerInvitations', 'fetchErrorDescription'),
           variant: "destructive"
         });
       } finally {
@@ -57,7 +102,8 @@ export const SellerInvitationsTable = () => {
     };
 
     fetchInvitations();
-  }, [user, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const handleAcceptInvitation = async (invitation: ListingInvitation) => {
     try {
@@ -69,8 +115,8 @@ export const SellerInvitationsTable = () => {
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Invitation accepted. Please complete the livestock listing."
+        title: t('sellerInvitations', 'toastSuccessTitle'),
+        description: t('sellerInvitations', 'toastSuccessDescription')
       });
       
       navigate(`/seller/create-listing/${invitation.id}`);
@@ -78,8 +124,8 @@ export const SellerInvitationsTable = () => {
     } catch (error) {
       console.error('Error accepting invitation:', error);
       toast({
-        title: "Error",
-        description: "Failed to accept the invitation.",
+        title: t('sellerInvitations', 'toastErrorTitle'),
+        description: t('sellerInvitations', 'toastErrorDescription'),
         variant: "destructive"
       });
     }
@@ -89,7 +135,7 @@ export const SellerInvitationsTable = () => {
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="text-center">Loading invitations...</div>
+          <div className="text-center">{t('sellerInvitations', 'loading')}</div>
         </CardContent>
       </Card>
     );
@@ -102,19 +148,19 @@ export const SellerInvitationsTable = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Livestock Invitations</CardTitle>
+        <CardTitle>{t('sellerInvitations', 'title')}</CardTitle>
         <CardDescription>
-          Manage your invitations to list livestock.
+          {t('sellerInvitations', 'description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Reference ID</TableHead>
-              <TableHead>Date Sent</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead>{t('sellerInvitations', 'tableReference')}</TableHead>
+              <TableHead>{t('sellerInvitations', 'tableDateSent')}</TableHead>
+              <TableHead>{t('sellerInvitations', 'tableStatus')}</TableHead>
+              <TableHead>{t('sellerInvitations', 'tableActions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -131,7 +177,7 @@ export const SellerInvitationsTable = () => {
                   </TableCell>
                   <TableCell>
                     <Badge variant={status === 'pending' ? 'default' : 'secondary'}>
-                      {formatStatus(status)}
+                      {formatInvitationStatus(invitation.status)}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -141,7 +187,7 @@ export const SellerInvitationsTable = () => {
                         size="sm"
                         onClick={() => handleAcceptInvitation(invitation)}
                       >
-                        Accept Invitation
+                        {t('sellerInvitations', 'acceptInvitation')}
                       </Button>
                     ) : isViewOnly ? (
                       <Button
@@ -149,7 +195,7 @@ export const SellerInvitationsTable = () => {
                         size="sm"
                         onClick={() => navigate(`/seller/listing/${listing?.id}`)}
                       >
-                        View Listing
+                        {t('sellerInvitations', 'viewListing')}
                       </Button>
                     ) : (
                       <Button
@@ -157,7 +203,7 @@ export const SellerInvitationsTable = () => {
                         size="sm"
                         onClick={() => navigate(`/seller/create-listing/${invitation.id}`)}
                       >
-                        Edit Listing
+                        {t('sellerInvitations', 'editListing')}
                       </Button>
                     )}
                   </TableCell>

@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { Trash2 } from 'lucide-react';
+import { useTranslation } from '@/i18n/useTranslation';
 
 // The farms.address will be stored as: FarmName|District|Province|Country
 // We'll assemble the pipe-separated structure when inserting so we can populate required columns (city, province)
@@ -43,8 +44,13 @@ export default function SellerFarms() {
   const [saving, setSaving] = useState(false);
   const [farms, setFarms] = useState<Farm[]>([]);
   const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
 
-  const availableCountries = ['South Africa', 'Botswana', 'Namibia'];
+  const availableCountries = [
+    { value: 'South Africa', labelKey: 'countrySouthAfrica' },
+    { value: 'Botswana', labelKey: 'countryBotswana' },
+    { value: 'Namibia', labelKey: 'countryNamibia' },
+  ] as const;
 
   // If the structured farm name is empty, default it from the main Name field for convenience
   useEffect(() => {
@@ -68,17 +74,24 @@ export default function SellerFarms() {
         setFarms(data || []);
       } catch (err) {
         console.error('Failed to load farms', err);
-        toast({ title: 'Error', description: 'Failed to load your farms.', variant: 'destructive' });
+        toast({
+          title: t('common', 'errorTitle'),
+          description: t('sellerFarms', 'toastLoadErrorDescription'),
+          variant: 'destructive',
+        });
       } finally {
         setLoading(false);
       }
     };
     loadFarms();
-  }, [user, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const handleDeleteFarm = async (farm: Farm) => {
     if (!user) return;
-    const confirmed = window.confirm(`Delete farm "${farm.name}"? This cannot be undone.`);
+    const confirmed = window.confirm(
+      t('sellerFarms', 'confirmDelete').replace('{name}', farm.name)
+    );
     if (!confirmed) return;
     try {
       const { error } = await supabase
@@ -88,10 +101,17 @@ export default function SellerFarms() {
         .eq('owner_id', user.id);
       if (error) throw error;
       setFarms((prev) => prev.filter((f) => f.id !== farm.id));
-      toast({ title: 'Deleted', description: 'Farm removed.' });
+      toast({
+        title: t('sellerFarms', 'toastDeleteSuccessTitle'),
+        description: t('sellerFarms', 'toastDeleteSuccessDescription'),
+      });
     } catch (err) {
       console.error('Failed to delete farm', err);
-      toast({ title: 'Error', description: 'Failed to delete farm.', variant: 'destructive' });
+      toast({
+        title: t('common', 'errorTitle'),
+        description: t('sellerFarms', 'toastDeleteErrorDescription'),
+        variant: 'destructive',
+      });
     }
   };
 
@@ -99,11 +119,19 @@ export default function SellerFarms() {
     if (!user) return;
     const usedFarmName = (addrFarmName || name).trim();
     if (!name.trim()) {
-      toast({ title: 'Missing info', description: 'Please provide Farm Name.', variant: 'destructive' });
+      toast({
+        title: t('sellerFarms', 'toastMissingInfoTitle'),
+        description: t('sellerFarms', 'toastMissingNameDescription'),
+        variant: 'destructive',
+      });
       return;
     }
     if (!usedFarmName || !district.trim() || !province.trim() || !country.trim()) {
-      toast({ title: 'Missing info', description: 'Please fill all address fields.', variant: 'destructive' });
+      toast({
+        title: t('sellerFarms', 'toastMissingInfoTitle'),
+        description: t('sellerFarms', 'toastMissingAddressDescription'),
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -120,7 +148,10 @@ export default function SellerFarms() {
         postal_code: null,
       });
       if (error) throw error;
-      toast({ title: 'Saved', description: 'Farm captured successfully.' });
+      toast({
+        title: t('sellerFarms', 'toastSaveSuccessTitle'),
+        description: t('sellerFarms', 'toastSaveSuccessDescription'),
+      });
       setName('');
       setAddrFarmName('');
       setDistrict('');
@@ -136,7 +167,11 @@ export default function SellerFarms() {
       setFarms(data || []);
     } catch (err) {
       console.error('Failed to save farm', err);
-      toast({ title: 'Error', description: 'Failed to save farm.', variant: 'destructive' });
+      toast({
+        title: t('common', 'errorTitle'),
+        description: t('sellerFarms', 'toastSaveErrorDescription'),
+        variant: 'destructive',
+      });
     } finally {
       setSaving(false);
     }
@@ -146,34 +181,54 @@ export default function SellerFarms() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Farms</CardTitle>
+          <CardTitle>{t('sellerFarms', 'title')}</CardTitle>
           <CardDescription>
-            Capture your main farm and additional grazing locations.
+            {t('sellerFarms', 'description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <Label htmlFor="farm-name">Farm Name</Label>
-              <Input id="farm-name" placeholder="e.g. My Farm Name" value={name} onChange={(e) => setName(e.target.value)} />
+              <Label htmlFor="farm-name">{t('sellerFarms', 'farmNameLabel')}</Label>
+              <Input
+                id="farm-name"
+                placeholder={t('sellerFarms', 'farmNamePlaceholder')}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
             </div>
             <div>
-              <Label className="block mb-2">Address Fields</Label>
+              <Label className="block mb-2">{t('sellerFarms', 'addressFieldsLabel')}</Label>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                  <Label htmlFor="addr-farm-name" className="text-xs">Farm Name</Label>
-                  <Input id="addr-farm-name" placeholder="e.g. My Farm Name" value={addrFarmName} onChange={(e) => setAddrFarmName(e.target.value)} />
+                  <Label htmlFor="addr-farm-name" className="text-xs">{t('sellerFarms', 'addressFarmNameLabel')}</Label>
+                  <Input
+                    id="addr-farm-name"
+                    placeholder={t('sellerFarms', 'addressFarmNamePlaceholder')}
+                    value={addrFarmName}
+                    onChange={(e) => setAddrFarmName(e.target.value)}
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="addr-district" className="text-xs">District</Label>
-                  <Input id="addr-district" placeholder="e.g. Sandton" value={district} onChange={(e) => setDistrict(e.target.value)} />
+                  <Label htmlFor="addr-district" className="text-xs">{t('sellerFarms', 'districtLabel')}</Label>
+                  <Input
+                    id="addr-district"
+                    placeholder={t('sellerFarms', 'districtPlaceholder')}
+                    value={district}
+                    onChange={(e) => setDistrict(e.target.value)}
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="addr-province" className="text-xs">Province</Label>
-                  <Input id="addr-province" placeholder="e.g. Gauteng" value={province} onChange={(e) => setProvince(e.target.value)} />
+                  <Label htmlFor="addr-province" className="text-xs">{t('sellerFarms', 'provinceLabel')}</Label>
+                  <Input
+                    id="addr-province"
+                    placeholder={t('sellerFarms', 'provincePlaceholder')}
+                    value={province}
+                    onChange={(e) => setProvince(e.target.value)}
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="addr-country" className="text-xs">Country</Label>
+                  <Label htmlFor="addr-country" className="text-xs">{t('sellerFarms', 'countryLabel')}</Label>
                   <select
                     id="addr-country"
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -181,11 +236,11 @@ export default function SellerFarms() {
                     onChange={(e) => setCountry(e.target.value)}
                   >
                     <option value="" disabled>
-                      Select country
+                      {t('sellerFarms', 'countryPlaceholder')}
                     </option>
                     {availableCountries.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
+                      <option key={c.value} value={c.value}>
+                        {t('sellerFarms', c.labelKey)}
                       </option>
                     ))}
                   </select>
@@ -195,7 +250,7 @@ export default function SellerFarms() {
           </div>
           <div className="mt-4">
             <Button onClick={onAddFarm} disabled={saving}>
-              {saving ? 'Saving...' : 'Add Grazing Location'}
+              {saving ? t('common', 'saving') : t('sellerFarms', 'addGrazingLocation')}
             </Button>
           </div>
         </CardContent>
@@ -203,22 +258,22 @@ export default function SellerFarms() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Captured Farms</CardTitle>
-          <CardDescription>Your saved farms and grazing locations.</CardDescription>
+          <CardTitle>{t('sellerFarms', 'cardCapturedTitle')}</CardTitle>
+          <CardDescription>{t('sellerFarms', 'cardCapturedDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div>Loading...</div>
+            <div>{t('sellerFarms', 'loading')}</div>
           ) : farms.length === 0 ? (
-            <div className="text-sm text-muted-foreground">No farms captured yet.</div>
+            <div className="text-sm text-muted-foreground">{t('sellerFarms', 'emptyState')}</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="w-[60px] text-right">Actions</TableHead>
+                  <TableHead>{t('sellerFarms', 'tableName')}</TableHead>
+                  <TableHead>{t('sellerFarms', 'tableAddress')}</TableHead>
+                  <TableHead>{t('sellerFarms', 'tableCreated')}</TableHead>
+                  <TableHead className="w-[60px] text-right">{t('sellerFarms', 'tableActions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -230,7 +285,13 @@ export default function SellerFarms() {
                     </TableCell>
                     <TableCell>{new Date(f.created_at).toLocaleString()}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteFarm(f)} aria-label="Delete farm" title="Delete farm">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteFarm(f)}
+                        aria-label={t('sellerFarms', 'deleteActionLabel')}
+                        title={t('sellerFarms', 'deleteActionLabel')}
+                      >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>

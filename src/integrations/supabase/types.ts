@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.12 (cd3cf9e)"
+  }
   public: {
     Tables: {
       approval_actions: {
@@ -49,7 +54,7 @@ export type Database = {
           action: string
           created_at: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           new_values: Json | null
           old_values: Json | null
           record_id: string | null
@@ -61,7 +66,7 @@ export type Database = {
           action: string
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_values?: Json | null
           old_values?: Json | null
           record_id?: string | null
@@ -73,7 +78,7 @@ export type Database = {
           action?: string
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_values?: Json | null
           old_values?: Json | null
           record_id?: string | null
@@ -83,12 +88,87 @@ export type Database = {
         }
         Relationships: []
       }
+      companies: {
+        Row: {
+          admin_user_id: string
+          created_at: string
+          id: string
+          name: string
+          settings: Json | null
+          updated_at: string
+        }
+        Insert: {
+          admin_user_id: string
+          created_at?: string
+          id?: string
+          name: string
+          settings?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          admin_user_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          settings?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      company_user_relationships: {
+        Row: {
+          accepted_at: string | null
+          company_id: string
+          created_at: string
+          id: string
+          invited_by: string | null
+          relationship_type: Database["public"]["Enums"]["user_role"]
+          status: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          relationship_type: Database["public"]["Enums"]["user_role"]
+          status?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          relationship_type?: Database["public"]["Enums"]["user_role"]
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_user_relationships_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_company_user_relationships_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       farms: {
         Row: {
           address: string
           biosecurity_status: Json | null
           city: string
-          coordinates: unknown | null
+          coordinates: unknown
           created_at: string
           id: string
           name: string
@@ -102,7 +182,7 @@ export type Database = {
           address: string
           biosecurity_status?: Json | null
           city: string
-          coordinates?: unknown | null
+          coordinates?: unknown
           created_at?: string
           id?: string
           name: string
@@ -116,7 +196,7 @@ export type Database = {
           address?: string
           biosecurity_status?: Json | null
           city?: string
-          coordinates?: unknown | null
+          coordinates?: unknown
           created_at?: string
           id?: string
           name?: string
@@ -130,6 +210,7 @@ export type Database = {
       }
       listing_invitations: {
         Row: {
+          company_id: string | null
           created_at: string
           created_by: string
           id: string
@@ -141,6 +222,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          company_id?: string | null
           created_at?: string
           created_by: string
           id?: string
@@ -152,6 +234,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          company_id?: string | null
           created_at?: string
           created_by?: string
           id?: string
@@ -163,6 +246,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "listing_invitations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "listing_invitations_listing_id_fkey"
             columns: ["listing_id"]
@@ -178,24 +268,28 @@ export type Database = {
           additional_r25_per_head: boolean | null
           affidavit_file_path: string | null
           affidavit_required: boolean | null
-          gln_document_url: string | null
-          gln_num: string | null
+          assigned_load_master_id: string | null
           assigned_vet_id: string | null
           bred_or_bought: string
-          breed: string
+          breed: string | null
           breeder_name: string | null
+          company_id: string | null
           created_at: string
           declaration_livestock_kept_away: boolean | null
           declaration_livestock_south_africa: boolean | null
+          declaration_never_vaccinated_against_fmd: boolean | null
           declaration_no_animal_origin_feed: boolean | null
           declaration_no_cloven_hooved_animals: boolean | null
+          declaration_no_contact_with_non_resident_livestock: boolean | null
           declaration_no_foot_mouth_disease: boolean | null
           declaration_no_foot_mouth_disease_farm: boolean | null
           declaration_no_gene_editing: boolean | null
+          declaration_no_rift_valley_fever_10km_12_months: boolean | null
           declaration_veterinary_products_registered: boolean | null
           estimated_average_weight: number | null
           farm_birth_address: string | null
           farm_loading_address: string | null
+          gln_num: string | null
           grazing_green_feed: boolean | null
           growth_implant: boolean | null
           growth_implant_type: string | null
@@ -203,20 +297,28 @@ export type Database = {
           invitation_id: string | null
           invited_vet_email: string | null
           is_breeder_seller: boolean | null
+          is_loading_at_birth_farm: boolean | null
           livestock_moved_location: string | null
           livestock_moved_location_to: string | null
           livestock_moved_month: number | null
           livestock_moved_out_of_boundaries: boolean | null
           livestock_moved_year: number | null
           livestock_type: string | null
+          loading_completion_data: Json | null
           loading_points: Json | null
-          location: string
+          loading_points_1: number | null
+          loading_points_2: number | null
+          loading_points_3: number | null
+          loading_points_4: number | null
+          loading_points_5: number | null
+          location: string | null
           males_castrated: boolean | null
           mothers_status: string | null
           number_cattle_loaded: number | null
           number_of_heifers: number | null
           number_sheep_loaded: number | null
           owner_name: string
+          previous_owner_declaration_url: string | null
           profile_id: string | null
           reference_id: string | null
           responsible_person_designation: string | null
@@ -230,31 +332,35 @@ export type Database = {
           truck_registration_number: string | null
           updated_at: string
           weaned_duration: string | null
-          weighing_location: string
+          weighing_location: string | null
         }
         Insert: {
           additional_r25_per_calf?: boolean | null
           additional_r25_per_head?: boolean | null
           affidavit_file_path?: string | null
           affidavit_required?: boolean | null
-          gln_document_url?: string | null
-          gln_num?: string | null
+          assigned_load_master_id?: string | null
           assigned_vet_id?: string | null
           bred_or_bought: string
-          breed: string
+          breed?: string | null
           breeder_name?: string | null
+          company_id?: string | null
           created_at?: string
           declaration_livestock_kept_away?: boolean | null
           declaration_livestock_south_africa?: boolean | null
+          declaration_never_vaccinated_against_fmd?: boolean | null
           declaration_no_animal_origin_feed?: boolean | null
           declaration_no_cloven_hooved_animals?: boolean | null
+          declaration_no_contact_with_non_resident_livestock?: boolean | null
           declaration_no_foot_mouth_disease?: boolean | null
           declaration_no_foot_mouth_disease_farm?: boolean | null
           declaration_no_gene_editing?: boolean | null
+          declaration_no_rift_valley_fever_10km_12_months?: boolean | null
           declaration_veterinary_products_registered?: boolean | null
           estimated_average_weight?: number | null
           farm_birth_address?: string | null
           farm_loading_address?: string | null
+          gln_num?: string | null
           grazing_green_feed?: boolean | null
           growth_implant?: boolean | null
           growth_implant_type?: string | null
@@ -262,20 +368,28 @@ export type Database = {
           invitation_id?: string | null
           invited_vet_email?: string | null
           is_breeder_seller?: boolean | null
+          is_loading_at_birth_farm?: boolean | null
           livestock_moved_location?: string | null
           livestock_moved_location_to?: string | null
           livestock_moved_month?: number | null
           livestock_moved_out_of_boundaries?: boolean | null
           livestock_moved_year?: number | null
           livestock_type?: string | null
+          loading_completion_data?: Json | null
           loading_points?: Json | null
-          location: string
+          loading_points_1?: number | null
+          loading_points_2?: number | null
+          loading_points_3?: number | null
+          loading_points_4?: number | null
+          loading_points_5?: number | null
+          location?: string | null
           males_castrated?: boolean | null
           mothers_status?: string | null
           number_cattle_loaded?: number | null
           number_of_heifers?: number | null
           number_sheep_loaded?: number | null
           owner_name: string
+          previous_owner_declaration_url?: string | null
           profile_id?: string | null
           reference_id?: string | null
           responsible_person_designation?: string | null
@@ -289,31 +403,35 @@ export type Database = {
           truck_registration_number?: string | null
           updated_at?: string
           weaned_duration?: string | null
-          weighing_location: string
+          weighing_location?: string | null
         }
         Update: {
           additional_r25_per_calf?: boolean | null
           additional_r25_per_head?: boolean | null
           affidavit_file_path?: string | null
           affidavit_required?: boolean | null
-          gln_document_url?: string | null
-          gln_num?: string | null
+          assigned_load_master_id?: string | null
           assigned_vet_id?: string | null
           bred_or_bought?: string
-          breed?: string
+          breed?: string | null
           breeder_name?: string | null
+          company_id?: string | null
           created_at?: string
           declaration_livestock_kept_away?: boolean | null
           declaration_livestock_south_africa?: boolean | null
+          declaration_never_vaccinated_against_fmd?: boolean | null
           declaration_no_animal_origin_feed?: boolean | null
           declaration_no_cloven_hooved_animals?: boolean | null
+          declaration_no_contact_with_non_resident_livestock?: boolean | null
           declaration_no_foot_mouth_disease?: boolean | null
           declaration_no_foot_mouth_disease_farm?: boolean | null
           declaration_no_gene_editing?: boolean | null
+          declaration_no_rift_valley_fever_10km_12_months?: boolean | null
           declaration_veterinary_products_registered?: boolean | null
           estimated_average_weight?: number | null
           farm_birth_address?: string | null
           farm_loading_address?: string | null
+          gln_num?: string | null
           grazing_green_feed?: boolean | null
           growth_implant?: boolean | null
           growth_implant_type?: string | null
@@ -321,20 +439,28 @@ export type Database = {
           invitation_id?: string | null
           invited_vet_email?: string | null
           is_breeder_seller?: boolean | null
+          is_loading_at_birth_farm?: boolean | null
           livestock_moved_location?: string | null
           livestock_moved_location_to?: string | null
           livestock_moved_month?: number | null
           livestock_moved_out_of_boundaries?: boolean | null
           livestock_moved_year?: number | null
           livestock_type?: string | null
+          loading_completion_data?: Json | null
           loading_points?: Json | null
-          location?: string
+          loading_points_1?: number | null
+          loading_points_2?: number | null
+          loading_points_3?: number | null
+          loading_points_4?: number | null
+          loading_points_5?: number | null
+          location?: string | null
           males_castrated?: boolean | null
           mothers_status?: string | null
           number_cattle_loaded?: number | null
           number_of_heifers?: number | null
           number_sheep_loaded?: number | null
           owner_name?: string
+          previous_owner_declaration_url?: string | null
           profile_id?: string | null
           reference_id?: string | null
           responsible_person_designation?: string | null
@@ -348,21 +474,21 @@ export type Database = {
           truck_registration_number?: string | null
           updated_at?: string
           weaned_duration?: string | null
-          weighing_location?: string
+          weighing_location?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "livestock_listings_assigned_vet_id_fkey"
-            columns: ["assigned_vet_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            foreignKeyName: "fk_livestock_listings_reference_id"
+            columns: ["reference_id"]
+            isOneToOne: true
+            referencedRelation: "listing_invitations"
+            referencedColumns: ["reference_id"]
           },
           {
-            foreignKeyName: "livestock_listings_invitation_id_fkey"
-            columns: ["invitation_id"]
+            foreignKeyName: "livestock_listings_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "detailed_listing_invitations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
@@ -455,10 +581,51 @@ export type Database = {
           },
         ]
       }
+      pending_company_invitations: {
+        Row: {
+          company_id: string
+          created_at: string
+          email: string
+          expires_at: string | null
+          id: string
+          invited_by: string
+          relationship_type: Database["public"]["Enums"]["user_role"]
+          status: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          email: string
+          expires_at?: string | null
+          id?: string
+          invited_by: string
+          relationship_type: Database["public"]["Enums"]["user_role"]
+          status?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          email?: string
+          expires_at?: string | null
+          id?: string
+          invited_by?: string
+          relationship_type?: Database["public"]["Enums"]["user_role"]
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_company_invitations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           address: string | null
-          agent_agency_represented: string | null
+          agency_represented: string | null
           apac_registration_url: string | null
           appointment_letter_url: string | null
           approved_at: string | null
@@ -477,11 +644,13 @@ export type Database = {
           declaration_responsible_person_definition: boolean | null
           declaration_veterinary_products_registered: boolean | null
           email: string
+          entity_name: string | null
           first_name: string | null
           id: string
           id_document_url: string | null
           language_preference: Database["public"]["Enums"]["language_preference"]
           last_name: string | null
+          ownership_type: string | null
           phone: string | null
           postal_code: string | null
           practice_letter_head_url: string | null
@@ -491,6 +660,7 @@ export type Database = {
           registration_number: string | null
           responsible_person_designation: string | null
           responsible_person_name: string | null
+          responsible_person_title: string | null
           role: Database["public"]["Enums"]["user_role"]
           seller_entity_name: string | null
           seller_ownership_type: string | null
@@ -505,7 +675,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
-          agent_agency_represented?: string | null
+          agency_represented?: string | null
           apac_registration_url?: string | null
           appointment_letter_url?: string | null
           approved_at?: string | null
@@ -524,11 +694,13 @@ export type Database = {
           declaration_responsible_person_definition?: boolean | null
           declaration_veterinary_products_registered?: boolean | null
           email: string
+          entity_name?: string | null
           first_name?: string | null
           id: string
           id_document_url?: string | null
           language_preference?: Database["public"]["Enums"]["language_preference"]
           last_name?: string | null
+          ownership_type?: string | null
           phone?: string | null
           postal_code?: string | null
           practice_letter_head_url?: string | null
@@ -538,6 +710,7 @@ export type Database = {
           registration_number?: string | null
           responsible_person_designation?: string | null
           responsible_person_name?: string | null
+          responsible_person_title?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           seller_entity_name?: string | null
           seller_ownership_type?: string | null
@@ -552,7 +725,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
-          agent_agency_represented?: string | null
+          agency_represented?: string | null
           apac_registration_url?: string | null
           appointment_letter_url?: string | null
           approved_at?: string | null
@@ -571,11 +744,13 @@ export type Database = {
           declaration_responsible_person_definition?: boolean | null
           declaration_veterinary_products_registered?: boolean | null
           email?: string
+          entity_name?: string | null
           first_name?: string | null
           id?: string
           id_document_url?: string | null
           language_preference?: Database["public"]["Enums"]["language_preference"]
           last_name?: string | null
+          ownership_type?: string | null
           phone?: string | null
           postal_code?: string | null
           practice_letter_head_url?: string | null
@@ -585,6 +760,7 @@ export type Database = {
           registration_number?: string | null
           responsible_person_designation?: string | null
           responsible_person_name?: string | null
+          responsible_person_title?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           seller_entity_name?: string | null
           seller_ownership_type?: string | null
@@ -604,118 +780,188 @@ export type Database = {
           cattle_mouthed: boolean | null
           cattle_visually_inspected: boolean | null
           created_at: string
-          farm_address: string | null
+          farm_address: string
           farm_district: string | null
           farm_name: string | null
           farm_province: string | null
           foot_and_mouth_case_in_10km: boolean | null
           foot_and_mouth_symptoms: boolean | null
-          id: number
+          id: string
           location_distance_note: string | null
           lumpy_skin_disease_symptoms: boolean | null
-          owner_of_livestock: string | null
+          owner_of_livestock: string
           reference_id: string
           rift_valley_fever_case_in_10km: boolean | null
           sheep_mouthed: boolean | null
           sheep_visually_inspected: boolean | null
           signed_location: string | null
-          veterinarian_name: string | null
-          veterinarian_registration_number: string | null
+          updated_at: string
+          veterinarian_name: string
+          veterinarian_registration_number: string
         }
         Insert: {
           cattle_mouthed?: boolean | null
           cattle_visually_inspected?: boolean | null
           created_at?: string
-          farm_address?: string | null
+          farm_address: string
           farm_district?: string | null
           farm_name?: string | null
           farm_province?: string | null
           foot_and_mouth_case_in_10km?: boolean | null
           foot_and_mouth_symptoms?: boolean | null
-          id?: never
+          id?: string
           location_distance_note?: string | null
           lumpy_skin_disease_symptoms?: boolean | null
-          owner_of_livestock?: string | null
+          owner_of_livestock: string
           reference_id: string
           rift_valley_fever_case_in_10km?: boolean | null
           sheep_mouthed?: boolean | null
           sheep_visually_inspected?: boolean | null
           signed_location?: string | null
-          veterinarian_name?: string | null
-          veterinarian_registration_number?: string | null
+          updated_at?: string
+          veterinarian_name: string
+          veterinarian_registration_number: string
         }
         Update: {
           cattle_mouthed?: boolean | null
           cattle_visually_inspected?: boolean | null
           created_at?: string
-          farm_address?: string | null
+          farm_address?: string
           farm_district?: string | null
           farm_name?: string | null
           farm_province?: string | null
           foot_and_mouth_case_in_10km?: boolean | null
           foot_and_mouth_symptoms?: boolean | null
-          id?: never
+          id?: string
           location_distance_note?: string | null
           lumpy_skin_disease_symptoms?: boolean | null
-          owner_of_livestock?: string | null
+          owner_of_livestock?: string
           reference_id?: string
           rift_valley_fever_case_in_10km?: boolean | null
           sheep_mouthed?: boolean | null
           sheep_visually_inspected?: boolean | null
           signed_location?: string | null
-          veterinarian_name?: string | null
-          veterinarian_registration_number?: string | null
+          updated_at?: string
+          veterinarian_name?: string
+          veterinarian_registration_number?: string
         }
         Relationships: [
           {
-            foreignKeyName: "veterinary_declarations_reference_id_fkey"
+            foreignKeyName: "fk_veterinary_declarations_reference_id"
             columns: ["reference_id"]
             isOneToOne: false
             referencedRelation: "livestock_listings"
-            referencedColumns: ["id"]
+            referencedColumns: ["reference_id"]
           },
         ]
       }
     }
     Views: {
-      detailed_listing_invitations: {
-        Row: {
-          company_name: string | null
-          created_at: string | null
-          created_by: string | null
-          id: string | null
-          listing_id: string | null
-          reference_id: string | null
-          seller_email: string | null
-          seller_id: string | null
-          seller_profile_email: string | null
-          status: string | null
-          updated_at: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "listing_invitations_listing_id_fkey"
-            columns: ["listing_id"]
-            isOneToOne: false
-            referencedRelation: "livestock_listings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
+      approve_user_by_admin: {
+        Args: { requesting_user_id: string; target_user_id: string }
+        Returns: {
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          role: string
+          status: string
+          updated_at: string
+        }[]
+      }
+      can_user_access_company: {
+        Args: { target_company_id: string; user_uuid: string }
+        Returns: boolean
+      }
+      cleanup_expired_pending_invitations: { Args: never; Returns: undefined }
+      get_company_name_for_pending_invitation: {
+        Args: { invitation_email: string }
+        Returns: {
+          company_id: string
+          company_name: string
+          relationship_type: string
+        }[]
+      }
+      get_company_users: {
+        Args: { company_id_param: string; requesting_user_id: string }
+        Returns: {
+          accepted_at: string
+          company_id: string
+          created_at: string
+          id: string
+          invited_by: string
+          relationship_type: string
+          status: string
+          user_company_name: string
+          user_email: string
+          user_first_name: string
+          user_id: string
+          user_last_name: string
+          user_role: string
+          user_seller_entity_name: string
+          user_status: string
+        }[]
+      }
       get_current_user_role: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
       get_current_user_status: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: Database["public"]["Enums"]["user_status"]
       }
+      get_user_companies: {
+        Args: { user_uuid: string }
+        Returns: {
+          company_id: string
+          company_name: string
+          relationship_type: Database["public"]["Enums"]["user_role"]
+        }[]
+      }
+      get_user_company_contexts: {
+        Args: { user_id_param: string }
+        Returns: {
+          company_id: string
+          company_name: string
+          user_role: Database["public"]["Enums"]["user_role"]
+        }[]
+      }
+      get_user_profile: {
+        Args: { user_id?: string }
+        Returns: {
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          phone: string
+          profile_completed: boolean
+          role: Database["public"]["Enums"]["user_role"]
+          seller_entity_name: string
+          status: Database["public"]["Enums"]["user_status"]
+          updated_at: string
+        }[]
+      }
+      link_listing_invitations_for_user: {
+        Args: { user_email: string; user_id: string }
+        Returns: number
+      }
+      link_user_invitations: { Args: { user_email: string }; Returns: Json }
     }
     Enums: {
       language_preference: "en" | "af"
-      user_role: "super_admin" | "admin" | "seller" | "vet" | "agent" | "driver" | "load_master"
+      user_role:
+        | "super_admin"
+        | "admin"
+        | "seller"
+        | "vet"
+        | "agent"
+        | "driver"
+        | "load_master"
       user_status: "pending" | "approved" | "rejected" | "suspended"
     }
     CompositeTypes: {
@@ -724,21 +970,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -756,14 +1006,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -779,14 +1031,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -802,14 +1056,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -817,14 +1073,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
@@ -833,7 +1091,15 @@ export const Constants = {
   public: {
     Enums: {
       language_preference: ["en", "af"],
-      user_role: ["super_admin", "admin", "seller", "vet", "agent", "driver", "load_master"],
+      user_role: [
+        "super_admin",
+        "admin",
+        "seller",
+        "vet",
+        "agent",
+        "driver",
+        "load_master",
+      ],
       user_status: ["pending", "approved", "rejected", "suspended"],
     },
   },

@@ -16,16 +16,78 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CompanyService } from "@/services/companyService";
 import type { CompanyUserRelationship, Profile } from "@/services/companyService";
+import { useTranslation } from "@/i18n/useTranslation";
 
-type CompanyUser = CompanyUserRelationship & { profiles: Profile };
+type ProfilePreview = Pick<Profile, 'id' | 'first_name' | 'last_name' | 'email' | 'role' | 'status' | 'seller_entity_name'>;
+
+type AdminCompanyUser = {
+  id: string;
+  user_id: string;
+  company_id: string;
+  relationship_type: CompanyUserRelationship['relationship_type'];
+  status: CompanyUserRelationship['status'];
+  invited_by: string | null;
+  accepted_at: string | null;
+  created_at: string | null;
+  profiles: ProfilePreview | null;
+};
+
+type RawCompanyUser = CompanyUserRelationship & { profiles: Partial<Profile> | null };
+
+const toProfilePreview = (profile: Partial<Profile> | null | undefined): ProfilePreview | null => {
+  if (!profile) {
+    return null;
+  }
+
+  const { id, first_name, last_name, email, role, status, seller_entity_name } = profile;
+
+  return {
+    id: id ?? '',
+    first_name: first_name ?? '',
+    last_name: last_name ?? '',
+    email: email ?? '',
+    role: (role ?? 'seller') as ProfilePreview['role'],
+    status: (status ?? 'pending') as ProfilePreview['status'],
+    seller_entity_name: seller_entity_name ?? '',
+  };
+};
+
+const mapProfileStatusToRelationship = (
+  status: ProfilePreview['status'] | null | undefined
+): CompanyUserRelationship['status'] => {
+  switch (status) {
+    case 'approved':
+      return 'active';
+    case 'pending':
+      return 'pending';
+    case 'suspended':
+      return 'inactive';
+    default:
+      return 'inactive';
+  }
+};
+
+const normalizeCompanyUsers = (records: RawCompanyUser[]): AdminCompanyUser[] =>
+  records.map((record) => ({
+    id: record.id,
+    user_id: record.user_id,
+    company_id: record.company_id,
+    relationship_type: record.relationship_type,
+    status: record.status,
+    invited_by: record.invited_by ?? null,
+    accepted_at: record.accepted_at ?? null,
+    created_at: record.created_at ?? null,
+    profiles: toProfilePreview(record.profiles),
+  }));
 
 const Admin = () => {
   const navigate = useNavigate();
   const { user, profile, loading } = useAuth();
   const { currentCompany, companies, loading: companyLoading } = useCompany();
   const { toast } = useToast();
+  const { t } = useTranslation();
   
-  const [companyUsers, setCompanyUsers] = useState<CompanyUser[]>([]);
+  const [companyUsers, setCompanyUsers] = useState<AdminCompanyUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -57,39 +119,39 @@ const Admin = () => {
       }
       
       // Transform data to match the expected CompanyUser structure
-      const transformedData = data?.map(user => ({
-        // CompanyUserRelationship fields
-        id: `system-${user.id}`, // Unique ID for system-wide view
+      const transformedData: AdminCompanyUser[] = (data || []).map((user) => ({
+        id: `system-${user.id}`,
         user_id: user.id,
         company_id: 'system-wide',
-        relationship_type: user.role,
-        status: 'active',
-        invited_by: 'system',
-        accepted_at: user.created_at,
+        relationship_type: (user.role ?? 'seller') as CompanyUserRelationship['relationship_type'],
+        status: mapProfileStatusToRelationship(user.status),
+        invited_by: null,
+        accepted_at: user.status === 'approved' ? user.created_at : null,
         created_at: user.created_at,
-        
-        // User profile fields
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        user_role: user.role,
-        user_status: user.status,
-        seller_entity_name: user.seller_entity_name,
-        company_name: 'System Wide' // Placeholder for super admin view
-      })) || [];
-      
-      setCompanyUsers(transformedData as any);
+        profiles: toProfilePreview({
+          id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+          seller_entity_name: user.seller_entity_name,
+        }),
+      }));
+
+      setCompanyUsers(transformedData);
     } catch (error) {
       console.error('Error fetching all users:', error);
       toast({
-        title: "Error",
-        description: "Failed to load users",
+        title: t('adminUsers', 'toastErrorTitle'),
+        description: t('adminUsers', 'toastLoadUsersError'),
         variant: "destructive"
       });
     } finally {
       setLoadingUsers(false);
     }
-  }, [toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchCompanyUsers = useCallback(async () => {
     if (!currentCompany) return;
@@ -104,22 +166,24 @@ const Admin = () => {
       }
       
       // Filter out super_admin users if current user is not a super admin
+      const normalized = data ? normalizeCompanyUsers(data as RawCompanyUser[]) : [];
       const filteredData = isSuperAdmin 
-        ? (data || []) 
-        : (data || []).filter(user => user.profiles?.role !== 'super_admin');
+        ? normalized 
+        : normalized.filter((user) => user.profiles?.role !== 'super_admin');
       
       setCompanyUsers(filteredData);
     } catch (error) {
       console.error('Error fetching company users:', error);
       toast({
-        title: "Error",
-        description: "Failed to load company users",
+        title: t('adminUsers', 'toastErrorTitle'),
+        description: t('adminUsers', 'toastLoadUsersError'),
         variant: "destructive"
       });
     } finally {
       setLoadingUsers(false);
     }
-  }, [currentCompany, toast, isSuperAdmin]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentCompany, isSuperAdmin]);
 
   useEffect(() => {
     if (loading || companyLoading) return;
@@ -147,8 +211,8 @@ const Admin = () => {
       // For admin users, if no company is available after loading, show an error instead of redirecting
       if (profile?.role === 'admin') {
         toast({
-          title: "No Company Access",
-          description: "You don't have access to any companies. Please contact your administrator.",
+          title: t('adminUsers', 'noCompanyAccessTitle'),
+          description: t('adminUsers', 'noCompanyAccessDescription'),
           variant: "destructive"
         });
         return;
@@ -162,7 +226,8 @@ const Admin = () => {
     if (currentCompany) {
       fetchCompanyUsers();
     }
-  }, [user, profile, loading, companyLoading, currentCompany, navigate, fetchCompanyUsers, fetchAllUsers, isSuperAdmin, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, profile, loading, companyLoading, currentCompany, navigate, fetchCompanyUsers, fetchAllUsers, isSuperAdmin]);
 
   const handleInviteUser = async () => {
     if (!currentCompany || !inviteEmail || !inviteRole) return;
@@ -181,8 +246,8 @@ const Admin = () => {
       }
       
       toast({
-        title: "Success",
-        description: "User invited successfully",
+        title: t('adminUsers', 'toastSuccessTitle'),
+        description: t('adminUsers', 'toastInviteSuccess'),
         variant: "default"
       });
       
@@ -196,8 +261,8 @@ const Admin = () => {
     } catch (error) {
       console.error('Error inviting user:', error);
       toast({
-        title: "Error",
-        description: "Failed to invite user",
+        title: t('adminUsers', 'toastErrorTitle'),
+        description: t('adminUsers', 'toastInviteError'),
         variant: "destructive"
       });
     } finally {
@@ -218,8 +283,8 @@ const Admin = () => {
       }
       
       toast({
-        title: "Success",
-        description: "User removed from company",
+        title: t('adminUsers', 'toastSuccessTitle'),
+        description: t('adminUsers', 'toastRemoveSuccess'),
         variant: "default"
       });
       
@@ -228,8 +293,8 @@ const Admin = () => {
     } catch (error) {
       console.error('Error removing user:', error);
       toast({
-        title: "Error",
-        description: "Failed to remove user",
+        title: t('adminUsers', 'toastErrorTitle'),
+        description: t('adminUsers', 'toastRemoveError'),
         variant: "destructive"
       });
     }
@@ -244,8 +309,8 @@ const Admin = () => {
       }
       
       toast({
-        title: "Success",
-        description: "User approved successfully",
+        title: t('adminUsers', 'toastSuccessTitle'),
+        description: t('adminUsers', 'toastApproveSuccess'),
         variant: "default"
       });
       
@@ -254,8 +319,8 @@ const Admin = () => {
     } catch (error) {
       console.error('Error approving user:', error);
       toast({
-        title: "Error",
-        description: "Failed to approve user",
+        title: t('adminUsers', 'toastErrorTitle'),
+        description: t('adminUsers', 'toastApproveError'),
         variant: "destructive"
       });
     }
@@ -274,11 +339,11 @@ const Admin = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Active</Badge>;
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">{t('adminDashboard', 'statusApproved')}</Badge>;
       case 'pending':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Badge>;
-      case 'suspended':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Suspended</Badge>;
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">{t('adminDashboard', 'statusPending')}</Badge>;
+      case 'inactive':
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">{t('adminDashboard', 'statusSuspended')}</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -287,15 +352,15 @@ const Admin = () => {
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'super_admin':
-        return <Badge className="bg-purple-600 hover:bg-purple-700"><Shield className="w-3 h-3 mr-1" />Super Admin</Badge>;
+        return <Badge className="bg-purple-600 hover:bg-purple-700"><Shield className="w-3 h-3 mr-1" />{t('adminDashboard', 'roleSuperAdmin')}</Badge>;
       case 'admin':
-        return <Badge className="bg-blue-600 hover:bg-blue-700"><Shield className="w-3 h-3 mr-1" />Admin</Badge>;
+        return <Badge className="bg-blue-600 hover:bg-blue-700"><Shield className="w-3 h-3 mr-1" />{t('adminDashboard', 'roleAdmin')}</Badge>;
       case 'seller':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Seller</Badge>;
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">{t('adminDashboard', 'roleSeller')}</Badge>;
       case 'vet':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Vet</Badge>;
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{t('adminDashboard', 'roleVet')}</Badge>;
       case 'load_master':
-        return <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">Load Master</Badge>;
+        return <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">{t('adminDashboard', 'roleLoadMaster')}</Badge>;
       default:
         return <Badge variant="outline">{role}</Badge>;
     }
@@ -304,7 +369,7 @@ const Admin = () => {
   if (loading || !profile || loadingUsers) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">Loading...</div>
+        <div className="text-center">{t('common', 'loading')}</div>
       </div>
     );
   }
@@ -321,21 +386,23 @@ const Admin = () => {
               className="text-slate-600 hover:text-slate-900"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
+              {t('adminUsers', 'backToDashboard')}
             </Button>
             <div>
               <h1 className="text-3xl font-bold text-slate-900 flex items-center">
                 <Users className="w-8 h-8 mr-3 text-blue-600" />
-                Company Users
+                {t('adminUsers', 'pageTitle')}
               </h1>
               <p className="text-slate-600 mt-1">
-                Manage users for {isSuperAdmin ? 'System Wide' : currentCompany?.companyName}
+                {isSuperAdmin 
+                  ? t('adminUsers', 'systemWideDescription')
+                  : t('adminUsers', 'companyDescription').replace('{company}', currentCompany?.companyName || '')}
               </p>
             </div>
           </div>
           {!isSuperAdmin && <Button onClick={() => setShowInviteDialog(true)} className="bg-blue-600 hover:bg-blue-700">
             <UserPlus className="w-4 h-4 mr-2" />
-            Invite User
+            {t('adminUsers', 'inviteUserButton')}
           </Button>}
         </div>
           
@@ -344,36 +411,30 @@ const Admin = () => {
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center">
                 <Building2 className="w-5 h-5 mr-2" />
-                Company Users ({companyUsers.length})
+                {t('adminUsers', 'cardTitleWithCount').replace('{count}', String(companyUsers.length))}
               </div>
               <div className="flex items-center space-x-2">
                 <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                  Approved: {companyUsers.filter(u => {
-                    const status = u.profiles?.status || (u as any).user_status;
-                    return status === 'approved';
-                  }).length}
+                  {t('adminDashboard', 'statusApproved')}: {companyUsers.filter(({ profiles }) => profiles?.status === 'approved').length}
                 </Badge>
                 <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                  Pending: {companyUsers.filter(u => {
-                    const status = u.profiles?.status || (u as any).user_status;
-                    return status === 'pending';
-                  }).length}
+                  {t('adminDashboard', 'statusPending')}: {companyUsers.filter(({ profiles }) => profiles?.status === 'pending').length}
                 </Badge>
               </div>
             </CardTitle>
             <CardDescription>
-              Manage users and their roles within your company
+              {t('adminUsers', 'cardDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>{t('adminUsers', 'tableUser')}</TableHead>
+                  <TableHead>{t('adminUsers', 'tableRole')}</TableHead>
+                  <TableHead>{t('adminUsers', 'tableStatus')}</TableHead>
+                  <TableHead>{t('adminUsers', 'tableJoined')}</TableHead>
+                  <TableHead>{t('adminUsers', 'tableActions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -382,11 +443,11 @@ const Admin = () => {
                     <TableCell>
                       <div>
                         <div className="font-medium">
-                          {companyUser.profiles?.first_name || (companyUser as any).first_name} {companyUser.profiles?.last_name || (companyUser as any).last_name}
+                          {companyUser.profiles?.first_name} {companyUser.profiles?.last_name}
                         </div>
                         <div className="text-sm text-slate-500 flex items-center">
                           <Mail className="w-3 h-3 mr-1" />
-                          {companyUser.profiles?.email || (companyUser as any).email}
+                          {companyUser.profiles?.email}
                         </div>
                       </div>
                     </TableCell>
@@ -398,41 +459,40 @@ const Admin = () => {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm text-slate-500">
-                        {companyUser.accepted_at 
-                          ? new Date(companyUser.accepted_at).toLocaleDateString()
-                          : new Date(companyUser.created_at).toLocaleDateString()
-                        }
+                        {(companyUser.accepted_at || companyUser.created_at)
+                          ? new Date(companyUser.accepted_at || companyUser.created_at || '').toLocaleDateString()
+                          : t('common', 'notAvailable')}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
-                        {/* Approve button for pending users */}
-                        {(companyUser.profiles?.status || (companyUser as any).user_status) === 'pending' && (
-                          <Button 
-                            size="sm" 
-                            variant="default"
-                            onClick={() => handleApproveUser(companyUser.user_id)}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            Approve
-                          </Button>
-                        )}
-                        {/* Remove button for active users (except owners) */}
-                        {companyUser.status === 'active' && !isCompanyOwner(companyUser.user_id) && (
-                          <Button 
-                            size="sm" 
-                            variant="destructive"
-                            onClick={() => handleRemoveUser(companyUser.id)}
-                          >
-                            <Trash2 className="w-3 h-3 mr-1" />
-                            Remove
-                          </Button>
+                        {!isCompanyOwner(companyUser.user_id) && (
+                          <> 
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleApproveUser(companyUser.user_id)}
+                              disabled={companyUser.status === 'active'}
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              {t('adminUsers', 'actionApprove')}
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleRemoveUser(companyUser.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              {t('adminUsers', 'actionRemove')}
+                            </Button>
+                          </>
                         )}
                         {/* Owner badge */}
                         {isCompanyOwner(companyUser.user_id) && (
                           <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                            Owner
+                            {t('adminUsers', 'ownerBadge')}
                           </Badge>
                         )}
                       </div>
@@ -446,48 +506,58 @@ const Admin = () => {
 
         {/* Invite User Dialog */}
         <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-          <DialogContent>
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Invite User to Company</DialogTitle>
-              <DialogDescription>
-                Send an invitation to join {currentCompany?.companyName}
-              </DialogDescription>
+              <DialogTitle>{t('adminUsers', 'inviteDialogTitle')}</DialogTitle>
+              <DialogDescription>{t('adminUsers', 'inviteDialogDescription')}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="invite-email">Email Address</Label>
+              <div className="space-y-2">
+                <Label htmlFor="invite-email">{t('adminUsers', 'emailLabel')}</Label>
                 <Input
                   id="invite-email"
                   type="email"
-                  placeholder="user@example.com"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder={t('adminUsers', 'emailPlaceholder')}
                 />
               </div>
-              <div>
-                <Label htmlFor="invite-role">Role</Label>
-                <Select value={inviteRole} onValueChange={setInviteRole}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a role" />
+              <div className="space-y-2">
+                <Label htmlFor="invite-role">{t('adminUsers', 'roleLabel')}</Label>
+                <Select
+                  value={inviteRole}
+                  onValueChange={setInviteRole}
+                  disabled={inviteLoading}
+                >
+                  <SelectTrigger id="invite-role">
+                    <SelectValue placeholder={t('adminUsers', 'rolePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="seller">Seller</SelectItem>
-                    <SelectItem value="vet">Veterinarian</SelectItem>
-                    <SelectItem value="load_master">Load Master</SelectItem>
+                    <SelectItem value="admin">{t('adminDashboard', 'roleAdmin')}</SelectItem>
+                    <SelectItem value="seller">{t('adminDashboard', 'roleSeller')}</SelectItem>
+                    <SelectItem value="vet">{t('adminDashboard', 'roleVet')}</SelectItem>
+                    <SelectItem value="agent">{t('adminDashboard', 'roleAgent')}</SelectItem>
+                    <SelectItem value="load_master">{t('adminDashboard', 'roleLoadMaster')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
-                Cancel
+              <Button variant="outline" onClick={() => setShowInviteDialog(false)} disabled={inviteLoading}>
+                {t('common', 'cancel')}
               </Button>
-              <Button 
-                onClick={handleInviteUser}
-                disabled={!inviteEmail || !inviteRole || inviteLoading}
-              >
-                {inviteLoading ? 'Sending...' : 'Send Invitation'}
+              <Button onClick={handleInviteUser} disabled={inviteLoading} className="bg-blue-600 hover:bg-blue-700">
+                {inviteLoading ? (
+                  <span className="flex items-center">
+                    <span className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    {t('adminUsers', 'sendingLabel')}
+                  </span>
+                ) : (
+                  <span className="flex items-center">
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    {t('adminUsers', 'sendInvitationButton')}
+                  </span>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

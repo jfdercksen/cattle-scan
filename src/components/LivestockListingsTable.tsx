@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Eye } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
+import { useTranslation } from '@/i18n/useTranslation';
 
 // Extended type that includes the invitation_id field and joined invitation data
 type LivestockListingWithInvitation = Tables<'livestock_listings'> & {
@@ -27,6 +28,7 @@ export const LivestockListingsTable = ({ onViewListing }: LivestockListingsTable
   const [listings, setListings] = useState<LivestockListing[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const fetchListings = useCallback(async () => {
     try {
@@ -69,14 +71,15 @@ export const LivestockListingsTable = ({ onViewListing }: LivestockListingsTable
     } catch (error) {
       console.error('Error fetching livestock listings:', error);
       toast({
-        title: "Error",
-        description: "Failed to load livestock listings",
-        variant: "destructive"
+        title: t('adminListings', 'loadErrorTitle'),
+        description: t('adminListings', 'loadErrorDescription'),
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     fetchListings();
@@ -95,11 +98,33 @@ export const LivestockListingsTable = ({ onViewListing }: LivestockListingsTable
     }
   };
 
+  const formatListingStatus = (status: string | null | undefined) => {
+    if (!status) {
+      return t('common', 'notAvailable');
+    }
+
+    const normalized = status.toLowerCase();
+    switch (normalized) {
+      case 'pending':
+        return t('adminListings', 'statusPending');
+      case 'approved':
+        return t('adminListings', 'statusApproved');
+      case 'rejected':
+        return t('adminListings', 'statusRejected');
+      default:
+        return status
+          .replace(/_/g, ' ')
+          .split(' ')
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+    }
+  };
+
   if (loading) {
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="text-center">Loading livestock listings...</div>
+          <div className="text-center">{t('adminListings', 'loading')}</div>
         </CardContent>
       </Card>
     );
@@ -108,35 +133,35 @@ export const LivestockListingsTable = ({ onViewListing }: LivestockListingsTable
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Livestock Listings</CardTitle>
+        <CardTitle>{t('adminListings', 'title')}</CardTitle>
         <CardDescription>
-          Manage livestock listings from sellers
+          {t('adminListings', 'description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {listings.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            No livestock listings found
+            {t('adminListings', 'empty')}
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Reference ID</TableHead>
-                <TableHead>Owner Name</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Breed</TableHead>
-                <TableHead>Total Livestock</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t('adminListings', 'tableReferenceId')}</TableHead>
+                <TableHead>{t('adminListings', 'tableOwnerName')}</TableHead>
+                <TableHead>{t('adminListings', 'tableLocation')}</TableHead>
+                <TableHead>{t('adminListings', 'tableBreed')}</TableHead>
+                <TableHead>{t('adminListings', 'tableTotalLivestock')}</TableHead>
+                <TableHead>{t('adminListings', 'tableStatus')}</TableHead>
+                <TableHead>{t('adminListings', 'tableCreated')}</TableHead>
+                <TableHead>{t('adminListings', 'tableActions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {listings.map((listing) => (
                 <TableRow key={listing.id}>
                   <TableCell className="font-mono">
-                    {listing.listing_invitations?.reference_id || 'N/A'}
+                    {listing.listing_invitations?.reference_id || t('common', 'notAvailable')}
                   </TableCell>
                   <TableCell className="font-medium">
                     {listing.owner_name}
@@ -149,7 +174,7 @@ export const LivestockListingsTable = ({ onViewListing }: LivestockListingsTable
                       variant="secondary" 
                       className={getStatusBadgeColor(listing.status)}
                     >
-                      {listing.status}
+                      {formatListingStatus(listing.status)}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -162,7 +187,7 @@ export const LivestockListingsTable = ({ onViewListing }: LivestockListingsTable
                       onClick={() => onViewListing(listing)}
                     >
                       <Eye className="w-4 h-4 mr-2" />
-                      View Details
+                      {t('adminListings', 'viewDetails')}
                     </Button>
                   </TableCell>
                 </TableRow>

@@ -1,13 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Building2, Users, BarChart3, Activity, Plus, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { useCompany } from '@/contexts/companyContext';
 import { useToast } from '@/hooks/use-toast';
-import { LivestockListingDialog } from "@/components/LivestockListingDialog";
 import { SellerInvitationsTable } from '@/components/SellerInvitationsTable';
 import type { Tables } from '@/integrations/supabase/types';
 import ProfileCompletion from '@/components/ProfileCompletionForm';
@@ -17,6 +13,7 @@ import { CompanySelector } from '@/components/CompanySelector';
 import { MultiTenantDashboardController } from '@/services/multiTenantDashboardController';
 import { supabase } from '@/integrations/supabase/client';
 import SellerFarms from '@/components/SellerFarms';
+import { useTranslation } from '@/i18n/useTranslation';
 
 type Profile = Tables<'profiles'>;
 
@@ -26,10 +23,11 @@ type LivestockOffer = Tables<'livestock_offers'> & {
 
 const SellerDashboard = () => {
   const navigate = useNavigate();
-  const { user, profile, loading: authLoading, needsProfileCompletion } = useAuth();
+  const { user, profile, loading: authLoading, initialized, needsProfileCompletion } = useAuth();
   const { currentCompany, userCompanies } = useCompany();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -44,8 +42,8 @@ const SellerDashboard = () => {
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         toast({
-          title: "Error",
-          description: "Failed to load dashboard data",
+          title: t('sellerDashboard', 'toastErrorTitle'),
+          description: t('sellerDashboard', 'toastDashboardError'),
           variant: "destructive",
         });
       } finally {
@@ -54,24 +52,25 @@ const SellerDashboard = () => {
     };
 
     fetchDashboardData();
-  }, [user, profile, currentCompany, authLoading, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, profile, currentCompany, authLoading]);
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || !initialized) return;
 
     if (!user) {
       navigate('/auth');
     } else if (profile && profile.role !== 'seller') {
       navigate('/');
     }
-  }, [user, profile, authLoading, navigate]);
+  }, [user, profile, authLoading, initialized, navigate]);
 
 
 
-  if (authLoading || loading) {
+  if (authLoading || !initialized || loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">Loading...</div>
+        <div className="text-center">{t('common', 'loading')}</div>
       </div>
     );
   }
@@ -93,8 +92,8 @@ const SellerDashboard = () => {
         {/* Header with Company Selector */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-800">Seller Dashboard</h1>
-            <p className="text-slate-600 mt-1">Manage your livestock listings and sales</p>
+            <h1 className="text-3xl font-bold text-slate-800">{t('sellerDashboard', 'title')}</h1>
+            <p className="text-slate-600 mt-1">{t('sellerDashboard', 'description')}</p>
           </div>
           <div className="flex items-center space-x-4">
             {/* <CompanySelector /> */}

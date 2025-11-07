@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
+import { useTranslation } from '@/i18n/useTranslation';
 
 type LivestockListing = Tables<'livestock_listings'> & {
   listing_invitations: {
@@ -17,21 +18,62 @@ type LivestockListing = Tables<'livestock_listings'> & {
   } | null;
 };
 
-const offerFormSchema = z.object({
-  chalmar_beef_offer: z.number().min(0, 'Offer amount must be positive'),
-  to_weight: z.number().min(0, 'Weight must be positive'),
-  then_penilazation_of: z.number().min(0, 'Penalization amount must be positive'),
-  and_from: z.number().min(0, 'From amount must be positive'),
-  penilazation_of: z.number().min(0, 'Penalization amount must be positive'),
-  percent_heifers_allowed: z.number().min(0).max(100, 'Percentage must be between 0 and 100'),
-  penilazation_for_additional_heifers: z.number().min(0, 'Penalization amount must be positive'),
-  offer_valid_until_date: z.string().min(1, 'Date is required'),
-  offer_valid_until_time: z.string().min(1, 'Time is required'),
-  additional_r25_per_calf: z.boolean().default(false),
-  affidavit_required: z.boolean().default(false),
-});
+type Translate = ReturnType<typeof useTranslation>['t'];
 
-type OfferFormData = z.infer<typeof offerFormSchema>;
+const createOfferFormSchema = (t: Translate) =>
+  z.object({
+    chalmar_beef_offer: z
+      .number({
+        invalid_type_error: t('adminOffers', 'validationPositiveOffer'),
+      })
+      .min(0, { message: t('adminOffers', 'validationPositiveOffer') }),
+    to_weight: z
+      .number({
+        invalid_type_error: t('adminOffers', 'validationPositiveWeight'),
+      })
+      .min(0, { message: t('adminOffers', 'validationPositiveWeight') }),
+    then_penilazation_of: z
+      .number({
+        invalid_type_error: t('adminOffers', 'validationPositivePenalization'),
+      })
+      .min(0, { message: t('adminOffers', 'validationPositivePenalization') }),
+    and_from: z
+      .number({
+        invalid_type_error: t('adminOffers', 'validationPositiveWeight'),
+      })
+      .min(0, { message: t('adminOffers', 'validationPositiveWeight') }),
+    penilazation_of: z
+      .number({
+        invalid_type_error: t('adminOffers', 'validationPositivePenalization'),
+      })
+      .min(0, { message: t('adminOffers', 'validationPositivePenalization') }),
+    percent_heifers_allowed: z
+      .number({
+        invalid_type_error: t('adminOffers', 'validationPercentRange'),
+      })
+      .min(0, { message: t('adminOffers', 'validationPercentRange') })
+      .max(100, { message: t('adminOffers', 'validationPercentRange') }),
+    penilazation_for_additional_heifers: z
+      .number({
+        invalid_type_error: t('adminOffers', 'validationPositivePenalization'),
+      })
+      .min(0, { message: t('adminOffers', 'validationPositivePenalization') }),
+    offer_valid_until_date: z
+      .string({
+        invalid_type_error: t('adminOffers', 'validationDateRequired'),
+      })
+      .min(1, { message: t('adminOffers', 'validationDateRequired') }),
+    offer_valid_until_time: z
+      .string({
+        invalid_type_error: t('adminOffers', 'validationTimeRequired'),
+      })
+      .min(1, { message: t('adminOffers', 'validationTimeRequired') }),
+    additional_r25_per_calf: z.boolean().default(false),
+    affidavit_required: z.boolean().default(false),
+  });
+
+type OfferFormSchema = ReturnType<typeof createOfferFormSchema>;
+type OfferFormData = z.infer<OfferFormSchema>;
 
 interface LivestockOfferFormProps {
   listing: LivestockListing;
@@ -42,6 +84,9 @@ interface LivestockOfferFormProps {
 export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOfferFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
+
+  const offerFormSchema = useMemo(() => createOfferFormSchema(t), [t]);
 
   const form = useForm<OfferFormData>({
     resolver: zodResolver(offerFormSchema),
@@ -66,7 +111,7 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) {
-        throw new Error('Not authenticated');
+        throw new Error(t('adminOffers', 'authError'));
       }
 
       const { error } = await supabase
@@ -90,17 +135,17 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Offer submitted successfully!",
+        title: t('adminOffers', 'successTitle'),
+        description: t('adminOffers', 'successDescription'),
       });
       
       onSuccess();
     } catch (error) {
       console.error('Error submitting offer:', error);
       toast({
-        title: "Error",
-        description: "Failed to submit offer. Please try again.",
-        variant: "destructive",
+        title: t('adminOffers', 'errorTitle'),
+        description: t('adminOffers', 'errorDescription'),
+        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
@@ -110,26 +155,26 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <CardTitle>Create Offer for {listing.owner_name}</CardTitle>
+        <CardTitle>{t('adminOffers', 'formTitle').replace('{owner}', listing.owner_name)}</CardTitle>
         <CardDescription>
-          Complete the offer form for the livestock listing
+          {t('adminOffers', 'formDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h3 className="font-semibold mb-2">Listing Details</h3>
+          <h3 className="font-semibold mb-2">{t('adminOffers', 'listingDetailsHeading')}</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <span className="font-medium">Location:</span> {listing.location}
+              <span className="font-medium">{t('adminOffers', 'listingLocationLabel')}:</span> {listing.location}
             </div>
             <div>
-              <span className="font-medium">Breed:</span> {listing.breed}
+              <span className="font-medium">{t('adminOffers', 'listingBreedLabel')}:</span> {listing.breed}
             </div>
             <div>
-              <span className="font-medium">Total Livestock:</span> {listing.total_livestock_offered}
+              <span className="font-medium">{t('adminOffers', 'listingTotalLivestockLabel')}:</span> {listing.total_livestock_offered}
             </div>
             <div>
-              <span className="font-medium">Heifers:</span> {listing.number_of_heifers}
+              <span className="font-medium">{t('adminOffers', 'listingHeifersLabel')}:</span> {listing.number_of_heifers ?? t('common', 'notAvailable')}
             </div>
           </div>
         </div>
@@ -137,10 +182,10 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <FormItem>
-              <FormLabel>Reference ID</FormLabel>
+              <FormLabel>{t('adminOffers', 'referenceIdLabel')}</FormLabel>
               <FormControl>
                 <Input
-                  value={listing.listing_invitations?.reference_id || 'N/A'}
+                  value={listing.listing_invitations?.reference_id || t('common', 'notAvailable')}
                   readOnly
                   className="font-mono bg-gray-100"
                 />
@@ -152,7 +197,9 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
                 name="chalmar_beef_offer"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Chalmar Beef Offer (R/KG)</FormLabel>
+                    <FormLabel>
+                      {`${t('adminOffers', 'chalmarOfferLabel')} (R${t('adminOffers', 'offerAmountSuffix')})`}
+                    </FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -173,7 +220,7 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
                 name="to_weight"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>To Weight (KG)</FormLabel>
+                    <FormLabel>{t('adminOffers', 'toWeightLabel')}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -194,7 +241,7 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
                 name="then_penilazation_of"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Then Penilazation of (C/KG)</FormLabel>
+                    <FormLabel>{t('adminOffers', 'thenPenalizationLabel')}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -214,7 +261,7 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
                 name="and_from"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>And From (KG)</FormLabel>
+                    <FormLabel>{t('adminOffers', 'andFromLabel')}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -235,7 +282,7 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
                 name="penilazation_of"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Penilazation of (C/KG)</FormLabel>
+                    <FormLabel>{t('adminOffers', 'penalizationLabel')}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -255,7 +302,7 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
                 name="percent_heifers_allowed"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>% Heifers Allowed</FormLabel>
+                    <FormLabel>{t('adminOffers', 'percentHeifersAllowedLabel')}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -276,7 +323,7 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
               name="penilazation_for_additional_heifers"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Penilazation for Each Additional % Heifers (C/KG)</FormLabel>
+                  <FormLabel>{t('adminOffers', 'additionalHeifersPenaltyLabel')}</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -297,7 +344,7 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
                 name="offer_valid_until_date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Offer Valid Until (Date)</FormLabel>
+                    <FormLabel>{t('adminOffers', 'offerValidDateLabel')}</FormLabel>
                     <FormControl>
                       <Input
                         type="date"
@@ -314,7 +361,7 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
                 name="offer_valid_until_time"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Offer Valid Until (Time)</FormLabel>
+                    <FormLabel>{t('adminOffers', 'offerValidTimeLabel')}</FormLabel>
                     <FormControl>
                       <Input
                         type="time"
@@ -342,7 +389,7 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
-                      <FormLabel>Additional R25 per calf payment for turnover of less than R10 million</FormLabel>
+                      <FormLabel>{t('adminOffers', 'additionalPaymentLabel')}</FormLabel>
                     </div>
                   </FormItem>
                 )}
@@ -362,7 +409,7 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
-                      <FormLabel>Attached sworn affidavit must be completed and submitted</FormLabel>
+                      <FormLabel>{t('adminOffers', 'affidavitRequiredLabel')}</FormLabel>
                     </div>
                   </FormItem>
                 )}
@@ -371,18 +418,16 @@ export const LivestockOfferForm = ({ listing, onClose, onSuccess }: LivestockOff
 
             <div className="bg-blue-50 p-4 rounded-lg">
               <p className="text-sm text-blue-800">
-                <strong>Note:</strong> This offer is subject to biosecurity terms and evaluation of biosecurity and trace-ability 
-                assessment as well as the veterinary declaration. If Chalmar Beef is placed under quarantine before the livestock 
-                is offloaded, the offer is withdrawn.
+                <strong>{t('adminOffers', 'noteTitle')}:</strong> {t('adminOffers', 'noteDescription')}
               </p>
             </div>
 
             <div className="flex justify-end space-x-4">
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+                {t('adminOffers', 'cancelButton')}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Submitting Offer...' : 'Submit Offer'}
+                {isSubmitting ? t('adminOffers', 'submittingButton') : t('adminOffers', 'submitButton')}
               </Button>
             </div>
           </form>

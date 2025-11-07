@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { SignaturePad } from '@/components/SignaturePad';
 import { LivestockListingFormData } from '@/lib/schemas/livestockListingSchema';
+import { useTranslation } from '@/i18n/useTranslation';
 
 interface SignatureSectionProps {
   signature: string | null;
@@ -22,6 +23,7 @@ interface SignatureSectionProps {
 export const SignatureSection = ({ signature, setSignature, onLocationCapture, disableLocationCapture = false }: SignatureSectionProps) => {
   const form = useFormContext<LivestockListingFormData>();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const handleGetLocation = () => {
     if (disableLocationCapture) return;
@@ -32,7 +34,10 @@ export const SignatureSection = ({ signature, setSignature, onLocationCapture, d
         maximumAge: 0,
       };
 
-      toast({ title: 'Getting Location...', description: 'Please wait while we pinpoint your location.' });
+      toast({
+        title: t('signatureSection', 'locationFetchingTitle'),
+        description: t('signatureSection', 'locationFetchingDescription'),
+      });
 
       const watchId = navigator.geolocation.watchPosition(
         (position) => {
@@ -41,31 +46,38 @@ export const SignatureSection = ({ signature, setSignature, onLocationCapture, d
           const locationString = `Lat: ${latitude.toFixed(5)}, Lon: ${longitude.toFixed(5)}`;
           form.setValue('signed_location', locationString, { shouldValidate: true });
           onLocationCapture?.(locationString);
-          toast({ title: 'Success', description: 'Location captured successfully.' });
+          toast({
+            title: t('common', 'successTitle'),
+            description: t('signatureSection', 'locationSuccessDescription'),
+          });
         },
         (error) => {
           navigator.geolocation.clearWatch(watchId);
           console.error('Geolocation error:', error);
-          let errorMessage = 'Could not get location. Please enter it manually.';
+          let errorMessage = t('signatureSection', 'locationErrorDefault');
           if (error.code === 1) {
-            errorMessage = 'Please allow location access in your browser settings.';
+            errorMessage = t('signatureSection', 'locationErrorPermission');
           } else if (error.code === 2) {
-            errorMessage = 'Location is unavailable. Please check your network connection or try again from a different location.';
+            errorMessage = t('signatureSection', 'locationErrorUnavailable');
           } else if (error.code === 3) {
-            errorMessage = 'Getting location timed out. Please try again.';
+            errorMessage = t('signatureSection', 'locationErrorTimeout');
           }
-          toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+          toast({ title: t('common', 'errorTitle'), description: errorMessage, variant: 'destructive' });
         },
         options
       );
     } else {
-      toast({ title: 'Error', description: 'Geolocation is not supported by your browser.', variant: 'destructive' });
+      toast({
+        title: t('common', 'errorTitle'),
+        description: t('signatureSection', 'geolocationUnsupportedDescription'),
+        variant: 'destructive',
+      });
     }
   };
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-4">Digital Signature</h3>
+      <h3 className="text-lg font-semibold mb-4">{t('signatureSection', 'heading')}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <SignaturePad 
@@ -82,12 +94,19 @@ export const SignatureSection = ({ signature, setSignature, onLocationCapture, d
             name="signed_location"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Location of Signing</FormLabel>
+                <FormLabel>{t('signatureSection', 'locationLabel')}</FormLabel>
                 <div className="flex items-center space-x-2">
                   <FormControl>
-                    <Input placeholder="Enter location or get GPS" {...field} />
+                    <Input placeholder={t('signatureSection', 'locationPlaceholder')} {...field} />
                   </FormControl>
-                  <Button type="button" variant="outline" onClick={handleGetLocation} disabled={disableLocationCapture}>Get Location</Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGetLocation}
+                    disabled={disableLocationCapture}
+                  >
+                    {t('signatureSection', 'getLocationButton')}
+                  </Button>
                 </div>
                 <FormMessage />
               </FormItem>

@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCompany } from "@/contexts/companyContext";
 import { Building2, ChevronDown, Users } from "lucide-react";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface CompanySelectorProps {
   showCard?: boolean;
@@ -21,6 +22,7 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
     switchCompany, 
     loading 
   } = useCompany();
+  const { t } = useTranslation();
 
   if (loading) {
     return (
@@ -41,17 +43,17 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
   const getRoleDisplayName = (role: string) => {
     switch (role) {
       case 'super_admin':
-        return 'Super Admin';
+        return t('companySelector', 'roleSuperAdmin');
       case 'admin':
-        return 'Admin';
+        return t('companySelector', 'roleAdmin');
       case 'seller':
-        return 'Seller';
+        return t('companySelector', 'roleSeller');
       case 'vet':
-        return 'Veterinarian';
+        return t('companySelector', 'roleVet');
       case 'agent':
-        return 'Agent';
+        return t('companySelector', 'roleAgent');
       case 'load_master':
-        return 'Load Master';
+        return t('companySelector', 'roleLoadMaster');
       default:
         return role;
     }
@@ -82,12 +84,12 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
         <CardHeader>
           <CardTitle className="flex items-center">
             <Building2 className="w-5 h-5 mr-2" />
-            Company Context
+            {t('companySelector', 'title')}
           </CardTitle>
           <CardDescription>
             {userCompanies.length === 1 
-              ? 'You are associated with one company'
-              : `Switch between your ${userCompanies.length} companies`
+              ? t('companySelector', 'singleCompanyDescription')
+              : t('companySelector', 'multipleCompaniesDescription').replace('{count}', String(userCompanies.length))
             }
           </CardDescription>
         </CardHeader>
@@ -99,7 +101,7 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
                 <div>
                   <p className="font-medium text-slate-900">{currentCompany?.companyName}</p>
                   <p className="text-sm text-slate-600">
-                    Your role: {getRoleDisplayName(currentCompany?.userRole || '')}
+                    {t('companySelector', 'yourRole').replace('{role}', getRoleDisplayName(currentCompany?.userRole || ''))}
                   </p>
                 </div>
               </div>
@@ -114,7 +116,7 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
                 onValueChange={handleCompanyChange}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a company" />
+                  <SelectValue placeholder={t('companySelector', 'selectPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {userCompanies.map((company) => (
@@ -139,7 +141,7 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
                     <div className="flex items-center space-x-2">
                       <Building2 className="w-4 h-4 text-emerald-600" />
                       <span className="text-sm font-medium text-emerald-900">
-                        Active: {currentCompany.companyName}
+                        {t('companySelector', 'activeLabel').replace('{company}', currentCompany.companyName)}
                       </span>
                     </div>
                     <Badge className={getRoleBadgeColor(currentCompany.userRole)}>
@@ -181,7 +183,7 @@ export const CompanySelector: React.FC<CompanySelectorProps> = ({
         onValueChange={handleCompanyChange}
       >
         <SelectTrigger className="w-auto min-w-[200px] h-8 text-sm">
-          <SelectValue placeholder="Select company">
+          <SelectValue placeholder={t('companySelector', 'selectCompactPlaceholder')}>
             {currentCompany && (
               <div className="flex items-center space-x-2">
                 <span>{currentCompany.companyName}</span>

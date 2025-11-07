@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { CompanyService, type CompanyUserRelationship } from "@/services/company
 import { InvitationManager } from "@/services/invitationManager";
 import { useAuth } from "@/contexts/auth";
 import { UserPlus, Mail, CheckCircle, Clock, XCircle, AlertCircle, Loader2, X } from "lucide-react";
+import { useTranslation } from "@/i18n/useTranslation";
 import type { Tables, Database } from "@/integrations/supabase/types";
 
 type Profile = Tables<'profiles'>;
@@ -39,6 +40,7 @@ export const CompanyUserRelationshipManager: React.FC<CompanyUserRelationshipMan
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const [relationships, setRelationships] = useState<(CompanyUserRelationship & { profiles: Profile })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,27 +51,27 @@ export const CompanyUserRelationshipManager: React.FC<CompanyUserRelationshipMan
   });
   const [inviteLoading, setInviteLoading] = useState(false);
 
-  useEffect(() => {
-    fetchRelationships();
-  }, [companyId]);
-
-  const fetchRelationships = async () => {
+  const fetchRelationships = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await CompanyService.getCompanyUsers(companyId);
       if (error) throw error;
       setRelationships(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching relationships:', error);
       toast({
-        title: "Error",
-        description: "Failed to load company users",
+        title: t('common', 'errorTitle'),
+        description: t('companyManagement', 'toastErrorLoadCompanies'),
         variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [companyId, t, toast]);
+
+  useEffect(() => {
+    fetchRelationships();
+  }, [fetchRelationships]);
 
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,8 +88,8 @@ export const CompanyUserRelationshipManager: React.FC<CompanyUserRelationshipMan
 
       if (userCheck.exists && !userCheck.needsCompanyRelationship) {
         toast({
-          title: "User Already Associated",
-          description: "This user is already associated with this company",
+          title: t('common', 'errorTitle'),
+          description: t('companyUsers', 'alreadyAssociated'),
           variant: "destructive"
         });
         return;
@@ -109,8 +111,8 @@ export const CompanyUserRelationshipManager: React.FC<CompanyUserRelationshipMan
         await sendCompanyRelationshipNotification(inviteForm.email, inviteForm.role);
 
         toast({
-          title: "Success",
-          description: `User added to ${companyName}`,
+          title: t('common', 'successTitle'),
+          description: t('companyUsers', 'userAdded').replace('{company}', companyName),
         });
       } else {
         // User doesn't exist - create pending invitation
@@ -128,8 +130,8 @@ export const CompanyUserRelationshipManager: React.FC<CompanyUserRelationshipMan
         await sendRegistrationInvitation(inviteForm.email, inviteForm.role);
 
         toast({
-          title: "Success",
-          description: `Invitation sent to ${inviteForm.email}. They will be added to the company when they register.`,
+          title: t('common', 'successTitle'),
+          description: t('companyManagement', 'toastInvitationNew').replace('{email}', inviteForm.email),
         });
       }
 
@@ -137,11 +139,11 @@ export const CompanyUserRelationshipManager: React.FC<CompanyUserRelationshipMan
       setShowInviteDialog(false);
       fetchRelationships();
       onRelationshipChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error inviting user:', error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to invite user",
+        title: t('common', 'errorTitle'),
+        description: error instanceof Error && error.message ? error.message : t('companyUsers', 'inviteFailed'),
         variant: "destructive"
       });
     } finally {
@@ -165,17 +167,17 @@ export const CompanyUserRelationshipManager: React.FC<CompanyUserRelationshipMan
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: `Relationship ${status === 'active' ? 'activated' : 'deactivated'}`,
+        title: t('common', 'successTitle'),
+        description: status === 'active' ? t('companyUsers', 'relationshipActivated') : t('companyUsers', 'relationshipDeactivated'),
       });
 
       fetchRelationships();
       onRelationshipChange?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating relationship status:', error);
       toast({
-        title: "Error",
-        description: "Failed to update relationship status",
+        title: t('common', 'errorTitle'),
+        description: t('companyUsers', 'statusUpdateFailed'),
         variant: "destructive"
       });
     }
@@ -210,19 +212,32 @@ export const CompanyUserRelationshipManager: React.FC<CompanyUserRelationshipMan
   const getRoleDisplayName = (role: string) => {
     switch (role) {
       case 'super_admin':
-        return 'Super Admin';
+        return t('companyUsers', 'roleSuperAdmin');
       case 'admin':
-        return 'Admin';
+        return t('companyUsers', 'roleAdmin');
       case 'seller':
-        return 'Seller';
+        return t('companyUsers', 'roleSeller');
       case 'vet':
-        return 'Veterinarian';
+        return t('companyUsers', 'roleVet');
       case 'agent':
-        return 'Agent';
+        return t('companyUsers', 'roleAgent');
       case 'load_master':
-        return 'Load Master';
+        return t('companyUsers', 'roleLoadMaster');
       default:
-        return role;
+        return t('companyUsers', 'unknownRole');
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'active':
+        return t('companyUsers', 'statusActive');
+      case 'pending':
+        return t('companyUsers', 'statusPending');
+      case 'inactive':
+        return t('companyUsers', 'statusInactive');
+      default:
+        return t('companyUsers', 'unknownStatus');
     }
   };
 
@@ -231,7 +246,7 @@ export const CompanyUserRelationshipManager: React.FC<CompanyUserRelationshipMan
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading relationships...</p>
+          <p className="text-slate-600">{t('companyUsers', 'loadingRelationships')}</p>
         </div>
       </div>
     );
@@ -241,54 +256,54 @@ export const CompanyUserRelationshipManager: React.FC<CompanyUserRelationshipMan
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">Company Users</h2>
-          <p className="text-slate-600">Manage user relationships for {companyName}</p>
+          <h2 className="text-xl font-semibold text-slate-900">{t('companyUsers', 'heading')}</h2>
+          <p className="text-slate-600">{t('companyUsers', 'subheading').replace('{company}', companyName)}</p>
         </div>
         <div className="flex items-center space-x-2">
           <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
           <DialogTrigger asChild>
             <Button>
               <UserPlus className="w-4 h-4 mr-2" />
-              Invite User
+              {t('companyUsers', 'inviteButton')}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Invite User to {companyName}</DialogTitle>
+              <DialogTitle>{t('companyUsers', 'inviteDialogTitle').replace('{company}', companyName)}</DialogTitle>
               <DialogDescription>
-                Invite a new user or add an existing user to this company.
+                {t('companyUsers', 'inviteDialogDescription')}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleInviteUser} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">{t('companyUsers', 'emailLabel')}</Label>
                 <Input
                   id="email"
                   type="email"
                   value={inviteForm.email}
                   onChange={(e) => setInviteForm(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="user@example.com"
+                  placeholder={t('companyUsers', 'emailPlaceholder')}
                   required
                   disabled={inviteLoading}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
+                <Label htmlFor="role">{t('companyUsers', 'roleLabel')}</Label>
                 <Select
                   value={inviteForm.role}
                   onValueChange={(value: CompanyInvitableRole) => setInviteForm(prev => ({ ...prev, role: value }))}
                   disabled={inviteLoading}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a role" />
+                    <SelectValue placeholder={t('companyUsers', 'rolePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="seller">Seller</SelectItem>
-                    <SelectItem value="vet">Veterinarian</SelectItem>
+                    <SelectItem value="admin">{t('companyUsers', 'roleAdmin')}</SelectItem>
+                    <SelectItem value="seller">{t('companyUsers', 'roleSeller')}</SelectItem>
+                    <SelectItem value="vet">{t('companyUsers', 'roleVet')}</SelectItem>
                     {/* <SelectItem value="agent">Agent</SelectItem> */}
-                    <SelectItem value="load_master">Load Master</SelectItem>
+                    <SelectItem value="load_master">{t('companyUsers', 'roleLoadMaster')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -300,11 +315,11 @@ export const CompanyUserRelationshipManager: React.FC<CompanyUserRelationshipMan
                   onClick={() => setShowInviteDialog(false)}
                   disabled={inviteLoading}
                 >
-                  Cancel
+                  {t('common', 'cancel')}
                 </Button>
                 <Button type="submit" disabled={inviteLoading}>
                   {inviteLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Send Invitation
+                  {inviteLoading ? t('companyUsers', 'sending') : t('companyUsers', 'sendInvitation')}
                 </Button>
               </div>
             </form>
@@ -313,7 +328,7 @@ export const CompanyUserRelationshipManager: React.FC<CompanyUserRelationshipMan
         {onClose && (
           <Button variant="outline" onClick={onClose}>
             <X className="w-4 h-4 mr-2" />
-            Close
+            {t('common', 'close')}
           </Button>
         )}
         </div>
@@ -333,67 +348,67 @@ export const CompanyUserRelationshipManager: React.FC<CompanyUserRelationshipMan
                   <div>
                     <h3 className="font-medium text-slate-900">
                       {relationship.profiles.first_name && relationship.profiles.last_name
-                        ? `${relationship.profiles.first_name} ${relationship.profiles.last_name}`
-                        : relationship.profiles.email
-                      }
-                    </h3>
+                      ? `${relationship.profiles.first_name} ${relationship.profiles.last_name}`
+                      : relationship.profiles.email
+                    }
+                  </h3>
                     <div className="flex items-center space-x-2 text-sm text-slate-600">
                       <Mail className="w-4 h-4" />
                       <span>{relationship.profiles.email}</span>
                     </div>
                     {relationship.created_at && (
-                      <p className="text-xs text-slate-500">
-                        Invited {new Date(relationship.created_at).toLocaleDateString()}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3">
-                  <Badge variant="outline">
-                    {getRoleDisplayName(relationship.relationship_type)}
-                  </Badge>
-                  <Badge className={getStatusColor(relationship.status)}>
-                    {getStatusIcon(relationship.status)}
-                    <span className="ml-1 capitalize">{relationship.status}</span>
-                  </Badge>
-                  
-                  {relationship.status === 'pending' && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleUpdateRelationshipStatus(relationship.id, 'active')}
-                    >
-                      Activate
-                    </Button>
-                  )}
-                  
-                  {relationship.status === 'active' && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleUpdateRelationshipStatus(relationship.id, 'inactive')}
-                    >
-                      Deactivate
-                    </Button>
+                    <p className="text-xs text-slate-500">
+                      {t('companyUsers', 'invitedOn').replace('{date}', new Date(relationship.created_at).toLocaleDateString())}
+                    </p>
                   )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+
+              <div className="flex items-center space-x-3">
+                <Badge variant="outline">
+                  {getRoleDisplayName(relationship.relationship_type)}
+                </Badge>
+                <Badge className={getStatusColor(relationship.status)}>
+                  {getStatusIcon(relationship.status)}
+                    <span className="ml-1 capitalize">{getStatusLabel(relationship.status)}</span>
+                </Badge>
+                
+                {relationship.status === 'pending' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleUpdateRelationshipStatus(relationship.id, 'active')}
+                  >
+                      {t('companyUsers', 'activateButton')}
+                  </Button>
+                )}
+                  
+                  {relationship.status === 'active' && (
+                    <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleUpdateRelationshipStatus(relationship.id, 'inactive')}
+                  >
+                      {t('companyUsers', 'deactivateButton')}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         ))}
 
         {relationships.length === 0 && (
           <Card>
             <CardContent className="text-center py-8">
               <UserPlus className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">No users yet</h3>
+              <h3 className="text-lg font-medium text-slate-900 mb-2">{t('companyUsers', 'emptyHeading')}</h3>
               <p className="text-slate-600 mb-4">
-                Start building your team by inviting users to join {companyName}.
+                {t('companyUsers', 'emptyDescription').replace('{company}', companyName)}
               </p>
               <Button onClick={() => setShowInviteDialog(true)}>
                 <UserPlus className="w-4 h-4 mr-2" />
-                Invite First User
+                {t('companyUsers', 'emptyCta')}
               </Button>
             </CardContent>
           </Card>

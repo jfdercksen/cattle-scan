@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { LivestockCalculations } from '@/lib/calculationEngine';
 import { LoadMasterAssignment } from '@/components/admin/LoadMasterAssignment';
+import { useTranslation } from '@/i18n/useTranslation';
 
 type LivestockListing = Tables<'livestock_listings'> & {
   companies?: {
@@ -77,36 +78,10 @@ const parseLoadingPoints = (lp: Json | string | null | undefined): LoadingPoint[
   });
 };
 
-const formatStatus = (status: string | null | undefined): string => {
-  if (!status) return 'N/A';
-  return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-};
-
-const DetailItem = ({ label, value }: { label: string; value: ReactNode }) => (
+const DetailItem = ({ label, value }: { label: ReactNode; value: ReactNode }) => (
   <div className="flex justify-between py-2 border-b">
     <span className="font-semibold text-gray-600">{label}</span>
     <span className="text-gray-800 text-right">{value}</span>
-  </div>
-);
-
-const BooleanDisplay = ({ value }: { value: boolean | null | undefined }) => (
-  <span className={value ? 'text-green-600' : 'text-red-600'}>{value ? 'Yes' : 'No'}</span>
-);
-
-const AddressDisplay = ({ address }: { address: Json | null | undefined }) => {
-  if (address && typeof address === 'object' && !Array.isArray(address)) {
-    const { farm_name, district, province } = address;
-    if (typeof farm_name === 'string' && typeof district === 'string' && typeof province === 'string') {
-      return <>{`${farm_name}, ${district}, ${province}`}</>;
-    }
-  }
-  return <>N/A</>;
-};
-
-const YesNoDisplay = ({ label, value }: { label: string; value: boolean | null | undefined }) => (
-  <div className="flex justify-between items-center">
-    <p className="text-sm font-medium text-gray-500">{label}</p>
-    <Badge variant={value ? 'default' : 'destructive'}>{value ? 'Yes' : 'No'}</Badge>
   </div>
 );
 
@@ -117,6 +92,64 @@ export const AdminViewListingPage = () => {
   const [declaration, setDeclaration] = useState<VeterinaryDeclaration | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
+
+  const formatStatus = (status: string | null | undefined): string => {
+    if (!status) return t('common', 'notAvailable');
+    switch (status) {
+      case 'draft':
+        return t('adminViewListing', 'statusDraft');
+      case 'submitted_to_vet':
+        return t('adminViewListing', 'statusSubmittedToVet');
+      case 'vet_completed':
+        return t('adminViewListing', 'statusVetCompleted');
+      case 'available_for_loading':
+        return t('adminViewListing', 'statusAvailableForLoading');
+      case 'assigned_to_load_master':
+        return t('adminViewListing', 'statusAssignedToLoadMaster');
+      case 'loading_completed':
+        return t('adminViewListing', 'statusLoadingCompleted');
+      case 'completed':
+        return t('adminViewListing', 'statusCompleted');
+      case 'approved':
+        return t('adminViewListing', 'statusApproved');
+      case 'rejected':
+        return t('adminViewListing', 'statusRejected');
+      case 'cancelled':
+        return t('adminViewListing', 'statusCancelled');
+      case 'expired':
+        return t('adminViewListing', 'statusExpired');
+      case 'in_progress':
+        return t('adminViewListing', 'statusInProgress');
+      case 'not_started':
+        return t('adminViewListing', 'statusNotStarted');
+      default:
+        return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+  };
+
+  const BooleanDisplay = ({ value }: { value: boolean | null | undefined }) => (
+    <span className={value ? 'text-green-600' : 'text-red-600'}>
+      {value ? t('common', 'yes') : t('common', 'no')}
+    </span>
+  );
+
+  const AddressDisplay = ({ address }: { address: Json | null | undefined }) => {
+    if (address && typeof address === 'object' && !Array.isArray(address)) {
+      const { farm_name, district, province } = address as Record<string, unknown>;
+      if (typeof farm_name === 'string' && typeof district === 'string' && typeof province === 'string') {
+        return <>{`${farm_name}, ${district}, ${province}`}</>;
+      }
+    }
+    return <>{t('common', 'notAvailable')}</>;
+  };
+
+  const YesNoDisplay = ({ label, value }: { label: ReactNode; value: boolean | null | undefined }) => (
+    <div className="flex justify-between items-center">
+      <p className="text-sm font-medium text-gray-500">{label}</p>
+      <Badge variant={value ? 'default' : 'destructive'}>{value ? t('common', 'yes') : t('common', 'no')}</Badge>
+    </div>
+  );
 
   const fetchListingAndDeclaration = useCallback(async () => {
     if (!listingId) return;
@@ -154,18 +187,18 @@ export const AdminViewListingPage = () => {
       }
     } catch (err) {
       console.error('Error fetching listing:', err);
-      setError('Failed to load listing details.');
+      setError(t('adminViewListing', 'errorMessage'));
     } finally {
       setLoading(false);
     }
-  }, [listingId]);
+  }, [listingId, t]);
 
   useEffect(() => {
     fetchListingAndDeclaration();
   }, [listingId, fetchListingAndDeclaration]);
 
   if (loading) {
-    return <div className="text-center p-4">Loading listing details...</div>;
+    return <div className="text-center p-4">{t('adminViewListing', 'loadingMessage')}</div>;
   }
 
   if (error) {
@@ -173,12 +206,12 @@ export const AdminViewListingPage = () => {
   }
 
   if (!listing) {
-    return <div className="text-center p-4">Listing not found.</div>;
+    return <div className="text-center p-4">{t('adminViewListing', 'notFoundMessage')}</div>;
   }
 
   // Derive livestock info and counts from loading_points (new schema)
-  let derivedLivestockType: string = 'N/A';
-  let derivedBredOrBought: string = 'N/A';
+  let derivedLivestockType: string = t('common', 'notAvailable');
+  let derivedBredOrBought: string = t('common', 'notAvailable');
   const loadingPoints = parseLoadingPoints(listing.loading_points as Json | string | null | undefined);
   const types = new Set<string>();
   const bob = new Set<string>();
@@ -209,48 +242,71 @@ export const AdminViewListingPage = () => {
     if (bname) breederNames.add(bname);
   }
 
-  let derivedMalesCastrated: string = 'N/A';
-  if (malesCastrationSet.size === 1) derivedMalesCastrated = malesCastrationSet.has(true) ? 'Yes' : 'No';
-  else if (malesCastrationSet.size > 1) derivedMalesCastrated = 'Mixed';
+  let derivedMalesCastrated: string = t('common', 'notAvailable');
+  if (malesCastrationSet.size === 1) derivedMalesCastrated = malesCastrationSet.has(true) ? t('common', 'yes') : t('common', 'no');
+  else if (malesCastrationSet.size > 1) derivedMalesCastrated = t('adminViewListing', 'mixedValue');
 
-  let derivedIsBreederSeller: string = 'N/A';
-  if (breederSellerSet.size === 1) derivedIsBreederSeller = breederSellerSet.has(true) ? 'Yes' : 'No';
-  else if (breederSellerSet.size > 1) derivedIsBreederSeller = 'Mixed';
+  let derivedIsBreederSeller: string = t('common', 'notAvailable');
+  if (breederSellerSet.size === 1) derivedIsBreederSeller = breederSellerSet.has(true) ? t('common', 'yes') : t('common', 'no');
+  else if (breederSellerSet.size > 1) derivedIsBreederSeller = t('adminViewListing', 'mixedValue');
 
-  let derivedBreederName: string = 'N/A';
+  let derivedBreederName: string = t('common', 'notAvailable');
   if (breederNames.size === 1) derivedBreederName = Array.from(breederNames)[0];
-  else if (breederNames.size > 1) derivedBreederName = 'Mixed';
+  else if (breederNames.size > 1) derivedBreederName = t('adminViewListing', 'mixedValue');
 
   if (types.size > 1) {
-    derivedLivestockType = 'CATTLE AND SHEEP';
+    derivedLivestockType = t('livestockDetailsSection', 'livestockTypeOptionCattleAndSheep');
   } else if (types.size === 1) {
     const only = Array.from(types)[0];
-    derivedLivestockType = only === 'CATTLE' || only === 'SHEEP' ? only : 'N/A';
+    if (only === 'CATTLE') {
+      derivedLivestockType = t('livestockDetailsSection', 'livestockTypeOptionCattle');
+    } else if (only === 'SHEEP') {
+      derivedLivestockType = t('livestockDetailsSection', 'livestockTypeOptionSheep');
+    } else {
+      derivedLivestockType = t('common', 'notAvailable');
+    }
   } else {
-    if (cattleTotal > 0 && sheepTotal > 0) derivedLivestockType = 'CATTLE AND SHEEP';
-    else if (cattleTotal > 0) derivedLivestockType = 'CATTLE';
-    else if (sheepTotal > 0) derivedLivestockType = 'SHEEP';
+    if (cattleTotal > 0 && sheepTotal > 0) {
+      derivedLivestockType = t('livestockDetailsSection', 'livestockTypeOptionCattleAndSheep');
+    } else if (cattleTotal > 0) {
+      derivedLivestockType = t('livestockDetailsSection', 'livestockTypeOptionCattle');
+    } else if (sheepTotal > 0) {
+      derivedLivestockType = t('livestockDetailsSection', 'livestockTypeOptionSheep');
+    }
   }
 
-  if (bob.size > 1) derivedBredOrBought = 'Mixed';
-  else if (bob.size === 1) derivedBredOrBought = Array.from(bob)[0];
+  if (bob.size > 1) derivedBredOrBought = t('adminViewListing', 'mixedValue');
+  else if (bob.size === 1) {
+    const only = Array.from(bob)[0];
+    derivedBredOrBought = only === 'BRED'
+      ? t('livestockDetailsSection', 'bredOption')
+      : only === 'BOUGHT IN'
+        ? t('livestockDetailsSection', 'boughtOption')
+        : t('common', 'notAvailable');
+  }
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8">
       <Button variant="outline" size="sm" onClick={() => navigate(-1)} className="mb-4">
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Dashboard
+        {t('adminViewListing', 'backButtonLabel')}
       </Button>
 
       <Card>
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle>Listing Details</CardTitle>
+              <CardTitle>{t('adminViewListing', 'cardTitle')}</CardTitle>
               <CardDescription>
-                Reference ID: {listing.reference_id}
+                {t('adminViewListing', 'cardReference').replace('{reference}', listing.reference_id ?? t('common', 'notAvailable'))}
                 {listing.companies && (
-                  <><br />Company: {listing.companies.name || 'Unknown Company'}</>
+                  <>
+                    <br />
+                    {t('adminViewListing', 'cardCompany').replace(
+                      '{company}',
+                      listing.companies.name || t('adminViewListing', 'unknownCompany')
+                    )}
+                  </>
                 )}
               </CardDescription>
             </div>
@@ -260,57 +316,57 @@ export const AdminViewListingPage = () => {
         <CardContent>
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1">
-              <AccordionTrigger>General Information</AccordionTrigger>
+              <AccordionTrigger>{t('adminViewListing', 'accordionGeneralTitle')}</AccordionTrigger>
               <AccordionContent>
-                <DetailItem label="Owner Name" value={listing.owner_name} />
-                <DetailItem label="Livestock Type" value={derivedLivestockType} />
-                <DetailItem label="Bred or Bought" value={derivedBredOrBought} />
-                <DetailItem label="Breeder Name" value={derivedBreederName} />
-                <DetailItem label="Is Breeder the Seller?" value={derivedIsBreederSeller} />
+                <DetailItem label={t('adminViewListing', 'ownerNameLabel')} value={listing.owner_name ?? t('common', 'notAvailable')} />
+                <DetailItem label={t('adminViewListing', 'livestockTypeLabel')} value={derivedLivestockType} />
+                <DetailItem label={t('adminViewListing', 'bredOrBoughtLabel')} value={derivedBredOrBought} />
+                <DetailItem label={t('adminViewListing', 'breederNameLabel')} value={derivedBreederName} />
+                <DetailItem label={t('adminViewListing', 'breederSellerLabel')} value={derivedIsBreederSeller} />
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="item-2">
-              <AccordionTrigger>Livestock Details</AccordionTrigger>
+              <AccordionTrigger>{t('adminViewListing', 'accordionLivestockTitle')}</AccordionTrigger>
               <AccordionContent>
-                <DetailItem label="Total Livestock" value={maleTotal + femaleTotal} />
-                <DetailItem label="Number of Males" value={maleTotal} />
-                <DetailItem label="Number of Females" value={femaleTotal} />
-                <DetailItem label="Males Castrated" value={derivedMalesCastrated} />
+                <DetailItem label={t('adminViewListing', 'totalLivestockLabel')} value={maleTotal + femaleTotal} />
+                <DetailItem label={t('adminViewListing', 'numberOfMalesLabel')} value={maleTotal} />
+                <DetailItem label={t('adminViewListing', 'numberOfFemalesLabel')} value={femaleTotal} />
+                <DetailItem label={t('adminViewListing', 'malesCastratedLabel')} value={derivedMalesCastrated} />
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="item-4">
-              <AccordionTrigger>Location & Loading Points</AccordionTrigger>
+              <AccordionTrigger>{t('adminViewListing', 'accordionLocationTitle')}</AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-4">
                   {/* Basic Location Information */}
                   <div className="space-y-2">
-                    <DetailItem label="Location" value={listing.location} />
-                    <DetailItem label="Livestock Moved Out of Boundaries" value={<BooleanDisplay value={listing.livestock_moved_out_of_boundaries} />} />
+                    <DetailItem label={t('adminViewListing', 'locationLabel')} value={listing.location ?? t('common', 'notAvailable')} />
+                    <DetailItem label={t('adminViewListing', 'movedOutOfBoundariesLabel')} value={<BooleanDisplay value={listing.livestock_moved_out_of_boundaries} />} />
                     {listing.livestock_moved_out_of_boundaries && 
                         <>
-                            <DetailItem label="Moved Location From" value={<AddressDisplay address={listing.livestock_moved_location} />} /> 
-                            <DetailItem label="Moved Location To" value={<AddressDisplay address={listing.livestock_moved_location_to} />} />
+                            <DetailItem label={t('adminViewListing', 'movedFromLabel')} value={<AddressDisplay address={listing.livestock_moved_location} />} /> 
+                            <DetailItem label={t('adminViewListing', 'movedToLabel')} value={<AddressDisplay address={listing.livestock_moved_location_to} />} />
                         </>
                     }
                   </div>
 
                   {/* Loading Summary */}
                   <div className="p-4 border rounded-md bg-gray-50">
-                    <h4 className="text-lg font-semibold mb-3">Livestock Loading Summary</h4>
+                    <h4 className="text-lg font-semibold mb-3">{t('adminViewListing', 'loadingSummaryHeading')}</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {/* Only show cattle count if > 0 */}
                       {cattleTotal > 0 && (
                         <div>
-                          <p><strong>Total Cattle:</strong> {cattleTotal}</p>
+                          <p><strong>{t('adminViewListing', 'totalCattleLabel')}</strong> {cattleTotal}</p>
                         </div>
                       )}
 
                       {/* Only show sheep count if > 0 */}
                       {sheepTotal > 0 && (
                         <div>
-                          <p><strong>Total Sheep:</strong> {sheepTotal}</p>
+                          <p><strong>{t('adminViewListing', 'totalSheepLabel')}</strong> {sheepTotal}</p>
                         </div>
                       )}
 
@@ -319,7 +375,7 @@ export const AdminViewListingPage = () => {
                           {LivestockCalculations.determineLivestockType(
                             cattleTotal,
                             sheepTotal
-                          ) || "No livestock"}
+                          ) || t('adminViewListing', 'noLivestockLabel')}
                         </Badge>
                       </div>
                     </div>
@@ -335,7 +391,7 @@ export const AdminViewListingPage = () => {
                       if (points.length > 0) {
                         return (
                           <div className="mt-4">
-                            <h5 className="font-medium mb-3">Loading Points Breakdown</h5>
+                            <h5 className="font-medium mb-3">{t('adminViewListing', 'loadingPointsHeading')}</h5>
                             <div className="space-y-3">
                               {points.map((point: DisplayPoint, index: number) => {
                                 const males = point.details?.number_of_males ?? 0;
@@ -351,38 +407,38 @@ export const AdminViewListingPage = () => {
                                 return (
                                   <div key={index} className="p-3 bg-white border rounded-md">
                                     <div className="flex justify-between items-start mb-2">
-                                      <h6 className="font-medium text-sm">Loading Point {index + 1}</h6>
+                                      <h6 className="font-medium text-sm">{t('adminViewListing', 'loadingPointTitle').replace('{index}', String(index + 1))}</h6>
                                       <div className="flex gap-2">
                                         {hasCattle && (
                                           <Badge variant="secondary" className="text-xs">
-                                            {cattleCount} Cattle
+                                            {t('adminViewListing', 'loadingPointCattleBadge').replace('{count}', String(cattleCount))}
                                           </Badge>
                                         )}
                                         {hasSheep && (
                                           <Badge variant="secondary" className="text-xs">
-                                            {sheepCount} Sheep
+                                            {t('adminViewListing', 'loadingPointSheepBadge').replace('{count}', String(sheepCount))}
                                           </Badge>
                                         )}
                                       </div>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-gray-600">
                                       <div>
-                                        <strong>Birth:</strong> {point.birth_address?.farm_name || 'N/A'}, {point.birth_address?.district || 'N/A'}, {point.birth_address?.province || 'N/A'}
+                                        <strong>{t('adminViewListing', 'birthLabel')}</strong> {point.birth_address?.farm_name || t('common', 'notAvailable')}, {point.birth_address?.district || t('common', 'notAvailable')}, {point.birth_address?.province || t('common', 'notAvailable')}
                                       </div>
                                       <div>
-                                        <strong>Current:</strong> {point.is_current_same_as_birth ? 'Same as birth address' : `${point.current_address?.farm_name || 'N/A'}, ${point.current_address?.district || 'N/A'}, ${point.current_address?.province || 'N/A'}`}
+                                        <strong>{t('adminViewListing', 'currentLabel')}</strong> {point.is_current_same_as_birth ? t('adminViewListing', 'sameAsBirthAddress') : `${point.current_address?.farm_name || t('common', 'notAvailable')}, ${point.current_address?.district || t('common', 'notAvailable')}, ${point.current_address?.province || t('common', 'notAvailable')}`}
                                       </div>
                                       <div>
-                                        <strong>Loading:</strong> {point.is_loading_same_as_current ? 'Same as current address' : `${point.loading_address?.farm_name || 'N/A'}, ${point.loading_address?.district || 'N/A'}, ${point.loading_address?.province || 'N/A'}`}
+                                        <strong>{t('adminViewListing', 'loadingLabel')}</strong> {point.is_loading_same_as_current ? t('adminViewListing', 'sameAsCurrentAddress') : `${point.loading_address?.farm_name || t('common', 'notAvailable')}, ${point.loading_address?.district || t('common', 'notAvailable')}, ${point.loading_address?.province || t('common', 'notAvailable')}`}
                                       </div>
                                     </div>
                                     <div className="mt-2 text-xs text-gray-700">
                                       <div>
-                                        <strong>Male/Female:</strong> {males} / {females}
+                                        <strong>{t('adminViewListing', 'maleFemaleLabel')}</strong> {males} / {females}
                                       </div>
                                       {isCattle && typeof point.details?.males_castrated === 'boolean' && (
                                         <div>
-                                          <strong>Males Castrated:</strong> {point.details.males_castrated ? 'Yes' : 'No'}
+                                          <strong>{t('adminViewListing', 'malesCastratedInlineLabel')}</strong> {point.details.males_castrated ? t('common', 'yes') : t('common', 'no')}
                                         </div>
                                       )}
                                     </div>
@@ -403,28 +459,28 @@ export const AdminViewListingPage = () => {
             </AccordionItem>
 
             <AccordionItem value="item-5">
-              <AccordionTrigger>Declarations</AccordionTrigger>
+              <AccordionTrigger>{t('adminViewListing', 'accordionDeclarationsTitle')}</AccordionTrigger>
               <AccordionContent>
-                <DetailItem label="No other cloven-hooved animals on the truck" value={<BooleanDisplay value={listing.declaration_no_cloven_hooved_animals} />} />
-                <DetailItem label="Livestock kept away from others" value={<BooleanDisplay value={listing.declaration_livestock_kept_away} />} />
-                <DetailItem label="No animal origin feed" value={<BooleanDisplay value={listing.declaration_no_animal_origin_feed} />} />
-                <DetailItem label="Veterinary products registered" value={<BooleanDisplay value={listing.declaration_veterinary_products_registered} />} />
-                <DetailItem label="No Foot and Mouth Disease symptoms" value={<BooleanDisplay value={listing.declaration_no_foot_mouth_disease} />} />
-                <DetailItem label="No Foot and Mouth Disease on farm" value={<BooleanDisplay value={listing.declaration_no_foot_mouth_disease_farm} />} />
-                <DetailItem label="Livestock from South Africa" value={<BooleanDisplay value={listing.declaration_livestock_south_africa} />} />
-                <DetailItem label="No gene editing or cloning" value={<BooleanDisplay value={listing.declaration_no_gene_editing} />} />
+                <DetailItem label={t('adminViewListing', 'declarationNoClovenHoovedLabel')} value={<BooleanDisplay value={listing.declaration_no_cloven_hooved_animals} />} />
+                <DetailItem label={t('adminViewListing', 'declarationLivestockKeptAwayLabel')} value={<BooleanDisplay value={listing.declaration_livestock_kept_away} />} />
+                <DetailItem label={t('adminViewListing', 'declarationNoAnimalFeedLabel')} value={<BooleanDisplay value={listing.declaration_no_animal_origin_feed} />} />
+                <DetailItem label={t('adminViewListing', 'declarationProductsRegisteredLabel')} value={<BooleanDisplay value={listing.declaration_veterinary_products_registered} />} />
+                <DetailItem label={t('adminViewListing', 'declarationNoFootMouthSymptomsLabel')} value={<BooleanDisplay value={listing.declaration_no_foot_mouth_disease} />} />
+                <DetailItem label={t('adminViewListing', 'declarationNoFootMouthFarmLabel')} value={<BooleanDisplay value={listing.declaration_no_foot_mouth_disease_farm} />} />
+                <DetailItem label={t('adminViewListing', 'declarationSouthAfricaLabel')} value={<BooleanDisplay value={listing.declaration_livestock_south_africa} />} />
+                <DetailItem label={t('adminViewListing', 'declarationNoGeneEditingLabel')} value={<BooleanDisplay value={listing.declaration_no_gene_editing} />} />
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="item-6">
-              <AccordionTrigger>Loading Information</AccordionTrigger>
+              <AccordionTrigger>{t('adminViewListing', 'accordionLoadingTitle')}</AccordionTrigger>
               <AccordionContent>
-                <DetailItem label="Number of Cattle Loaded" value={cattleTotal} />
-                <DetailItem label="Number of Sheep Loaded" value={sheepTotal} />
-                <DetailItem label="Truck Registration Number" value={listing.truck_registration_number} />
+                <DetailItem label={t('adminViewListing', 'loadingCattleLoadedLabel')} value={cattleTotal} />
+                <DetailItem label={t('adminViewListing', 'loadingSheepLoadedLabel')} value={sheepTotal} />
+                <DetailItem label={t('adminViewListing', 'loadingTruckRegistrationLabel')} value={listing.truck_registration_number ?? t('common', 'notAvailable')} />
                 {listing.signature_data && (
                   <div className="py-2">
-                    <span className="font-semibold text-gray-600">Signature</span>
+                    <span className="font-semibold text-gray-600">{t('adminViewListing', 'loadingSignatureLabel')}</span>
                     <div className="mt-2 border rounded-md p-2 bg-gray-50">
                       <img src={listing.signature_data as string} alt="Signature" className="mx-auto" />
                     </div>
@@ -435,25 +491,25 @@ export const AdminViewListingPage = () => {
 
             {/* Veterinary Declaration Section */}
             <AccordionItem value="item-7">
-              <AccordionTrigger>Veterinary Declaration</AccordionTrigger>
+              <AccordionTrigger>{t('adminViewListing', 'accordionVeterinaryTitle')}</AccordionTrigger>
               <AccordionContent>
                 {declaration ? (
                   <div className="space-y-4">
-                    <DetailItem label="Veterinarian Name" value={declaration.veterinarian_name} />
-                    <DetailItem label="Registration Number" value={declaration.veterinarian_registration_number} />
+                    <DetailItem label={t('adminViewListing', 'vetNameLabel')} value={declaration.veterinarian_name ?? t('common', 'notAvailable')} />
+                    <DetailItem label={t('adminViewListing', 'vetRegistrationLabel')} value={declaration.veterinarian_registration_number ?? t('common', 'notAvailable')} />
                     <Separator />
-                    <DetailItem label="Cattle Visually Inspected" value={<BooleanDisplay value={declaration.cattle_visually_inspected} />} />
-                    <DetailItem label="Cattle Mouthed" value={<BooleanDisplay value={declaration.cattle_mouthed} />} />
-                    <DetailItem label="Sheep Visually Inspected" value={<BooleanDisplay value={declaration.sheep_visually_inspected} />} />
-                    <DetailItem label="Sheep Mouthed" value={<BooleanDisplay value={declaration.sheep_mouthed} />} />
+                    <DetailItem label={t('adminViewListing', 'vetCattleVisuallyInspectedLabel')} value={<BooleanDisplay value={declaration.cattle_visually_inspected} />} />
+                    <DetailItem label={t('adminViewListing', 'vetCattleMouthedLabel')} value={<BooleanDisplay value={declaration.cattle_mouthed} />} />
+                    <DetailItem label={t('adminViewListing', 'vetSheepVisuallyInspectedLabel')} value={<BooleanDisplay value={declaration.sheep_visually_inspected} />} />
+                    <DetailItem label={t('adminViewListing', 'vetSheepMouthedLabel')} value={<BooleanDisplay value={declaration.sheep_mouthed} />} />
                     <Separator />
-                    <DetailItem label="Foot and Mouth Symptoms" value={<BooleanDisplay value={declaration.foot_and_mouth_symptoms} />} />
-                    <DetailItem label="Lumpy Skin Disease Symptoms" value={<BooleanDisplay value={declaration.lumpy_skin_disease_symptoms} />} />
-                    <DetailItem label="No Foot and Mouth case in 10km" value={<BooleanDisplay value={declaration.foot_and_mouth_case_in_10km} />} />
-                    <DetailItem label="No Rift Valley Fever case in 10km" value={<BooleanDisplay value={declaration.rift_valley_fever_case_in_10km} />} />
+                    <DetailItem label={t('adminViewListing', 'vetFootMouthSymptomsLabel')} value={<BooleanDisplay value={declaration.foot_and_mouth_symptoms} />} />
+                    <DetailItem label={t('adminViewListing', 'vetLumpySkinSymptomsLabel')} value={<BooleanDisplay value={declaration.lumpy_skin_disease_symptoms} />} />
+                    <DetailItem label={t('adminViewListing', 'vetFootMouth10kmLabel')} value={<BooleanDisplay value={declaration.foot_and_mouth_case_in_10km} />} />
+                    <DetailItem label={t('adminViewListing', 'vetRiftValley10kmLabel')} value={<BooleanDisplay value={declaration.rift_valley_fever_case_in_10km} />} />
                   </div>
                 ) : (
-                  <p className="text-gray-500">No veterinary declaration has been submitted for this listing yet.</p>
+                  <p className="text-gray-500">{t('adminViewListing', 'vetDeclarationMissingMessage')}</p>
                 )}
               </AccordionContent>
             </AccordionItem>

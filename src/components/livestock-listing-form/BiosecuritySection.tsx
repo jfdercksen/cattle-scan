@@ -12,10 +12,12 @@ import { YesNoSwitch } from '@/components/ui/YesNoSwitch';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { LivestockListingFormData } from '@/lib/schemas/livestockListingSchema';
 import { Label } from '@/components/ui/label';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export const BiosecuritySection = () => {
   const form = useFormContext<LivestockListingFormData>();
   const { userProfile } = useUserProfile();
+  const { t } = useTranslation();
 
   const isBreederSeller = form.watch('is_breeder_seller');
   const { setValue } = form;
@@ -33,7 +35,7 @@ export const BiosecuritySection = () => {
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-4">Supplier Identity & Location</h3>
+      <h3 className="text-lg font-semibold mb-4">{t('biosecuritySection', 'heading')}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField
           control={form.control}
@@ -41,7 +43,7 @@ export const BiosecuritySection = () => {
           render={({ field }) => (
             <FormItem>
               <div className="flex items-center justify-between rounded-md border p-4 h-full">
-                <FormLabel>Is the breeder the seller?</FormLabel>
+                <FormLabel>{t('biosecuritySection', 'breederSellerLabel')}</FormLabel>
                 <FormControl>
                   <YesNoSwitch value={field.value} onChange={field.onChange} />
                 </FormControl>
@@ -57,9 +59,9 @@ export const BiosecuritySection = () => {
             name="breeder_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Breeder Name</FormLabel>
+                <FormLabel>{t('biosecuritySection', 'breederNameLabel')}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter breeder name" {...field} />
+                  <Input placeholder={t('biosecuritySection', 'breederNamePlaceholder')} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -75,7 +77,7 @@ export const BiosecuritySection = () => {
           render={({ field }) => (
             <FormItem>
               <div className="flex items-center justify-between rounded-md border p-4 h-full">
-                <FormLabel>Has livestock been moved out of property boundaries?</FormLabel>
+                <FormLabel>{t('biosecuritySection', 'movedOutLabel')}</FormLabel>
                 <FormControl>
                   <YesNoSwitch value={field.value} onChange={field.onChange} />
                 </FormControl>
@@ -87,16 +89,16 @@ export const BiosecuritySection = () => {
 
         {form.watch('livestock_moved_out_of_boundaries') && (
           <div className="md:col-span-2">
-            <Label>Location where livestock was moved from</Label>
+            <Label>{t('biosecuritySection', 'movedFromHeading')}</Label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
                 <FormField
                   control={form.control}
                   name="livestock_moved_location.farm_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Farm Name</FormLabel>
+                      <FormLabel className="text-xs">{t('biosecuritySection', 'farmNameLabel')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter farm name" {...field} />
+                        <Input placeholder={t('biosecuritySection', 'farmNamePlaceholder')} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -107,9 +109,9 @@ export const BiosecuritySection = () => {
                   name="livestock_moved_location.district"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">District</FormLabel>
+                      <FormLabel className="text-xs">{t('biosecuritySection', 'districtLabel')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter district" {...field} />
+                        <Input placeholder={t('biosecuritySection', 'districtPlaceholder')} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -120,9 +122,9 @@ export const BiosecuritySection = () => {
                   name="livestock_moved_location.province"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Province</FormLabel>
+                      <FormLabel className="text-xs">{t('biosecuritySection', 'provinceLabel')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter province" {...field} />
+                        <Input placeholder={t('biosecuritySection', 'provincePlaceholder')} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -131,16 +133,16 @@ export const BiosecuritySection = () => {
             </div>
 
             <div className="mt-4">
-            <Label>Location where livestock was moved to</Label>
+            <Label>{t('biosecuritySection', 'movedToHeading')}</Label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
                 <FormField
                   control={form.control}
                   name="livestock_moved_location_to.farm_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Farm Name</FormLabel>
+                      <FormLabel className="text-xs">{t('biosecuritySection', 'farmNameLabel')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter farm name" {...field} />
+                        <Input placeholder={t('biosecuritySection', 'farmNamePlaceholder')} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -151,9 +153,9 @@ export const BiosecuritySection = () => {
                   name="livestock_moved_location_to.district"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">District</FormLabel>
+                      <FormLabel className="text-xs">{t('biosecuritySection', 'districtLabel')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter district" {...field} />
+                        <Input placeholder={t('biosecuritySection', 'districtPlaceholder')} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -164,9 +166,9 @@ export const BiosecuritySection = () => {
                   name="livestock_moved_location_to.province"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Province</FormLabel>
+                      <FormLabel className="text-xs">{t('biosecuritySection', 'provinceLabel')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter province" {...field} />
+                        <Input placeholder={t('biosecuritySection', 'provincePlaceholder')} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -176,16 +178,16 @@ export const BiosecuritySection = () => {
             </div>
 
             <div className="mt-4">
-              <Label>When was the livestock moved there?</Label>
+              <Label>{t('biosecuritySection', 'movedWhenHeading')}</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                 <FormField
                   control={form.control}
                   name="livestock_moved_year"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Year</FormLabel>
+                      <FormLabel className="text-xs">{t('biosecuritySection', 'yearLabel')}</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="Enter year" {...field} />
+                        <Input type="number" placeholder={t('biosecuritySection', 'yearPlaceholder')} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -196,9 +198,9 @@ export const BiosecuritySection = () => {
                   name="livestock_moved_month"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Month</FormLabel>
+                      <FormLabel className="text-xs">{t('biosecuritySection', 'monthLabel')}</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="Enter month" {...field} />
+                        <Input type="number" placeholder={t('biosecuritySection', 'monthPlaceholder')} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

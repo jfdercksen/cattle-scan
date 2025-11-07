@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Eye } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
+import { useTranslation } from '@/i18n/useTranslation';
 
 type LivestockOffer = Tables<'livestock_offers'> & {
   livestock_listings: Tables<'livestock_listings'>;
@@ -21,8 +22,9 @@ export const AdminOffersTable = ({ onViewOffer }: AdminOffersTableProps) => {
   const [offers, setOffers] = useState<LivestockOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
-  const fetchOffers = async () => {
+  const fetchOffers = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('livestock_offers')
@@ -37,18 +39,19 @@ export const AdminOffersTable = ({ onViewOffer }: AdminOffersTableProps) => {
     } catch (error) {
       console.error('Error fetching offers:', error);
       toast({
-        title: "Error",
-        description: "Failed to load offers",
+        title: t('common', 'errorTitle'),
+        description: t('adminOffers', 'failedToLoad'),
         variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     fetchOffers();
-  }, []);
+  }, [fetchOffers]);
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -63,11 +66,31 @@ export const AdminOffersTable = ({ onViewOffer }: AdminOffersTableProps) => {
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return t('adminOffers', 'statusPending');
+      case 'accepted':
+        return t('adminOffers', 'statusAccepted');
+      case 'declined':
+        return t('adminOffers', 'statusDeclined');
+      default:
+        return status;
+    }
+  };
+
+  const formatCurrencyKg = (value: number | null | undefined) => {
+    if (value === null || value === undefined) {
+      return t('common', 'notAvailable');
+    }
+    return `${t('adminOffers', 'currencyPrefix')}${value}${t('adminOffers', 'offerAmountSuffix')}`;
+  };
+
   if (loading) {
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="text-center">Loading offers...</div>
+          <div className="text-center">{t('adminOffers', 'loading')}</div>
         </CardContent>
       </Card>
     );
@@ -76,27 +99,27 @@ export const AdminOffersTable = ({ onViewOffer }: AdminOffersTableProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>My Offers</CardTitle>
+        <CardTitle>{t('adminOffers', 'title')}</CardTitle>
         <CardDescription>
-          View all offers you've created for livestock listings
+          {t('adminOffers', 'description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {offers.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            No offers found
+            {t('adminOffers', 'empty')}
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Listing</TableHead>
-                <TableHead>Offer Amount</TableHead>
-                <TableHead>Valid Until</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Response Date</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t('adminOffers', 'listingColumn')}</TableHead>
+                <TableHead>{t('adminOffers', 'offerAmountColumn')}</TableHead>
+                <TableHead>{t('adminOffers', 'validUntilColumn')}</TableHead>
+                <TableHead>{t('adminOffers', 'statusColumn')}</TableHead>
+                <TableHead>{t('adminOffers', 'responseDateColumn')}</TableHead>
+                <TableHead>{t('adminOffers', 'createdColumn')}</TableHead>
+                <TableHead>{t('adminOffers', 'actionsColumn')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -105,7 +128,7 @@ export const AdminOffersTable = ({ onViewOffer }: AdminOffersTableProps) => {
                   <TableCell className="font-medium">
                     {offer.livestock_listings.owner_name} - {offer.livestock_listings.breed}
                   </TableCell>
-                  <TableCell>R{offer.chalmar_beef_offer}/KG</TableCell>
+                  <TableCell>{formatCurrencyKg(offer.chalmar_beef_offer)}</TableCell>
                   <TableCell>
                     {new Date(offer.offer_valid_until_date).toLocaleDateString()} {offer.offer_valid_until_time}
                   </TableCell>
@@ -114,13 +137,13 @@ export const AdminOffersTable = ({ onViewOffer }: AdminOffersTableProps) => {
                       variant="secondary" 
                       className={getStatusBadgeColor(offer.status)}
                     >
-                      {offer.status}
+                      {getStatusLabel(offer.status)}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     {offer.seller_response_date 
                       ? new Date(offer.seller_response_date).toLocaleDateString()
-                      : '-'
+                      : t('common', 'notAvailable')
                     }
                   </TableCell>
                   <TableCell>
@@ -133,7 +156,7 @@ export const AdminOffersTable = ({ onViewOffer }: AdminOffersTableProps) => {
                       onClick={() => onViewOffer(offer)}
                     >
                       <Eye className="w-4 h-4 mr-2" />
-                      View Details
+                      {t('adminOffers', 'viewDetails')}
                     </Button>
                   </TableCell>
                 </TableRow>

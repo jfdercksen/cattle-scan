@@ -4,6 +4,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { signaturePadController } from '@/lib/signaturePadController';
+import { useTranslation } from '@/i18n/useTranslation';
 
 interface SignaturePadProps {
   onSignatureChange: (signature: string | null) => void;
@@ -29,6 +30,15 @@ export function SignaturePad({ onSignatureChange, signature }: SignaturePadProps
     devicePixelRatio: 1,
     touchSupport: false,
   });
+  const { t } = useTranslation();
+
+  const qualityLabelMap: Record<'poor' | 'fair' | 'good' | 'excellent', 'qualityPoor' | 'qualityFair' | 'qualityGood' | 'qualityExcellent'> = {
+    poor: 'qualityPoor',
+    fair: 'qualityFair',
+    good: 'qualityGood',
+    excellent: 'qualityExcellent',
+  };
+  const currentQualityLabel = signatureQuality ? t('signaturePad', qualityLabelMap[signatureQuality]) : '';
 
   // Detect device capabilities and set up touch calibration
   useEffect(() => {
@@ -166,10 +176,10 @@ export function SignaturePad({ onSignatureChange, signature }: SignaturePadProps
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          Digital Signature
+          {t('signaturePad', 'cardTitle')}
           {deviceInfo.isMobile && (
             <span className="text-xs text-gray-500 font-normal">
-              Touch optimized
+              {t('signaturePad', 'mobileBadge')}
             </span>
           )}
         </CardTitle>
@@ -188,71 +198,73 @@ export function SignaturePad({ onSignatureChange, signature }: SignaturePadProps
             {...signatureOptions}
           />
         </div>
-        
-        {/* Touch accuracy indicator for mobile */}
+
         {deviceInfo.isMobile && (
           <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
-            💡 Tip: Touch accuracy has been calibrated for your device. Sign naturally - your signature will be saved automatically.
+            {t('signaturePad', 'touchTip')}
           </div>
         )}
-        
-        {/* Signature quality indicator */}
+
         {signatureQuality && !isEmpty && (
-          <div className={`text-xs p-2 rounded flex items-center gap-2 ${
-            signatureQuality === 'excellent' ? 'bg-green-50 text-green-700' :
-            signatureQuality === 'good' ? 'bg-blue-50 text-blue-700' :
-            signatureQuality === 'fair' ? 'bg-yellow-50 text-yellow-700' :
-            'bg-red-50 text-red-700'
-          }`}>
+          <div
+            className={`text-xs p-2 rounded flex items-center gap-2 ${
+              signatureQuality === 'excellent'
+                ? 'bg-green-50 text-green-700'
+                : signatureQuality === 'good'
+                ? 'bg-blue-50 text-blue-700'
+                : signatureQuality === 'fair'
+                ? 'bg-yellow-50 text-yellow-700'
+                : 'bg-red-50 text-red-700'
+            }`}
+          >
             <span>
               {signatureQuality === 'excellent' ? '✅' :
-               signatureQuality === 'good' ? '👍' :
-               signatureQuality === 'fair' ? '⚠️' : '❌'}
+                signatureQuality === 'good' ? '👍' :
+                  signatureQuality === 'fair' ? '⚠️' : '❌'}
             </span>
             <span>
-              Signature quality: {signatureQuality}
-              {signatureQuality === 'poor' && ' - Consider signing again for better clarity'}
+              {t('signaturePad', 'qualityLabel').replace('{quality}', currentQualityLabel)}
+              {signatureQuality === 'poor' && t('signaturePad', 'qualityPoorNote')}
             </span>
           </div>
         )}
-        
+
         {signature && (
           <div className="space-y-2">
-            <p className="text-sm font-medium">Current Signature:</p>
-            <img 
-              src={signature} 
-              alt="Signature" 
-              className="border rounded max-h-24 w-auto" 
+            <p className="text-sm font-medium">{t('signaturePad', 'currentSignatureLabel')}</p>
+            <img
+              src={signature}
+              alt={t('signaturePad', 'signatureAlt')}
+              className="border rounded max-h-24 w-auto"
               style={{ maxWidth: '100%' }}
             />
           </div>
         )}
-        
+
         <div className="flex gap-2 flex-wrap">
-          <Button 
-            type="button" 
-            variant="outline" 
+          <Button
+            type="button"
+            variant="outline"
             onClick={clear}
             size="sm"
             className="flex-1 sm:flex-none"
           >
-            Clear Signature
+            {t('signaturePad', 'clearButton')}
           </Button>
           {!deviceInfo.isMobile && (
-            <Button 
-              type="button" 
+            <Button
+              type="button"
               onClick={save}
               size="sm"
               disabled={isEmpty && !signature}
               className="flex-1 sm:flex-none"
             >
-              Save Signature
+              {t('signaturePad', 'saveButton')}
             </Button>
           )}
-          {/* Touch calibration test button for development */}
           {process.env.NODE_ENV === 'development' && deviceInfo.isMobile && (
-            <Button 
-              type="button" 
+            <Button
+              type="button"
               variant="ghost"
               onClick={() => {
                 if (sigCanvas.current) {
@@ -265,20 +277,19 @@ export function SignaturePad({ onSignatureChange, signature }: SignaturePadProps
               size="sm"
               className="text-xs"
             >
-              Test Calibration
+              {t('signaturePad', 'testCalibrationButton')}
             </Button>
           )}
         </div>
-        
-        {/* Debug info for development */}
+
         {process.env.NODE_ENV === 'development' && (
           <details className="text-xs text-gray-500">
-            <summary>Debug Info</summary>
+            <summary>{t('signaturePad', 'debugInfoTitle')}</summary>
             <div className="mt-2 space-y-1">
-              <div>Mobile: {deviceInfo.isMobile ? 'Yes' : 'No'}</div>
-              <div>Touch Support: {deviceInfo.touchSupport ? 'Yes' : 'No'}</div>
-              <div>Device Pixel Ratio: {deviceInfo.devicePixelRatio}</div>
-              <div>Canvas Size: {canvasSize.width}x{canvasSize.height}</div>
+              <div>{t('signaturePad', 'debugMobileLabel').replace('{value}', deviceInfo.isMobile ? 'Yes' : 'No')}</div>
+              <div>{t('signaturePad', 'debugTouchSupportLabel').replace('{value}', deviceInfo.touchSupport ? 'Yes' : 'No')}</div>
+              <div>{t('signaturePad', 'debugPixelRatioLabel').replace('{value}', String(deviceInfo.devicePixelRatio))}</div>
+              <div>{t('signaturePad', 'debugCanvasSizeLabel').replace('{width}', String(canvasSize.width)).replace('{height}', String(canvasSize.height))}</div>
             </div>
           </details>
         )}

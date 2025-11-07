@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
-type Language = 'en' | 'af';
+export type Language = 'en' | 'af';
 
 interface LanguageContextType {
   language: Language;
@@ -13,8 +13,23 @@ interface LanguageProviderProps {
   children: ReactNode;
 }
 
+const STORAGE_KEY = 'cattle-scan-language';
+
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>(() => {
+    if (typeof window === 'undefined') {
+      return 'en';
+    }
+
+    const stored = window.localStorage.getItem(STORAGE_KEY) as Language | null;
+    return stored === 'af' ? 'af' : 'en';
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(STORAGE_KEY, language);
+    }
+  }, [language]);
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage }}>

@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Camera, Upload, File, X, CheckCircle, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from '@/i18n/useTranslation';
 
 export interface UploadResult {
   success: boolean;
@@ -75,6 +76,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const validateFileType = useCallback((file: File): boolean => {
     const allowedTypes = ALLOWED_FILE_TYPES[documentType];
@@ -205,14 +207,16 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
     // Validate file type
     if (!validateFileType(file)) {
       const allowedTypes = ALLOWED_FILE_TYPES[documentType].join(', ');
-      setError(`Invalid file type. Allowed types: ${allowedTypes}`);
+      setError(t('fileUploadManager', 'invalidFileType').replace('{types}', allowedTypes));
       return;
     }
 
     // Validate file size
     if (!validateFileSize(file)) {
       const maxSizeMB = Math.round(maxSizeBytes / (1024 * 1024));
-      setError(`File size too large. Maximum size: ${maxSizeMB}MB`);
+      setError(
+        t('fileUploadManager', 'fileSizeTooLarge').replace('{size}', `${maxSizeMB}MB`)
+      );
       return;
     }
 
@@ -279,24 +283,27 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
       if (result.success) {
         setUploadedFileUrl(result.fileUrl || null);
         toast({
-          title: "Upload Successful",
-          description: "File uploaded successfully",
+          title: t('fileUploadManager', 'uploadSuccessTitle'),
+          description: t('fileUploadManager', 'uploadSuccessDescription'),
           variant: "default"
         });
         onUploadComplete?.(result);
       } else {
-        setError(result.error || 'Upload failed');
+        const fallbackError = t('fileUploadManager', 'uploadErrorGeneric');
+        setError(result.error || fallbackError);
         toast({
-          title: "Upload Failed",
-          description: result.error || 'Upload failed',
+          title: t('fileUploadManager', 'uploadErrorTitle'),
+          description: result.error || fallbackError,
           variant: "destructive"
         });
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Upload failed');
+      const fallbackError = t('fileUploadManager', 'uploadErrorGeneric');
+      const message = error instanceof Error ? error.message : fallbackError;
+      setError(message);
       toast({
-        title: "Upload Failed",
-        description: error instanceof Error ? error.message : 'Upload failed',
+        title: t('fileUploadManager', 'uploadErrorTitle'),
+        description: message,
         variant: "destructive"
       });
     } finally {
@@ -419,7 +426,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
                 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">
-                    {selectedFile?.name || 'Uploaded file'}
+                    {selectedFile?.name || t('fileUploadManager', 'uploadedFileLabel')}
                   </p>
                   {selectedFile && (
                     <p className="text-xs text-gray-500">
@@ -430,7 +437,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
                   {uploadedFileUrl && (
                     <div className="flex items-center gap-1 mt-1">
                       <CheckCircle className="w-3 h-3 text-green-500" />
-                      <span className="text-xs text-green-600">Uploaded</span>
+                      <span className="text-xs text-green-600">{t('fileUploadManager', 'uploadedStatus')}</span>
                     </div>
                   )}
                 </div>
@@ -452,7 +459,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
               <div className="mt-3">
                 <Progress value={uploadProgress} className="h-2" />
                 <p className="text-xs text-gray-500 mt-1">
-                  Uploading... {uploadProgress}%
+                  {t('fileUploadManager', 'uploadingProgress').replace('{progress}', String(uploadProgress))}
                 </p>
               </div>
             )}
@@ -466,7 +473,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
                   disabled={disabled}
                   className="w-full"
                 >
-                  Upload File
+                  {t('fileUploadManager', 'uploadButton')}
                 </Button>
               </div>
             )}
@@ -480,7 +487,7 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
                   onClick={() => window.open(uploadedFileUrl, '_blank')}
                   className="w-full"
                 >
-                  View File
+                  {t('fileUploadManager', 'viewFileButton')}
                 </Button>
               </div>
             )}
@@ -490,8 +497,15 @@ export const FileUploadManager: React.FC<FileUploadManagerProps> = ({
 
       {/* File Requirements Info */}
       <div className="text-xs text-gray-500">
-        <p>Accepted formats: {ALLOWED_FILE_TYPES[documentType].join(', ')}</p>
-        <p>Maximum size: {formatFileSize(maxSizeBytes)}</p>
+        <p>
+          {t('fileUploadManager', 'acceptedFormats').replace(
+            '{formats}',
+            ALLOWED_FILE_TYPES[documentType].join(', ')
+          )}
+        </p>
+        <p>
+          {t('fileUploadManager', 'maxSize').replace('{size}', formatFileSize(maxSizeBytes))}
+        </p>
       </div>
     </div>
   );

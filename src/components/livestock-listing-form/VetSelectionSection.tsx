@@ -11,6 +11,7 @@ import { useCompany } from '@/contexts/companyContext';
 import { CompanyService } from '@/services/companyService';
 import { useToast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
+import { useTranslation } from '@/i18n/useTranslation';
 
 type Profile = Tables<'profiles'>;
 type CompanyUser = { profiles: Profile };
@@ -26,6 +27,7 @@ export const VetSelectionSection = () => {
   const { currentCompany } = useCompany();
   const { toast } = useToast();
   const form = useFormContext<LivestockListingFormData>();
+  const { t } = useTranslation();
   const [vets, setVets] = useState<CompanyUser[]>([]);
   const [isLoadingVets, setIsLoadingVets] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
@@ -65,8 +67,8 @@ export const VetSelectionSection = () => {
       } catch (error) {
         console.error('Error fetching vets:', error);
         toast({
-          title: 'Error',
-          description: 'Failed to load veterinarians.',
+          title: t('common', 'errorTitle'),
+          description: t('vetSelection', 'loadVetsErrorDescription'),
           variant: 'destructive',
         });
       } finally {
@@ -75,14 +77,15 @@ export const VetSelectionSection = () => {
     };
     
     fetchVets();
-  }, [currentCompany, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentCompany]);
 
   const handleInviteVet = async () => {
     const email = form.getValues('invited_vet_email');
     if (!email || !user || !currentCompany) {
       toast({
-        title: 'Error',
-        description: 'Please enter a valid email and ensure you are logged in with a company selected.',
+        title: t('common', 'errorTitle'),
+        description: t('vetSelection', 'missingEmailDescription'),
         variant: 'destructive',
       });
       return;
@@ -97,8 +100,8 @@ export const VetSelectionSection = () => {
       );
 
       toast({
-        title: 'Success',
-        description: 'Vet invitation sent successfully.',
+        title: t('common', 'successTitle'),
+        description: t('vetSelection', 'inviteSuccessDescription'),
       });
 
       // Mark invitation as sent (keep email field populated for validation)
@@ -126,8 +129,8 @@ export const VetSelectionSection = () => {
     } catch (error) {
       console.error('Error inviting vet:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to send vet invitation. Please try again.',
+        title: t('common', 'errorTitle'),
+        description: t('vetSelection', 'inviteErrorDescription'),
         variant: 'destructive',
       });
     } finally {
@@ -137,34 +140,38 @@ export const VetSelectionSection = () => {
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-4">Assign Veterinarian</h3>
+      <h3 className="text-lg font-semibold mb-4">{t('vetSelection', 'heading')}</h3>
       <div className="space-y-4">
         <FormField
           control={form.control}
           name="assigned_vet_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Select a Veterinarian</FormLabel>
+              <FormLabel>{t('vetSelection', 'selectLabel')}</FormLabel>
               <Select onValueChange={field.onChange}
                 value={field.value}
                 disabled={isLoadingVets}
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a vet" />
+                    <SelectValue placeholder={t('vetSelection', 'selectPlaceholder')} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {isLoadingVets ? (
-                    <SelectItem value="loading" disabled>Loading...</SelectItem>
+                    <SelectItem value="loading" disabled>
+                      {t('vetSelection', 'loadingOption')}
+                    </SelectItem>
                   ) : vets.length > 0 ? (
                     vets.map((vet) => (
                       <SelectItem key={vet.profiles.id} value={vet.profiles.id}>
-                        {`${vet.profiles.first_name || ''} ${vet.profiles.last_name || ''}`.trim() || 'Unnamed Vet'} ({vet.profiles.email})
+                        {`${vet.profiles.first_name || ''} ${vet.profiles.last_name || ''}`.trim() || t('vetSelection', 'unnamedVet')} ({vet.profiles.email})
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="no-vets" disabled>No vets available to select.</SelectItem>
+                    <SelectItem value="no-vets" disabled>
+                      {t('vetSelection', 'noVetsOption')}
+                    </SelectItem>
                   )}
                 </SelectContent>
               </Select>
@@ -174,7 +181,9 @@ export const VetSelectionSection = () => {
         />
 
         <Button type="button" variant="outline" onClick={() => setShowInvite(!showInvite)}>
-          {showInvite ? 'Cancel Invitation' : 'Invite a New Vet'}
+          {showInvite
+            ? t('vetSelection', 'inviteToggleCancel')
+            : t('vetSelection', 'inviteToggleInvite')}
         </Button>
 
         {showInvite && (
@@ -184,11 +193,11 @@ export const VetSelectionSection = () => {
               name="invited_vet_email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Invite New Vet by Email</FormLabel>
+                  <FormLabel>{t('vetSelection', 'inviteSectionTitle')}</FormLabel>
                   <div className="flex gap-2">
                     <FormControl>
                       <Input
-                        placeholder="Enter vet's email"
+                        placeholder={t('vetSelection', 'emailPlaceholder')}
                         {...field}
                         disabled={invitationSent}
                       />
@@ -198,12 +207,16 @@ export const VetSelectionSection = () => {
                       onClick={handleInviteVet}
                       disabled={isInviting || !field.value || invitationSent}
                     >
-                      {invitationSent ? 'Invitation Sent' : isInviting ? 'Sending...' : 'Send Invite'}
+                      {invitationSent
+                        ? t('vetSelection', 'invitationSentButton')
+                        : isInviting
+                          ? t('common', 'sending')
+                          : t('vetSelection', 'sendInviteButton')}
                     </Button>
                   </div>
                   {invitationSent && (
                     <p className="text-sm text-green-600 mt-1">
-                      ✓ Invitation sent successfully to {field.value}
+                      ✓ {t('vetSelection', 'invitationSentMessage').replace('{email}', field.value)}
                     </p>
                   )}
                   <FormMessage />

@@ -1,17 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Shield, Users, Clock, CheckCircle, Ban, Settings, Activity, BarChart3, ArrowRight, LogOut, Building2, Plus } from "lucide-react";
+import { Shield, Users, Clock, BarChart3, ArrowRight, LogOut, Building2, Plus } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { useCompany } from "@/contexts/companyContext";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { MultiTenantDashboardController, type DashboardData } from "@/services/multiTenantDashboardController";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables, Database } from "@/integrations/supabase/types";
 import { AdminOfferDetailsDialog } from "@/components/AdminOfferDetailsDialog";
 import { ListingInvitationForm } from '@/components/ListingInvitationForm';
 import { ListingInvitationsTable } from '@/components/ListingInvitationsTable';
@@ -20,6 +19,8 @@ import { LivestockListingDetailsDialog } from "@/components/LivestockListingDeta
 import { CompanySelector } from "@/components/CompanySelector";
 import { CompanyManagement } from "@/components/CompanyManagement";
 import { CompanyRegistrationForm } from '@/components/CompanyRegistrationForm';
+import { useTranslation } from "@/i18n/useTranslation";
+import type { ListingInvitation as ListingInvitationWithRelations } from '@/components/ListingInvitationsTable';
 
 
 type Profile = Tables<'profiles'>;
@@ -33,18 +34,20 @@ type LivestockOffer = Tables<'livestock_offers'> & {
   livestock_listings: Tables<'livestock_listings'>;
 };
 
+type AdminDashboardStatus = 'approved' | 'pending' | 'suspended' | 'rejected';
+type AdminDashboardRole = Database['public']['Enums']['user_role'];
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading, signOut, profile } = useAuth();
+  const { user, loading: authLoading, initialized, signOut, profile } = useAuth();
   const { currentCompany, userCompanies, loading: companyLoading } = useCompany();
   const { toast } = useToast();
+  const { t } = useTranslation();
   
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [invitations, setInvitations] = useState<any[]>([]);
+  const [invitations, setInvitations] = useState<ListingInvitationWithRelations[]>([]);
   const [loadingInvitations, setLoadingInvitations] = useState(true);
-  const [loadingProfiles, setLoadingProfiles] = useState(true);
   
   const [selectedListing, setSelectedListing] = useState<LivestockListing | null>(null);
   const [listingDialogOpen, setListingDialogOpen] = useState(false);
@@ -62,6 +65,10 @@ const AdminDashboard = () => {
 
   // Handle navigation redirects
   useEffect(() => {
+    if (authLoading || !initialized) {
+      return;
+    }
+
     if (!user || !profile) {
       navigate('/auth');
       return;
@@ -71,13 +78,7 @@ const AdminDashboard = () => {
       navigate('/dashboard');
       return;
     }
-  }, [user, profile, isAdmin, navigate]);
-
-  useEffect(() => {
-    if (user && profile && !companyLoading) {
-      fetchDashboardData();
-    }
-  }, [user, profile, currentCompany, companyLoading]);
+  }, [user, profile, isAdmin, navigate, authLoading, initialized]);
 
   const fetchDashboardData = useCallback(async () => {
     if (!user || !profile) return;
@@ -92,19 +93,26 @@ const AdminDashboard = () => {
 
       if (error) throw error;
       setDashboardData(data);
-      setInvitations(data?.invitations || []);
+      setInvitations((data?.invitations || []) as ListingInvitationWithRelations[]);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast({
-        title: "Error",
-        description: "Failed to load dashboard data",
+        title: t("common", "errorTitle"),
+        description: t("adminDashboard", "failedToLoad"),
         variant: "destructive"
       });
     } finally {
       setLoading(false);
       setLoadingInvitations(false);
     }
-  }, [user, profile, currentCompany, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, profile]);
+
+  useEffect(() => {
+    if (user && profile && !companyLoading) {
+      fetchDashboardData();
+    }
+  }, [user, profile, companyLoading, fetchDashboardData]);
 
   // Function to refresh invitations data
   const fetchInvitations = useCallback(async () => {
@@ -119,18 +127,18 @@ const AdminDashboard = () => {
 
       if (error) throw error;
       setDashboardData(data);
-      setInvitations(data?.invitations || []);
+      setInvitations((data?.invitations || []) as ListingInvitationWithRelations[]);
     } catch (error) {
       console.error('Error fetching invitations:', error);
       toast({
-        title: "Error",
-        description: "Failed to refresh invitations",
+        title: t("common", "errorTitle"),
+        description: t("adminDashboard", "failedToLoadInvitations"),
         variant: "destructive"
       });
     } finally {
       setLoadingInvitations(false);
     }
-  }, [user, profile, toast]);
+  }, [user, profile, toast, t]);
 
   const handleSignOut = async () => {
     try {
@@ -153,14 +161,14 @@ const AdminDashboard = () => {
     setOfferDialogOpen(true);
   };
 
-  if (authLoading || companyLoading || loading) {
+  if (authLoading || !initialized || companyLoading || loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
             <Shield className="w-5 h-5 text-white animate-pulse" />
           </div>
-          <p className="text-slate-600">Loading dashboard...</p>
+          <p className="text-slate-600">{t("adminDashboard", "loading")}</p>
         </div>
       </div>
     );
@@ -179,17 +187,16 @@ const AdminDashboard = () => {
           <CardHeader className="text-center">
             <CardTitle className="flex items-center justify-center">
               <Building2 className="w-6 h-6 mr-2" />
-              Welcome to Cattle Secure Trace
+              {t("adminDashboard", "welcomeTitle")}
             </CardTitle>
             <CardDescription>
-              You need to be associated with a company to access the admin dashboard.
-              Please contact your system administrator.
+              {t("adminDashboard", "welcomeDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             <Button onClick={handleSignOut} variant="outline">
               <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
+              {t("common", "signOut")}
             </Button>
           </CardContent>
         </Card>
@@ -205,6 +212,41 @@ const AdminDashboard = () => {
     totalCompanies: dashboardData?.companies?.length || 0
   };
 
+  const getProfileStatusLabel = (status: AdminDashboardStatus) => {
+    switch (status) {
+      case 'approved':
+        return t('adminDashboard', 'statusApproved');
+      case 'pending':
+        return t('adminDashboard', 'statusPending');
+      case 'suspended':
+        return t('adminDashboard', 'statusSuspended');
+      case 'rejected':
+      default:
+        return t('adminDashboard', 'statusRejected');
+    }
+  };
+
+  const getProfileRoleLabel = (role: AdminDashboardRole | null | undefined) => {
+    switch (role) {
+      case 'super_admin':
+        return t('adminDashboard', 'roleSuperAdmin');
+      case 'admin':
+        return t('adminDashboard', 'roleAdmin');
+      case 'seller':
+        return t('adminDashboard', 'roleSeller');
+      case 'vet':
+        return t('adminDashboard', 'roleVet');
+      case 'agent':
+        return t('adminDashboard', 'roleAgent');
+      case 'driver':
+        return t('adminDashboard', 'roleDriver');
+      case 'load_master':
+        return t('adminDashboard', 'roleLoadMaster');
+      default:
+        return role ?? '';
+    }
+  };
+
   const recentProfiles = dashboardData?.profiles?.slice(0, 5) || [];
 
   return (
@@ -217,10 +259,10 @@ const AdminDashboard = () => {
                 <Shield className="w-8 h-8 text-emerald-600 mr-3" />
                 <div>
                   <h1 className="text-2xl font-bold text-slate-900">
-                    {isSuperAdmin ? 'Super Admin Dashboard' : 'Admin Dashboard'}
+                    {isSuperAdmin ? t("adminDashboard", "superAdminHeading") : t("adminDashboard", "adminHeading")}
                   </h1>
                   <p className="text-sm text-slate-600">
-                    {isSuperAdmin ? 'Platform-wide management' : 'Company management'}
+                    {isSuperAdmin ? t("adminDashboard", "superAdminSubheading") : t("adminDashboard", "adminSubheading")}
                   </p>
                 </div>
               </div>
@@ -238,14 +280,14 @@ const AdminDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-3' : 'grid-cols-3'}`}>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            {isSuperAdmin && <TabsTrigger value="companies" onClick={() => setShowCompanyManagement(true)}>Companies</TabsTrigger>}
+            <TabsTrigger value="overview">{t("adminDashboard", "overviewTab")}</TabsTrigger>
+            {isSuperAdmin && <TabsTrigger value="companies" onClick={() => setShowCompanyManagement(true)}>{t("adminDashboard", "companiesTab")}</TabsTrigger>}
             {/* <TabsTrigger value="livestock">Livestock</TabsTrigger>
             <TabsTrigger value="offers">Offers</TabsTrigger>
             <TabsTrigger value="sellers">Sellers</TabsTrigger> */}
-            {!isSuperAdmin && <TabsTrigger value="invitations">Invitations</TabsTrigger>}
+            {!isSuperAdmin && <TabsTrigger value="invitations">{t("adminDashboard", "invitationsTab")}</TabsTrigger>}
             {/* <TabsTrigger value="activity">Activity</TabsTrigger> */}
-            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="profile">{t("adminDashboard", "profileTab")}</TabsTrigger>
             
           </TabsList>
 
@@ -254,13 +296,13 @@ const AdminDashboard = () => {
               {isSuperAdmin && (
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Companies</CardTitle>
+                    <CardTitle className="text-sm font-medium">{t("adminDashboard", "totalCompanies")}</CardTitle>
                     <Building2 className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{stats.totalCompanies}</div>
                     <p className="text-xs text-muted-foreground">
-                      Active companies on platform
+                      {t("adminDashboard", "totalCompaniesDescription")}
                     </p>
                   </CardContent>
                 </Card>
@@ -268,26 +310,26 @@ const AdminDashboard = () => {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Listings</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t("adminDashboard", "totalListings")}</CardTitle>
                   <BarChart3 className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalListings}</div>
                   <p className="text-xs text-muted-foreground">
-                    {currentCompany ? `From ${currentCompany.companyName}` : 'All companies'}
+                    {currentCompany ? t("adminDashboard", "totalListingsFrom").replace('{company}', currentCompany.companyName) : t("adminDashboard", "totalListingsAll")}
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Invitations</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t("adminDashboard", "pendingInvitations")}</CardTitle>
                   <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.pendingInvitations}</div>
                   <p className="text-xs text-muted-foreground">
-                    Awaiting response
+                    {t("adminDashboard", "pendingInvitationsDescription")}
                   </p>
                 </CardContent>
               </Card>
@@ -311,9 +353,9 @@ const AdminDashboard = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <Users className="w-5 h-5 mr-2" />
-                    Recent Users
+                    {t("adminDashboard", "recentUsers")}
                   </CardTitle>
-                  <CardDescription>Latest user registrations</CardDescription>
+                  <CardDescription>{t("adminDashboard", "recentUsersDescription")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -330,7 +372,7 @@ const AdminDashboard = () => {
                               <p className="text-sm font-medium text-slate-800">
                                 {profile.first_name} {profile.last_name}
                               </p>
-                              <p className="text-xs text-slate-500">{profile.role}</p>
+                              <p className="text-xs text-slate-500">{getProfileRoleLabel(profile.role as AdminDashboardRole)}</p>
                             </div>
                           </div>
                           <Badge 
@@ -342,12 +384,12 @@ const AdminDashboard = () => {
                               'bg-red-100 text-red-800'
                             }
                           >
-                            {profile.status}
+                            {getProfileStatusLabel(profile.status as AdminDashboardStatus)}
                           </Badge>
                         </div>
                       ))
                     ) : (
-                      <p className="text-sm text-slate-500 text-center py-4">No recent registrations</p>
+                      <p className="text-sm text-slate-500 text-center py-4">{t("adminDashboard", "noRecentRegistrations")}</p>
                     )}
                     
                     {isSuperAdmin && <div className="pt-3 border-t border-slate-200">
@@ -357,7 +399,7 @@ const AdminDashboard = () => {
                         variant="outline"
                       >
                         <Users className="w-4 h-4 mr-2" />
-                        Manage All Users
+                        {t("adminDashboard", "manageAllUsers")}
                         <ArrowRight className="w-4 h-4 ml-auto" />
                       </Button>
                     </div>}
@@ -369,9 +411,9 @@ const AdminDashboard = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <Building2 className="w-5 h-5 mr-2" />
-                    Company Management
+                    {t("adminDashboard", "companyManagement")}
                   </CardTitle>
-                  <CardDescription>Manage companies and relationships</CardDescription>
+                  <CardDescription>{t("adminDashboard", "companyManagementDescription")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {isSuperAdmin ? (
@@ -382,7 +424,7 @@ const AdminDashboard = () => {
                         variant="outline"
                       >
                         <Building2 className="w-4 h-4 mr-2" />
-                        Manage All Companies
+                        {t("adminDashboard", "manageAllCompanies")}
                         <ArrowRight className="w-4 h-4 ml-auto" />
                       </Button>
                       <Dialog open={showCompanyRegistration} onOpenChange={setShowCompanyRegistration}>
@@ -392,13 +434,13 @@ const AdminDashboard = () => {
                             variant="outline"
                           >
                             <Plus className="w-4 h-4 mr-2" />
-                            Create New Company
+                            {t("adminDashboard", "createNewCompany")}
                             <ArrowRight className="w-4 h-4 ml-auto" />
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-md">
                           <DialogHeader>
-                            <DialogTitle>Create New Company</DialogTitle>
+                            <DialogTitle>{t("adminDashboard", "createNewCompany")}</DialogTitle>
                           </DialogHeader>
                           <CompanyRegistrationForm 
                             onSuccess={() => {
@@ -416,7 +458,7 @@ const AdminDashboard = () => {
                       variant="outline"
                     >
                       <Users className="w-4 h-4 mr-2" />
-                      Manage Company Users
+                      {t("adminDashboard", "manageCompanyUsers")}
                       <ArrowRight className="w-4 h-4 ml-auto" />
                     </Button>
                   )}

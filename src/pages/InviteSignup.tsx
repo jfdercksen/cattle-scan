@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Shield, ArrowLeft, Mail } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
-import { useLanguage } from "@/contexts/languageContext";
+import { useTranslation } from "@/i18n/useTranslation";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -18,7 +18,7 @@ const InviteSignup = () => {
   const location = useLocation();
   const { signUp, user, profile, loading: authLoading, getRoleRedirectPath } = useAuth();
   const { toast } = useToast();
-  const { language } = useLanguage();
+  const { t, language } = useTranslation();
 
   const [loading, setLoading] = useState(false);
 
@@ -98,62 +98,27 @@ const InviteSignup = () => {
     return () => clearTimeout(timeoutId);
   }, [email]);
 
-  const content = {
-    en: {
-      signUp: 'Sign Up',
-      email: 'Email',
-      password: 'Password',
-      confirmPassword: 'Confirm Password',
-      firstName: 'First Name',
-      lastName: 'Last Name',
-      phone: 'Phone Number',
-      companyName: 'Company Name',
-      buyerSignUpTitle: 'Buyer Registration',
-      buyerSignUpDescription: 'Register as a buyer to access the platform',
-      signUpTitle: 'Create Account',
-      signUpDescription: 'Join the Cattle Scan platform via your invitation',
-      backToHome: 'Back to Home',
-    },
-    af: {
-      signUp: 'Registreer',
-      email: 'E-pos',
-      password: 'Wagwoord',
-      confirmPassword: 'Bevestig Wagwoord',
-      firstName: 'Voornaam',
-      lastName: 'Van',
-      phone: 'Telefoonnommer',
-      companyName: 'Maatskappy Naam',
-      buyerSignUpTitle: 'Koper Registrasie',
-      buyerSignUpDescription: 'Registreer as koper om toegang tot die platform te kry',
-      signUpTitle: 'Skep Rekening',
-      signUpDescription: 'Sluit aan by Cattle Scan via jou uitnodiging',
-      backToHome: 'Terug na Tuis',
-    }
-  } as const;
-
-  const t = content[language];
-
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateEmail(email)) {
-      toast({ title: 'Error', description: 'Please enter a valid email address', variant: 'destructive' });
+      toast({ title: t("common", "errorTitle"), description: t("inviteSignup", "invalidEmail"), variant: 'destructive' });
       return;
     }
     if (password.length < 6) {
-      toast({ title: 'Error', description: 'Password must be at least 6 characters long', variant: 'destructive' });
+      toast({ title: t("common", "errorTitle"), description: t("inviteSignup", "passwordTooShort"), variant: 'destructive' });
       return;
     }
     if (password !== confirmPassword) {
-      toast({ title: 'Error', description: 'Passwords do not match', variant: 'destructive' });
+      toast({ title: t("common", "errorTitle"), description: t("inviteSignup", "passwordsNoMatch"), variant: 'destructive' });
       return;
     }
     if (!validatePhone(phone)) {
-      toast({ title: 'Error', description: 'Please enter a valid phone number', variant: 'destructive' });
+      toast({ title: t("common", "errorTitle"), description: t("inviteSignup", "invalidPhoneNumber"), variant: 'destructive' });
       return;
     }
     if (!firstName.trim() || !lastName.trim()) {
-      toast({ title: 'Error', description: 'First name and last name are required', variant: 'destructive' });
+      toast({ title: t("common", "errorTitle"), description: t("inviteSignup", "missingName"), variant: 'destructive' });
       return;
     }
 
@@ -183,14 +148,14 @@ const InviteSignup = () => {
           console.error('Error updating listing invitations after registration:', invitationError);
         }
         toast({
-          title: 'Success',
-          description: isBuyerSignup ? 'Account created successfully! You are now the super admin.' : 'Account created successfully! Please wait for approval.',
+          title: t("common", "successTitle"),
+          description: isBuyerSignup ? t("inviteSignup", "successBuyer") : t("inviteSignup", "successDefault"),
           variant: 'default'
         });
         // Redirect handled by auth effect
       }
     } catch (err) {
-      toast({ title: 'Error', description: 'An unexpected error occurred', variant: 'destructive' });
+      toast({ title: t("common", "errorTitle"), description: t("auth", "unexpectedErrorDescription"), variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -203,7 +168,7 @@ const InviteSignup = () => {
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center text-slate-600 hover:text-slate-800">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              {t.backToHome}
+              {t("common", "backToHome")}
             </Link>
           </div>
           <div className="text-center">
@@ -211,10 +176,10 @@ const InviteSignup = () => {
               <Shield className="w-6 h-6 text-white" />
             </div>
             <CardTitle className="text-2xl font-bold">
-              {isBuyerSignup ? t.buyerSignUpTitle : t.signUpTitle}
+              {isBuyerSignup ? t("inviteSignup", "buyerSignUpTitle") : t("inviteSignup", "signUpTitle")}
             </CardTitle>
             <CardDescription>
-              {isBuyerSignup ? t.buyerSignUpDescription : t.signUpDescription}
+              {isBuyerSignup ? t("inviteSignup", "buyerSignUpDescription") : t("inviteSignup", "signUpDescription")}
             </CardDescription>
           </div>
         </CardHeader>
@@ -222,22 +187,22 @@ const InviteSignup = () => {
           <form onSubmit={handleSignUp} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="firstName">{t.firstName}</Label>
+                <Label htmlFor="firstName">{t("common", "firstName")}</Label>
                 <Input id="firstName" type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} required maxLength={50} />
               </div>
               <div>
-                <Label htmlFor="lastName">{t.lastName}</Label>
+                <Label htmlFor="lastName">{t("common", "lastName")}</Label>
                 <Input id="lastName" type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} required maxLength={50} />
               </div>
             </div>
 
             <div>
-              <Label htmlFor="email">{t.email}</Label>
+              <Label htmlFor="email">{t("common", "email")}</Label>
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required maxLength={100} />
             </div>
 
             <div>
-              <Label htmlFor="phone">{t.phone}</Label>
+              <Label htmlFor="phone">{t("common", "phoneNumber")}</Label>
               <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={20} />
             </div>
 
@@ -245,23 +210,23 @@ const InviteSignup = () => {
               <div className="p-2 bg-blue-50 border border-blue-200 rounded-md">
                 <p className="text-sm text-blue-800">
                   <Mail className="w-4 h-4 inline mr-1" />
-                  You've been invited to join <strong>{pendingInvitation.companies.name}</strong> as a <strong>{pendingInvitation.relationship_type}</strong>
+                  {t("inviteSignup", "invitationNoticePrefix")} <strong>{pendingInvitation.companies.name}</strong> {t("inviteSignup", "invitationNoticeSuffix")} <strong>{pendingInvitation.relationship_type}</strong>
                 </p>
               </div>
             )}
 
             <div>
-              <Label htmlFor="password">{t.password}</Label>
+              <Label htmlFor="password">{t("common", "password")}</Label>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
             </div>
 
             <div>
-              <Label htmlFor="confirmPassword">{t.confirmPassword}</Label>
+              <Label htmlFor="confirmPassword">{t("common", "confirmPassword")}</Label>
               <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
             </div>
 
             <Button type="submit" className="w-full" disabled={loading || !isSignupAllowed()}>
-              {loading ? 'Creating Account...' : (!isSignupAllowed() ? 'Signup requires an invitation' : t.signUp)}
+              {loading ? t("inviteSignup", "creatingAccount") : (!isSignupAllowed() ? t("inviteSignup", "invitationRequired") : t("inviteSignup", "signUp"))}
             </Button>
           </form>
         </CardContent>

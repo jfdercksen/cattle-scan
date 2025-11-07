@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { LivestockOfferForm } from './LivestockOfferForm';
 import type { Tables } from '@/integrations/supabase/types';
+import { useTranslation } from '@/i18n/useTranslation';
 
 type LivestockListing = Tables<'livestock_listings'> & {
   listing_invitations: {
@@ -21,6 +22,7 @@ interface LivestockListingDetailsDialogProps {
 
 export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: LivestockListingDetailsDialogProps) => {
   const [showOfferForm, setShowOfferForm] = useState(false);
+  const { t } = useTranslation();
 
   if (!listing) return null;
 
@@ -46,6 +48,23 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
     }
   };
 
+  const formatListingStatus = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return t('adminListings', 'statusPending');
+      case 'approved':
+        return t('adminListings', 'statusApproved');
+      case 'rejected':
+        return t('adminListings', 'statusRejected');
+      default:
+        return status
+          .replace(/_/g, ' ')
+          .split(' ')
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+    }
+  };
+
   if (showOfferForm) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -65,12 +84,12 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            Livestock Listing Details
+            {t('adminListings', 'dialogTitle')}
             <Badge 
               variant="secondary" 
               className={getStatusBadgeColor(listing.status)}
             >
-              {listing.status}
+              {formatListingStatus(listing.status)}
             </Badge>
           </DialogTitle>
         </DialogHeader>
@@ -79,16 +98,16 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
           {/* Responsible Person Information */}
           {(listing.responsible_person_name || listing.responsible_person_designation) && (
             <div>
-              <h3 className="text-lg font-semibold mb-3">Responsible Person Information</h3>
+              <h3 className="text-lg font-semibold mb-3">{t('adminListings', 'responsibleSectionTitle')}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                 {listing.responsible_person_name && (
                   <div>
-                    <span className="font-medium">Name:</span> {listing.responsible_person_name}
+                    <span className="font-medium">{t('adminListings', 'responsibleNameLabel')}:</span> {listing.responsible_person_name}
                   </div>
                 )}
                 {listing.responsible_person_designation && (
                   <div>
-                    <span className="font-medium">Designation:</span> {listing.responsible_person_designation}
+                    <span className="font-medium">{t('adminListings', 'responsibleDesignationLabel')}:</span> {listing.responsible_person_designation}
                   </div>
                 )}
               </div>
@@ -99,25 +118,25 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
 
           {/* Basic Information */}
           <div>
-            <h3 className="text-lg font-semibold mb-3">Basic Information</h3>
+            <h3 className="text-lg font-semibold mb-3">{t('adminListings', 'basicSectionTitle')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <span className="font-medium">Owner Name:</span> {listing.owner_name}
+                <span className="font-medium">{t('adminListings', 'ownerNameLabel')}:</span> {listing.owner_name}
               </div>
               <div>
-                <span className="font-medium">Bred or Bought:</span> {listing.bred_or_bought}
+                <span className="font-medium">{t('adminListings', 'bredOrBoughtLabel')}:</span> {listing.bred_or_bought}
               </div>
               <div>
-                <span className="font-medium">Location:</span> {listing.location}
+                <span className="font-medium">{t('adminListings', 'locationLabel')}:</span> {listing.location}
               </div>
               <div>
-                <span className="font-medium">Weighing Location:</span> {listing.weighing_location}
+                <span className="font-medium">{t('adminListings', 'weighingLocationLabel')}:</span> {listing.weighing_location}
               </div>
               <div>
-                <span className="font-medium">Breed:</span> {listing.breed}
+                <span className="font-medium">{t('adminListings', 'breedLabel')}:</span> {listing.breed}
               </div>
               <div>
-                <span className="font-medium">Total Livestock Offered:</span> {listing.total_livestock_offered}
+                <span className="font-medium">{t('adminListings', 'totalLivestockOfferedLabel')}:</span> {listing.total_livestock_offered}
               </div>
             </div>
           </div>
@@ -127,37 +146,37 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
             <>
               <Separator />
               <div>
-                <h3 className="text-lg font-semibold mb-3">Supplier Identity & Location</h3>
+                <h3 className="text-lg font-semibold mb-3">{t('adminListings', 'supplierSectionTitle')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {listing.breeder_name && (
                     <div>
-                      <span className="font-medium">Breeder Name:</span> {listing.breeder_name}
+                      <span className="font-medium">{t('adminListings', 'breederNameLabel')}:</span> {listing.breeder_name}
                     </div>
                   )}
                   <div>
-                    <span className="font-medium">Is Breeder the Seller:</span> {listing.is_breeder_seller ? 'Yes' : 'No'}
+                    <span className="font-medium">{t('adminListings', 'isBreederSellerLabel')}:</span> {listing.is_breeder_seller ? t('common', 'yes') : t('common', 'no')}
                   </div>
                   {listing.farm_birth_address && (
                     <div>
-                      <span className="font-medium">Farm Birth Address:</span> {listing.farm_birth_address}
+                      <span className="font-medium">{t('adminListings', 'farmBirthAddressLabel')}:</span> {listing.farm_birth_address}
                     </div>
                   )}
                   {listing.farm_loading_address && (
                     <div>
-                      <span className="font-medium">Farm Loading Address:</span> {listing.farm_loading_address}
+                      <span className="font-medium">{t('adminListings', 'farmLoadingAddressLabel')}:</span> {listing.farm_loading_address}
                     </div>
                   )}
                   <div>
-                    <span className="font-medium">Livestock Moved Out of Boundaries:</span> {listing.livestock_moved_out_of_boundaries ? 'Yes' : 'No'}
+                    <span className="font-medium">{t('adminListings', 'livestockMovedLabel')}:</span> {listing.livestock_moved_out_of_boundaries ? t('common', 'yes') : t('common', 'no')}
                   </div>
                   {listing.livestock_moved_location && (
                     <div>
-                      <span className="font-medium">Location Where Moved From:</span> {listing.livestock_moved_location}
+                      <span className="font-medium">{t('adminListings', 'livestockMovedFromLabel')}:</span> {listing.livestock_moved_location}
                     </div>
                   )}
                   {listing.livestock_moved_location_to && (
                     <div>
-                      <span className="font-medium">Location Where Moved To:</span> {listing.livestock_moved_location_to}
+                      <span className="font-medium">{t('adminListings', 'livestockMovedToLabel')}:</span> {listing.livestock_moved_location_to}
                     </div>
                   )}
                 </div>
@@ -169,7 +188,7 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
 
           {/* Loading Points */}
           <div>
-            <h3 className="text-lg font-semibold mb-3">Loading Points</h3>
+            <h3 className="text-lg font-semibold mb-3">{t('adminListings', 'loadingPointsSectionTitle')}</h3>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {[1, 2, 3, 4, 5].map((point) => {
                 const loadingPoint = listing[`loading_points_${point}` as keyof LivestockListing] as number;
@@ -177,12 +196,12 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
                 
                 return (
                   <div key={point} className="p-3 border rounded-lg">
-                    <div className="font-medium">Point {point}</div>
+                    <div className="font-medium">{t('adminListings', 'loadingPointLabel').replace('{index}', String(point))}</div>
                     <div className="text-sm text-gray-600">
-                      Loading: {loadingPoint}
+                      {t('adminListings', 'loadingAmountLabel')}: {loadingPoint ?? t('common', 'notAvailable')}
                     </div>
                     <div className="text-sm text-gray-600">
-                      Livestock: {livestockAtPoint}
+                      {t('adminListings', 'loadingLivestockLabel')}: {livestockAtPoint ?? t('common', 'notAvailable')}
                     </div>
                   </div>
                 );
@@ -194,38 +213,38 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
 
           {/* Livestock Details */}
           <div>
-            <h3 className="text-lg font-semibold mb-3">Livestock Details</h3>
+            <h3 className="text-lg font-semibold mb-3">{t('adminListings', 'livestockDetailsSectionTitle')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <span className="font-medium">Number of Heifers:</span> {listing.number_of_heifers}
+                <span className="font-medium">{t('adminListings', 'numberOfHeifersLabel')}:</span> {listing.number_of_heifers ?? t('common', 'notAvailable')}
               </div>
               <div>
-                <span className="font-medium">Males Castrated:</span> {listing.males_castrated ? 'Yes' : 'No'}
+                <span className="font-medium">{t('adminListings', 'malesCastratedLabel')}:</span> {listing.males_castrated ? t('common', 'yes') : t('common', 'no')}
               </div>
               {listing.mothers_status && (
                 <div>
-                  <span className="font-medium">Mothers Status:</span> {listing.mothers_status}
+                  <span className="font-medium">{t('adminListings', 'mothersStatusLabel')}:</span> {listing.mothers_status}
                 </div>
               )}
               {listing.weaned_duration && (
                 <div>
-                  <span className="font-medium">Weaned Duration:</span> {listing.weaned_duration}
+                  <span className="font-medium">{t('adminListings', 'weanedDurationLabel')}:</span> {listing.weaned_duration}
                 </div>
               )}
               <div>
-                <span className="font-medium">Grazing Green Feed:</span> {listing.grazing_green_feed ? 'Yes' : 'No'}
+                <span className="font-medium">{t('adminListings', 'grazingGreenFeedLabel')}:</span> {listing.grazing_green_feed ? t('common', 'yes') : t('common', 'no')}
               </div>
               <div>
-                <span className="font-medium">Growth Implant:</span> {listing.growth_implant ? 'Yes' : 'No'}
+                <span className="font-medium">{t('adminListings', 'growthImplantLabel')}:</span> {listing.growth_implant ? t('common', 'yes') : t('common', 'no')}
               </div>
               {listing.growth_implant_type && (
                 <div>
-                  <span className="font-medium">Growth Implant Type:</span> {listing.growth_implant_type}
+                  <span className="font-medium">{t('adminListings', 'growthImplantTypeLabel')}:</span> {listing.growth_implant_type}
                 </div>
               )}
               {listing.estimated_average_weight && (
                 <div>
-                  <span className="font-medium">Estimated Average Weight:</span> {listing.estimated_average_weight} kg
+                  <span className="font-medium">{t('adminListings', 'estimatedAverageWeightLabel')}:</span> {listing.estimated_average_weight} kg
                 </div>
               )}
             </div>
@@ -234,54 +253,54 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
           {/* Biosecurity Declarations */}
           <Separator />
           <div>
-            <h3 className="text-lg font-semibold mb-3">Biosecurity Declarations</h3>
+            <h3 className="text-lg font-semibold mb-3">{t('adminListings', 'biosecuritySectionTitle')}</h3>
             <div className="grid grid-cols-1 gap-3">
               <div className="flex items-center space-x-2">
                 <div className={`w-4 h-4 rounded-full ${listing.declaration_no_cloven_hooved_animals ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                 <span className={`text-sm ${listing.declaration_no_cloven_hooved_animals ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
-                  No cloven-hooved animals other than cattle on property (12 months)
+                  {t('adminListings', 'biosecurityNoClovenLabel')}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className={`w-4 h-4 rounded-full ${listing.declaration_livestock_kept_away ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                 <span className={`text-sm ${listing.declaration_livestock_kept_away ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
-                  Livestock kept away from others (21 days)
+                  {t('adminListings', 'biosecurityKeptAwayLabel')}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className={`w-4 h-4 rounded-full ${listing.declaration_no_animal_origin_feed ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                 <span className={`text-sm ${listing.declaration_no_animal_origin_feed ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
-                  No feed of animal origin used
+                  {t('adminListings', 'biosecurityNoAnimalFeedLabel')}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className={`w-4 h-4 rounded-full ${listing.declaration_veterinary_products_registered ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                 <span className={`text-sm ${listing.declaration_veterinary_products_registered ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
-                  Only registered veterinary products used (Act 36 of 1947)
+                  {t('adminListings', 'biosecurityRegisteredProductsLabel')}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className={`w-4 h-4 rounded-full ${listing.declaration_no_foot_mouth_disease ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                 <span className={`text-sm ${listing.declaration_no_foot_mouth_disease ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
-                  No foot-and-mouth disease on property (12 months)
+                  {t('adminListings', 'biosecurityNoFmdPropertyLabel')}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className={`w-4 h-4 rounded-full ${listing.declaration_no_foot_mouth_disease_farm ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                 <span className={`text-sm ${listing.declaration_no_foot_mouth_disease_farm ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
-                  Farm outside foot-and-mouth disease control area
+                  {t('adminListings', 'biosecurityNoFmdFarmLabel')}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className={`w-4 h-4 rounded-full ${listing.declaration_livestock_south_africa ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                 <span className={`text-sm ${listing.declaration_livestock_south_africa ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
-                  Livestock born and raised in South Africa
+                  {t('adminListings', 'biosecuritySouthAfricaLabel')}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className={`w-4 h-4 rounded-full ${listing.declaration_no_gene_editing ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                 <span className={`text-sm ${listing.declaration_no_gene_editing ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
-                  No gene editing or genetic modification performed
+                  {t('adminListings', 'biosecurityNoGeneEditingLabel')}
                 </span>
               </div>
             </div>
@@ -292,17 +311,17 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
             <>
               <Separator />
               <div>
-                <h3 className="text-lg font-semibold mb-3">Livestock Loading Details</h3>
+                <h3 className="text-lg font-semibold mb-3">{t('adminListings', 'loadingDetailsSectionTitle')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <span className="font-medium">Number of Cattle Loaded:</span> {listing.number_cattle_loaded || 0}
+                    <span className="font-medium">{t('adminListings', 'numberCattleLoadedLabel')}:</span> {listing.number_cattle_loaded ?? 0}
                   </div>
                   <div>
-                    <span className="font-medium">Number of Sheep Loaded:</span> {listing.number_sheep_loaded || 0}
+                    <span className="font-medium">{t('adminListings', 'numberSheepLoadedLabel')}:</span> {listing.number_sheep_loaded ?? 0}
                   </div>
                   {listing.truck_registration_number && (
                     <div>
-                      <span className="font-medium">Truck Registration:</span> {listing.truck_registration_number}
+                      <span className="font-medium">{t('adminListings', 'truckRegistrationLabel')}:</span> {listing.truck_registration_number}
                     </div>
                   )}
                 </div>
@@ -315,13 +334,13 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
             <>
               <Separator />
               <div>
-                <h3 className="text-lg font-semibold mb-3">Digital Signature</h3>
+                <h3 className="text-lg font-semibold mb-3">{t('adminListings', 'digitalSignatureSectionTitle')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <div className="p-4 border rounded-lg bg-white">
                       <img 
                         src={listing.signature_data} 
-                        alt="Digital Signature" 
+                        alt={t('adminListings', 'digitalSignatureAlt')} 
                         className="max-w-full max-h-32 object-contain"
                       />
                     </div>
@@ -329,12 +348,12 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
                   <div className="space-y-2">
                     {listing.signature_date && (
                       <div>
-                        <span className="font-medium">Signed Date:</span> {new Date(listing.signature_date).toLocaleString()}
+                        <span className="font-medium">{t('adminListings', 'signedDateLabel')}:</span> {new Date(listing.signature_date).toLocaleString()}
                       </div>
                     )}
                     {listing.signed_location && (
                       <div>
-                        <span className="font-medium">Signed Location:</span> {listing.signed_location}
+                        <span className="font-medium">{t('adminListings', 'signedLocationLabel')}:</span> {listing.signed_location}
                       </div>
                     )}
                   </div>
@@ -347,13 +366,13 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
 
           {/* Timestamps */}
           <div>
-            <h3 className="text-lg font-semibold mb-3">Timeline</h3>
+            <h3 className="text-lg font-semibold mb-3">{t('adminListings', 'timelineSectionTitle')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <span className="font-medium">Created:</span> {new Date(listing.created_at).toLocaleString()}
+                <span className="font-medium">{t('adminListings', 'createdLabel')}:</span> {new Date(listing.created_at).toLocaleString()}
               </div>
               <div>
-                <span className="font-medium">Updated:</span> {new Date(listing.updated_at).toLocaleString()}
+                <span className="font-medium">{t('adminListings', 'updatedLabel')}:</span> {new Date(listing.updated_at).toLocaleString()}
               </div>
             </div>
           </div>
@@ -361,11 +380,11 @@ export const LivestockListingDetailsDialog = ({ listing, open, onOpenChange }: L
           {/* Actions */}
           <div className="flex justify-end space-x-4 pt-4 border-t">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Close
+              {t('adminListings', 'closeButton')}
             </Button>
             {listing.status === 'pending' && (
               <Button onClick={handleCreateOffer}>
-                Create Offer
+                {t('adminListings', 'createOfferButton')}
               </Button>
             )}
           </div>

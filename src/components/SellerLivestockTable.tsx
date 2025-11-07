@@ -9,19 +9,25 @@ import { useToast } from '@/hooks/use-toast';
 import { Eye, Edit, Beef } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
 import type { Tables } from '@/integrations/supabase/types';
+import { useTranslation } from '@/i18n/useTranslation';
 
-type LivestockListing = Tables<'livestock_listings'>;
+export type SellerLivestockTableListing = Tables<'livestock_listings'> & {
+  listing_invitations: {
+    reference_id: string;
+  } | null;
+};
 
 interface SellerLivestockTableProps {
-  onViewListing: (listing: LivestockListing) => void;
-  onEditListing: (listing: LivestockListing) => void;
+  onViewListing: (listing: SellerLivestockTableListing) => void;
+  onEditListing: (listing: SellerLivestockTableListing) => void;
 }
 
 export const SellerLivestockTable = ({ onViewListing, onEditListing }: SellerLivestockTableProps) => {
-  const [listings, setListings] = useState<LivestockListing[]>([]);
+  const [listings, setListings] = useState<SellerLivestockTableListing[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const fetchListings = async () => {
@@ -33,17 +39,42 @@ export const SellerLivestockTable = ({ onViewListing, onEditListing }: SellerLiv
       try {
         const { data, error } = await supabase
           .from('livestock_listings')
-          .select('*')
+          .select('*, listing_invitations(reference_id)')
           .eq('seller_id', user.id)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        setListings(data || []);
+
+        const normalizedListings = (data ?? []).map((listing) => {
+          const { listing_invitations: rawInvitation, ...rest } = listing as Tables<'livestock_listings'> & {
+            listing_invitations?: unknown;
+          };
+
+          let normalizedInvitation: { reference_id: string } | null = null;
+          if (
+            rawInvitation &&
+            typeof rawInvitation === 'object' &&
+            !Array.isArray(rawInvitation) &&
+            'reference_id' in rawInvitation &&
+            typeof (rawInvitation as { reference_id?: unknown }).reference_id === 'string'
+          ) {
+            normalizedInvitation = {
+              reference_id: (rawInvitation as { reference_id: string }).reference_id,
+            };
+          }
+
+          return {
+            ...(rest as Tables<'livestock_listings'>),
+            listing_invitations: normalizedInvitation,
+          } satisfies SellerLivestockTableListing;
+        });
+
+        setListings(normalizedListings as SellerLivestockTableListing[]);
       } catch (error) {
         console.error('Error fetching livestock listings:', error);
         toast({
-          title: "Error",
-          description: "Failed to load livestock listings",
+          title: t('sellerLivestockTable', 'toastErrorTitle'),
+          description: t('sellerLivestockTable', 'toastErrorDescription'),
           variant: "destructive",
         });
       } finally {
@@ -52,7 +83,8 @@ export const SellerLivestockTable = ({ onViewListing, onEditListing }: SellerLiv
     };
 
     fetchListings();
-  }, [user, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -64,6 +96,19 @@ export const SellerLivestockTable = ({ onViewListing, onEditListing }: SellerLiv
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return t('sellerLivestockTable', 'statusPending');
+      case 'approved':
+        return t('sellerLivestockTable', 'statusApproved');
+      case 'rejected':
+        return t('sellerLivestockTable', 'statusRejected');
+      default:
+        return t('sellerLivestockTable', 'statusDefault');
     }
   };
 
@@ -90,8 +135,8 @@ export const SellerLivestockTable = ({ onViewListing, onEditListing }: SellerLiv
       onEditListing(listing);
     } else {
       toast({
-        title: "Cannot Edit",
-        description: "This listing cannot be edited because it has received offers",
+        title: t('sellerLivestockTable', 'toastCannotEditTitle'),
+        description: t('sellerLivestockTable', 'toastCannotEditDescription'),
         variant: "destructive"
       });
     }
@@ -101,7 +146,7 @@ export const SellerLivestockTable = ({ onViewListing, onEditListing }: SellerLiv
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="text-center">Loading livestock listings...</div>
+          <div className="text-center">{t('sellerLivestockTable', 'loadingMessage')}</div>
         </CardContent>
       </Card>
     );
@@ -112,28 +157,28 @@ export const SellerLivestockTable = ({ onViewListing, onEditListing }: SellerLiv
       <CardHeader>
         <CardTitle className="flex items-center">
           <Beef className="w-5 h-5 mr-2" />
-          My Livestock Listings
+          {t('sellerLivestockTable', 'title')}
         </CardTitle>
         <CardDescription>
-          View and manage your livestock listings
+          {t('sellerLivestockTable', 'description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {listings.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            No livestock listings found. Create your first listing to get started.
+            {t('sellerLivestockTable', 'emptyState')}
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Owner Name</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Breed</TableHead>
-                <TableHead>Total Livestock</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t('sellerLivestockTable', 'columnOwner')}</TableHead>
+                <TableHead>{t('sellerLivestockTable', 'columnLocation')}</TableHead>
+                <TableHead>{t('sellerLivestockTable', 'columnBreed')}</TableHead>
+                <TableHead>{t('sellerLivestockTable', 'columnTotalLivestock')}</TableHead>
+                <TableHead>{t('sellerLivestockTable', 'columnStatus')}</TableHead>
+                <TableHead>{t('sellerLivestockTable', 'columnCreated')}</TableHead>
+                <TableHead>{t('sellerLivestockTable', 'columnActions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -150,7 +195,7 @@ export const SellerLivestockTable = ({ onViewListing, onEditListing }: SellerLiv
                       variant="secondary" 
                       className={getStatusBadgeColor(listing.status)}
                     >
-                      {listing.status}
+                      {getStatusLabel(listing.status)}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -164,7 +209,7 @@ export const SellerLivestockTable = ({ onViewListing, onEditListing }: SellerLiv
                         onClick={() => onViewListing(listing)}
                       >
                         <Eye className="w-4 h-4 mr-2" />
-                        View
+                        {t('sellerLivestockTable', 'viewButton')}
                       </Button>
                       <Button
                         variant="outline"
@@ -172,7 +217,7 @@ export const SellerLivestockTable = ({ onViewListing, onEditListing }: SellerLiv
                         onClick={() => handleEdit(listing)}
                       >
                         <Edit className="w-4 h-4 mr-2" />
-                        Edit
+                        {t('sellerLivestockTable', 'editButton')}
                       </Button>
                     </div>
                   </TableCell>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,11 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { CompanyService, type Company, type CompanyUserRelationship } from "@/services/companyService";
-import { InvitationManager } from "@/services/invitationManager";
 import { useAuth } from "@/contexts/auth";
-import { Building2, Users, Settings, Plus, UserPlus, Mail, Calendar, CheckCircle, Clock, XCircle, X } from "lucide-react";
+import { Building2, Users, Settings, Plus, UserPlus, Calendar, CheckCircle, Clock, XCircle } from "lucide-react";
 import { CompanyRegistrationForm } from "./CompanyRegistrationForm";
 import type { Tables } from "@/integrations/supabase/types";
+import { useTranslation } from "@/i18n/useTranslation";
 
 type Profile = Tables<'profiles'>;
 
@@ -26,10 +26,20 @@ interface CompanySettings {
   [key: string]: unknown; // Allow for additional properties
 }
 
-interface CompanyWithUsers extends Company {
+type CompanyUserWithProfile = CompanyUserRelationship & { profiles: Profile };
+
+interface CompanyEntry {
+  company: Company;
   userCount: number;
-  users: (CompanyUserRelationship & { profiles: Profile })[];
+  users: CompanyUserWithProfile[];
 }
+
+const getCompanySettings = (company: Company): CompanySettings | null => {
+  if (!company.settings || typeof company.settings !== 'object' || Array.isArray(company.settings)) {
+    return null;
+  }
+  return company.settings as CompanySettings;
+};
 
 interface CompanyManagementProps {
   onClose?: () => void;
@@ -38,9 +48,10 @@ interface CompanyManagementProps {
 export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose }) => {
   const { user, profile } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
-  const [companies, setCompanies] = useState<CompanyWithUsers[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<CompanyWithUsers | null>(null);
+  const [companies, setCompanies] = useState<CompanyEntry[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<CompanyEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
@@ -49,61 +60,63 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
   const [inviteLoading, setInviteLoading] = useState(false);
 
   const isSuperAdmin = profile?.role === 'super_admin';
-
-  useEffect(() => {
-    fetchCompanies();
-  }, [user]);
-
-  const fetchCompanies = async () => {
+  const fetchCompanies = useCallback(async () => {
     if (!user) return;
 
     setLoading(true);
     try {
-      let companiesData: Company[] = [];
+      let baseCompanies: Company[] = [];
 
       if (isSuperAdmin) {
         // Super admin can see all companies
         const { data, error } = await CompanyService.getCompanies();
         if (error) throw error;
-        companiesData = data || [];
+        baseCompanies = data ?? [];
       } else {
         // Regular users see only their companies
         const { data, error } = await CompanyService.getUserCompanies(user.id);
         if (error) throw error;
-        companiesData = data || [];
+        baseCompanies = data ?? [];
       }
 
       // Fetch user details for each company
-      const companiesWithUsers = await Promise.all(
-        companiesData.map(async (company) => {
-          const { data: users, error } = await CompanyService.getCompanyUsers(company.id);
+      const companiesWithUsers: CompanyEntry[] = await Promise.all(
+        baseCompanies.map(async (company): Promise<CompanyEntry> => {
+          const { data: users, error: usersError } = await CompanyService.getCompanyUsers(company.id);
+          if (usersError) throw usersError;
+
           return {
-            ...company,
+            company,
             userCount: users?.length || 0,
-            users: users || []
+            users: (users || []) as CompanyUserWithProfile[]
           };
         })
       );
 
       setCompanies(companiesWithUsers);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching companies:', error);
       toast({
-        title: "Error",
-        description: "Failed to load companies",
+        title: t('companyManagement', 'toastErrorTitle'),
+        description: t('companyManagement', 'toastErrorLoadCompanies'),
         variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isSuperAdmin]);
+
+  useEffect(() => {
+    fetchCompanies();
+  }, [fetchCompanies]);
 
   const handleCompanyCreated = (companyId: string) => {
     setShowCreateDialog(false);
     fetchCompanies();
     toast({
-      title: "Success",
-      description: "Company created successfully",
+      title: t('companyManagement', 'toastSuccessTitle'),
+      description: t('companyManagement', 'toastCompanyCreated'),
     });
   };
 
@@ -136,27 +149,40 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
   const getRoleDisplayName = (role: string) => {
     switch (role) {
       case 'super_admin':
-        return 'Super Admin';
+        return t('adminDashboard', 'roleSuperAdmin');
       case 'admin':
-        return 'Admin';
+        return t('companyManagement', 'roleAdmin');
       case 'seller':
-        return 'Seller';
+        return t('companyManagement', 'roleSeller');
       case 'vet':
-        return 'Veterinarian';
+        return t('companyManagement', 'roleVet');
       case 'agent':
-        return 'Agent';
+        return t('adminDashboard', 'roleAgent');
       case 'load_master':
-        return 'Load Master';
+        return t('companyManagement', 'roleLoadMaster');
       default:
         return role;
+    }
+  };
+
+  const getRelationshipStatusLabel = (status: string) => {
+    switch (status) {
+      case 'active':
+        return t('companyManagement', 'statusActive');
+      case 'pending':
+        return t('companyManagement', 'statusPending');
+      case 'inactive':
+        return t('companyManagement', 'statusInactive');
+      default:
+        return status;
     }
   };
 
   const handleInviteUser = async () => {
     if (!selectedCompany || !user || !inviteEmail.trim()) {
       toast({
-        title: "Error",
-        description: "Please fill in all required fields",
+        title: t('companyManagement', 'toastErrorTitle'),
+        description: t('companyManagement', 'toastFillRequired'),
         variant: "destructive"
       });
       return;
@@ -172,7 +198,7 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
       if (exists && existingUser) {
         // User exists - create direct company relationship
         const { error } = await CompanyService.createCompanyUserRelationship({
-          company_id: selectedCompany.id,
+          company_id: selectedCompany.company.id,
           user_id: existingUser.id,
           relationship_type: inviteRole,
           invited_by: user.id,
@@ -182,14 +208,14 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
         if (error) throw error;
 
         toast({
-          title: "Success",
-          description: `Invitation sent to existing user ${inviteEmail}`
+          title: t('companyManagement', 'toastSuccessTitle'),
+          description: t('companyManagement', 'toastInvitationExisting').replace('{email}', inviteEmail)
         });
       } else {
         // User doesn't exist - create pending invitation record
         // This will be processed when the user eventually registers
         const { error } = await CompanyService.createPendingInvitation({
-          company_id: selectedCompany.id,
+          company_id: selectedCompany.company.id,
           email: inviteEmail.trim(),
           relationship_type: inviteRole,
           invited_by: user.id,
@@ -199,8 +225,8 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
         if (error) throw error;
 
         toast({
-          title: "Success",
-          description: `Invitation sent to ${inviteEmail}. They will be added to the company when they register.`
+          title: t('companyManagement', 'toastSuccessTitle'),
+          description: t('companyManagement', 'toastInvitationNew').replace('{email}', inviteEmail)
         });
       }
 
@@ -214,8 +240,8 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
     } catch (error) {
       console.error('Error inviting user:', error);
       toast({
-        title: "Error",
-        description: "Failed to send invitation. Please try again.",
+        title: t('companyManagement', 'toastErrorTitle'),
+        description: t('companyManagement', 'toastSendFailed'),
         variant: "destructive"
       });
     } finally {
@@ -228,7 +254,7 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading companies...</p>
+          <p className="text-slate-600">{t('companyManagement', 'loading')}</p>
         </div>
       </div>
     );
@@ -238,9 +264,9 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Company Management</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{t('companyManagement', 'title')}</h1>
           <p className="text-slate-600">
-            {isSuperAdmin ? 'Manage all companies on the platform' : 'Manage your companies'}
+            {isSuperAdmin ? t('companyManagement', 'superAdminSubtitle') : t('companyManagement', 'adminSubtitle')}
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -249,14 +275,14 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
             <DialogTrigger asChild>
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
-                Create Company
+                {t('companyManagement', 'createCompany')}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl">
               <DialogHeader>
-                <DialogTitle>Create New Company</DialogTitle>
+                <DialogTitle>{t('companyManagement', 'createCompanyTitle')}</DialogTitle>
                 <DialogDescription>
-                  Set up a new livestock trading company on the platform.
+                  {t('companyManagement', 'createCompanyDescription')}
                 </DialogDescription>
               </DialogHeader>
               <CompanyRegistrationForm onSuccess={handleCompanyCreated} />
@@ -273,77 +299,82 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {companies.map((company) => (
-          <Card key={company.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Building2 className="w-5 h-5 mr-2 text-emerald-600" />
-                  {company.name}
-                </div>
-                {company.admin_user_id === user?.id && (
-                  <Badge variant="secondary">Admin</Badge>
-                )}
-              </CardTitle>
-              <CardDescription>
-                {(company.settings as CompanySettings)?.description || 'No description provided'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center text-slate-600">
-                    <Users className="w-4 h-4 mr-1" />
-                    {company.userCount} users
-                  </span>
-                  <span className="flex items-center text-slate-600">
-                    <Calendar className="w-4 h-4 mr-1" />
-                    {new Date(company.created_at).toLocaleDateString()}
-                  </span>
-                </div>
+        {companies.map((entry) => {
+          const { company, userCount, users } = entry;
+          const settings = getCompanySettings(company);
 
-                {(company.settings as CompanySettings)?.phone && (
-                  <div className="text-sm text-slate-600">
-                    <strong>Phone:</strong> {(company.settings as CompanySettings).phone}
+          return (
+            <Card key={company.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Building2 className="w-5 h-5 mr-2 text-emerald-600" />
+                    {company.name}
                   </div>
-                )}
-
-                {(company.settings as CompanySettings)?.registration_number && (
-                  <div className="text-sm text-slate-600">
-                    <strong>Reg #:</strong> {(company.settings as CompanySettings).registration_number}
+                  {company.admin_user_id === user?.id && (
+                    <Badge variant="secondary">{t('companyManagement', 'roleAdmin')}</Badge>
+                  )}
+                </CardTitle>
+                <CardDescription>
+                  {settings?.description || t('companyManagement', 'noDescription')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center text-slate-600">
+                      <Users className="w-4 h-4 mr-1" />
+                      {t('companyManagement', 'companyUsers').replace('{count}', String(userCount))}
+                    </span>
+                    <span className="flex items-center text-slate-600">
+                      <Calendar className="w-4 h-4 mr-1" />
+                      {t('companyManagement', 'createdOn').replace('{date}', new Date(company.created_at).toLocaleDateString())}
+                    </span>
                   </div>
-                )}
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => setSelectedCompany(company)}
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  Manage
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                  {settings?.phone && (
+                    <div className="text-sm text-slate-600">
+                      <strong>{t('companyManagement', 'phoneLabel')}</strong> {settings.phone}
+                    </div>
+                  )}
+
+                  {settings?.registration_number && (
+                    <div className="text-sm text-slate-600">
+                      <strong>{t('companyManagement', 'registrationLabel')}</strong> {settings.registration_number}
+                    </div>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setSelectedCompany(entry)}
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    {t('companyManagement', 'manageButton')}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {companies.length === 0 && (
         <Card>
           <CardContent className="text-center py-8">
             <Building2 className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-slate-900 mb-2">No companies found</h3>
+            <h3 className="text-lg font-medium text-slate-900 mb-2">{t('companyManagement', 'noCompaniesTitle')}</h3>
             <p className="text-slate-600 mb-4">
               {isSuperAdmin 
-                ? 'Create your first company to get started with the platform.'
-                : 'You are not associated with any companies yet.'
+                ? t('companyManagement', 'noCompaniesSuperAdmin')
+                : t('companyManagement', 'noCompaniesAdmin')
               }
             </p>
             {isSuperAdmin && (
               <Button onClick={() => setShowCreateDialog(true)}>
                 <Plus className="w-4 h-4 mr-2" />
-                Create First Company
+                {t('companyManagement', 'createFirstCompany')}
               </Button>
             )}
           </CardContent>
@@ -356,26 +387,26 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <Building2 className="w-5 h-5 mr-2" />
-              {selectedCompany?.name}
+              {selectedCompany?.company.name}
             </DialogTitle>
             <DialogDescription>
-              Manage company settings and user relationships
+              {t('companyManagement', 'dialogTitle')}
             </DialogDescription>
           </DialogHeader>
 
           {selectedCompany && (
             <Tabs defaultValue="users" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="users">Users</TabsTrigger>
-                <TabsTrigger value="settings">Settings</TabsTrigger>
+                <TabsTrigger value="users">{t('companyManagement', 'tabsUsers')}</TabsTrigger>
+                <TabsTrigger value="settings">{t('companyManagement', 'tabsSettings')}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="users" className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Company Users</h3>
+                  <h3 className="text-lg font-medium">{t('companyManagement', 'companyUsersHeading')}</h3>
                   <Button size="sm" onClick={() => setShowInviteDialog(true)}>
                     <UserPlus className="w-4 h-4 mr-2" />
-                    Invite User
+                    {t('companyManagement', 'inviteUser')}
                   </Button>
                 </div>
 
@@ -401,7 +432,7 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
                         </Badge>
                         <Badge className={getStatusColor(relationship.status)}>
                           {getStatusIcon(relationship.status)}
-                          <span className="ml-1">{relationship.status}</span>
+                          <span className="ml-1">{getRelationshipStatusLabel(relationship.status)}</span>
                         </Badge>
                       </div>
                     </div>
@@ -412,38 +443,38 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
               <TabsContent value="settings" className="space-y-4">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-medium mb-2">Company Information</h3>
+                    <h3 className="text-lg font-medium mb-2">{t('companyManagement', 'companyInfoHeading')}</h3>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <strong>Name:</strong> {selectedCompany.name}
+                        <strong>{t('companyManagement', 'infoName')}</strong> {selectedCompany.company.name}
                       </div>
                       <div>
-                        <strong>Created:</strong> {new Date(selectedCompany.created_at).toLocaleDateString()}
+                        <strong>{t('companyManagement', 'infoCreated')}</strong> {new Date(selectedCompany.company.created_at).toLocaleDateString()}
                       </div>
-                      {(selectedCompany.settings as CompanySettings)?.phone && (
+                      {getCompanySettings(selectedCompany.company)?.phone && (
                         <div>
-                          <strong>Phone:</strong> {(selectedCompany.settings as CompanySettings).phone}
+                          <strong>{t('companyManagement', 'phoneLabel')}</strong> {getCompanySettings(selectedCompany.company)?.phone}
                         </div>
                       )}
-                      {(selectedCompany.settings as CompanySettings)?.registration_number && (
+                      {getCompanySettings(selectedCompany.company)?.registration_number && (
                         <div>
-                          <strong>Registration:</strong> {(selectedCompany.settings as CompanySettings).registration_number}
+                          <strong>{t('companyManagement', 'registrationLabel')}</strong> {getCompanySettings(selectedCompany.company)?.registration_number}
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {(selectedCompany.settings as CompanySettings)?.address && (
+                  {getCompanySettings(selectedCompany.company)?.address && (
                     <div>
-                      <strong>Address:</strong>
-                      <p className="text-sm text-slate-600 mt-1">{(selectedCompany.settings as CompanySettings).address}</p>
+                      <strong>{t('companyManagement', 'infoAddress')}</strong>
+                      <p className="text-sm text-slate-600 mt-1">{getCompanySettings(selectedCompany.company)?.address}</p>
                     </div>
                   )}
 
-                  {(selectedCompany.settings as CompanySettings)?.description && (
+                  {getCompanySettings(selectedCompany.company)?.description && (
                     <div>
-                      <strong>Description:</strong>
-                      <p className="text-sm text-slate-600 mt-1">{(selectedCompany.settings as CompanySettings).description}</p>
+                      <strong>{t('companyManagement', 'infoDescription')}</strong>
+                      <p className="text-sm text-slate-600 mt-1">{getCompanySettings(selectedCompany.company)?.description}</p>
                     </div>
                   )}
                 </div>
@@ -459,20 +490,20 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <UserPlus className="w-5 h-5 mr-2" />
-              Invite User to {selectedCompany?.name}
+              {t('companyManagement', 'inviteDialogTitle').replace('{company}', selectedCompany?.company.name ?? '')}
             </DialogTitle>
             <DialogDescription>
-              Invite an existing user to join this company. The user must already be registered.
+              {t('companyManagement', 'inviteDialogDescription')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="invite-email">Email Address</Label>
+              <Label htmlFor="invite-email">{t('companyManagement', 'emailLabel')}</Label>
               <Input
                 id="invite-email"
                 type="email"
-                placeholder="user@example.com"
+                placeholder={t('companyManagement', 'emailPlaceholder')}
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 disabled={inviteLoading}
@@ -480,16 +511,16 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="invite-role">Role</Label>
+              <Label htmlFor="invite-role">{t('companyManagement', 'roleLabel')}</Label>
               <Select value={inviteRole} onValueChange={(value: 'admin' | 'seller' | 'vet' | 'load_master') => setInviteRole(value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a role" />
+                  <SelectValue placeholder={t('companyManagement', 'roleLabel')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="seller">Seller</SelectItem>
-                  <SelectItem value="vet">Veterinarian</SelectItem>
-                  <SelectItem value="load_master">Load Master</SelectItem>
+                  <SelectItem value="admin">{t('companyManagement', 'roleAdmin')}</SelectItem>
+                  <SelectItem value="seller">{t('companyManagement', 'roleSeller')}</SelectItem>
+                  <SelectItem value="vet">{t('companyManagement', 'roleVet')}</SelectItem>
+                  <SelectItem value="load_master">{t('companyManagement', 'roleLoadMaster')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -504,7 +535,7 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
                 }}
                 disabled={inviteLoading}
               >
-                Cancel
+                {t('companyManagement', 'cancel')}
               </Button>
               <Button
                 onClick={handleInviteUser}
@@ -513,10 +544,10 @@ export const CompanyManagement: React.FC<CompanyManagementProps> = ({ onClose })
                 {inviteLoading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Sending...
+                    {t('companyManagement', 'sending')}
                   </>
                 ) : (
-                  'Send Invitation'
+                  t('companyManagement', 'sendInvitation')
                 )}
               </Button>
             </div>

@@ -12,20 +12,12 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import type { Tables } from '@/integrations/supabase/types';
 import { ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export type ListingInvitation = Tables<'listing_invitations'> & {
   livestock_listings: Pick<Tables<'livestock_listings'>, 'id' | 'status'>[] | null;
   company_name: string | null;
   seller_profile_email: string | null;
-};
-
-const formatStatus = (status: string | null | undefined): string => {
-  if (!status) return 'N/A';
-  return status
-    .replace(/_/g, ' ')
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
 };
 
 interface ListingInvitationsTableProps {
@@ -36,6 +28,63 @@ interface ListingInvitationsTableProps {
 
 export const ListingInvitationsTable = ({ invitations, loading, refetch }: ListingInvitationsTableProps) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+
+  const formatStatusFallback = (status: string | null | undefined): string => {
+    if (!status) return t('common', 'notAvailable');
+    return status
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  const formatInvitationStatus = (status: string | null | undefined): string => {
+    if (!status) {
+      return t('common', 'notAvailable');
+    }
+
+    const normalized = status.toLowerCase();
+    switch (normalized) {
+      case 'pending':
+        return t('adminInvitations', 'statusPending');
+      case 'accepted':
+        return t('adminInvitations', 'statusAccepted');
+      case 'declined':
+        return t('adminInvitations', 'statusDeclined');
+      case 'cancelled':
+      case 'canceled':
+        return t('adminInvitations', 'statusCancelled');
+      case 'expired':
+        return t('adminInvitations', 'statusExpired');
+      default:
+        return formatStatusFallback(status);
+    }
+  };
+
+  const formatListingStatus = (status: string | null | undefined): string => {
+    const resolved = status ?? 'Not Started';
+    const normalized = resolved.toLowerCase().replace(/\s+/g, '_');
+
+    switch (normalized) {
+      case 'not_started':
+        return t('adminInvitations', 'listingStatusNotStarted');
+      case 'draft':
+        return t('adminInvitations', 'listingStatusDraft');
+      case 'submitted_to_vet':
+        return t('adminInvitations', 'listingStatusSubmittedToVet');
+      case 'in_progress':
+        return t('adminInvitations', 'listingStatusInProgress');
+      case 'completed':
+        return t('adminInvitations', 'listingStatusCompleted');
+      case 'approved':
+        return t('adminInvitations', 'listingStatusApproved');
+      case 'rejected':
+        return t('adminInvitations', 'listingStatusRejected');
+      default:
+        return formatStatusFallback(resolved);
+    }
+  };
   // Data fetching is now handled by the parent component (AdminDashboard)
   // We still need a subscription to listen for real-time changes
   useEffect(() => {
@@ -169,21 +218,21 @@ export const ListingInvitationsTable = ({ invitations, loading, refetch }: Listi
   }, [sorted, page, rowsPerPage]);
 
   if (loading) {
-    return <p>Loading invitations...</p>;
+    return <p>{t('adminInvitations', 'loading')}</p>;
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sent Invitations</CardTitle>
-        <CardDescription>A list of all livestock listing invitations that have been sent.</CardDescription>
+        <CardTitle>{t('adminInvitations', 'title')}</CardTitle>
+        <CardDescription>{t('adminInvitations', 'description')}</CardDescription>
       </CardHeader>
       <CardContent>
         {/* Toolbar: search and filters */}
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-4">
           <div className="flex items-center gap-3 w-full md:w-auto">
             <Input
-              placeholder="Search by reference, company, or seller email..."
+              placeholder={t('adminInvitations', 'searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full md:w-[360px]"
@@ -191,47 +240,47 @@ export const ListingInvitationsTable = ({ invitations, loading, refetch }: Listi
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <Label className="text-sm">Invitation</Label>
+              <Label className="text-sm">{t('adminInvitations', 'invitationFilterLabel')}</Label>
               <Select value={invitationStatus} onValueChange={setInvitationStatus}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Invitation status" />
+                  <SelectValue placeholder={t('adminInvitations', 'invitationFilterPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="all">{t('adminInvitations', 'allOption')}</SelectItem>
                   {invitationStatusOptions.map((s) => (
                     <SelectItem key={s} value={s}>
-                      {formatStatus(s)}
+                      {formatInvitationStatus(s)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="flex items-center gap-2">
-              <Label className="text-sm">Listing</Label>
+              <Label className="text-sm">{t('adminInvitations', 'listingFilterLabel')}</Label>
               <Select value={listingStatus} onValueChange={setListingStatus}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Listing status" />
+                  <SelectValue placeholder={t('adminInvitations', 'listingFilterPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="all">{t('adminInvitations', 'allOption')}</SelectItem>
                   {listingStatusOptions.map((s) => (
                     <SelectItem key={s} value={s}>
-                      {formatStatus(s)}
+                      {formatListingStatus(s)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="flex items-center gap-2">
-              <Label className="text-sm">Rows</Label>
+              <Label className="text-sm">{t('adminInvitations', 'rowsLabel')}</Label>
               <Select value={String(rowsPerPage)} onValueChange={(v) => setRowsPerPage(Number(v))}>
                 <SelectTrigger className="w-[110px]">
-                  <SelectValue placeholder="Rows" />
+                  <SelectValue placeholder={t('adminInvitations', 'rowsLabel')} />
                 </SelectTrigger>
                 <SelectContent>
                   {[5, 10, 20, 50].map((n) => (
                     <SelectItem key={n} value={String(n)}>
-                      {n} / page
+                      {t('adminInvitations', 'rowsOption').replace('{count}', String(n))}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -249,7 +298,7 @@ export const ListingInvitationsTable = ({ invitations, loading, refetch }: Listi
                   className="px-0 h-auto font-semibold hover:bg-transparent"
                   onClick={() => toggleSort('reference')}
                 >
-                  Reference ID
+                  {t('adminInvitations', 'tableReferenceId')}
                   {sortKey === 'reference' ? (
                     sortDir === 'asc' ? <ChevronUp className="ml-2 h-3.5 w-3.5" /> : <ChevronDown className="ml-2 h-3.5 w-3.5" />
                   ) : (
@@ -264,7 +313,7 @@ export const ListingInvitationsTable = ({ invitations, loading, refetch }: Listi
                   className="px-0 h-auto font-semibold hover:bg-transparent"
                   onClick={() => toggleSort('seller')}
                 >
-                  Seller
+                  {t('adminInvitations', 'tableSeller')}
                   {sortKey === 'seller' ? (
                     sortDir === 'asc' ? <ChevronUp className="ml-2 h-3.5 w-3.5" /> : <ChevronDown className="ml-2 h-3.5 w-3.5" />
                   ) : (
@@ -279,7 +328,7 @@ export const ListingInvitationsTable = ({ invitations, loading, refetch }: Listi
                   className="px-0 h-auto font-semibold hover:bg-transparent"
                   onClick={() => toggleSort('invitation_status')}
                 >
-                  Invitation Status
+                  {t('adminInvitations', 'tableInvitationStatus')}
                   {sortKey === 'invitation_status' ? (
                     sortDir === 'asc' ? <ChevronUp className="ml-2 h-3.5 w-3.5" /> : <ChevronDown className="ml-2 h-3.5 w-3.5" />
                   ) : (
@@ -294,7 +343,7 @@ export const ListingInvitationsTable = ({ invitations, loading, refetch }: Listi
                   className="px-0 h-auto font-semibold hover:bg-transparent"
                   onClick={() => toggleSort('listing_status')}
                 >
-                  Listing Status
+                  {t('adminInvitations', 'tableListingStatus')}
                   {sortKey === 'listing_status' ? (
                     sortDir === 'asc' ? <ChevronUp className="ml-2 h-3.5 w-3.5" /> : <ChevronDown className="ml-2 h-3.5 w-3.5" />
                   ) : (
@@ -309,7 +358,7 @@ export const ListingInvitationsTable = ({ invitations, loading, refetch }: Listi
                   className="px-0 h-auto font-semibold hover:bg-transparent"
                   onClick={() => toggleSort('date')}
                 >
-                  Date Sent
+                  {t('adminInvitations', 'tableDateSent')}
                   {sortKey === 'date' ? (
                     sortDir === 'asc' ? <ChevronUp className="ml-2 h-3.5 w-3.5" /> : <ChevronDown className="ml-2 h-3.5 w-3.5" />
                   ) : (
@@ -317,7 +366,7 @@ export const ListingInvitationsTable = ({ invitations, loading, refetch }: Listi
                   )}
                 </Button>
               </TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead>{t('adminInvitations', 'tableActions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -326,7 +375,7 @@ export const ListingInvitationsTable = ({ invitations, loading, refetch }: Listi
                 <TableRow key={invitation.id}>
                   <TableCell className="font-mono">{invitation.reference_id}</TableCell>
                   <TableCell>
-                    <div>{invitation.company_name || 'N/A'}</div>
+                    <div>{invitation.company_name || t('adminInvitations', 'companyUnknown')}</div>
                     <div className="text-sm text-muted-foreground">{invitation.seller_email || invitation.seller_profile_email}</div>
                   </TableCell>
                   <TableCell>
@@ -334,12 +383,12 @@ export const ListingInvitationsTable = ({ invitations, loading, refetch }: Listi
                       variant={invitation.status === 'pending' ? 'secondary' : invitation.status === 'accepted' ? 'default' : 'outline'}
                       className={invitation.status === 'accepted' ? 'bg-blue-100 text-blue-800' : ''}
                     >
-                      {formatStatus(invitation.status)}
+                      {formatInvitationStatus(invitation.status)}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant={invitation.livestock_listings && invitation.livestock_listings.length > 0 && invitation.livestock_listings[0].status === 'completed' ? 'default' : 'secondary'}>
-                      {formatStatus(invitation.livestock_listings && invitation.livestock_listings.length > 0 ? invitation.livestock_listings[0].status : 'Not Started')}
+                      {formatListingStatus(invitation.livestock_listings && invitation.livestock_listings.length > 0 ? invitation.livestock_listings[0].status : 'Not Started')}
                     </Badge>
                   </TableCell>
                   <TableCell>{format(new Date(invitation.created_at), 'PPP')}</TableCell>
@@ -350,17 +399,17 @@ export const ListingInvitationsTable = ({ invitations, loading, refetch }: Listi
                         size="sm"
                         onClick={() => navigate(`/admin/listing/${invitation.livestock_listings?.[0]?.id}`)}
                       >
-                        View Listing
+                        {t('adminInvitations', 'viewListing')}
                       </Button>
                     ) : (
-                      <span className="text-xs text-gray-500">No Listing</span>
+                      <span className="text-xs text-gray-500">{t('adminInvitations', 'noListing')}</span>
                     )}
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="text-center">No invitations found.</TableCell>
+                <TableCell colSpan={6} className="text-center">{t('adminInvitations', 'emptyState')}</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -381,7 +430,11 @@ export const ListingInvitationsTable = ({ invitations, loading, refetch }: Listi
                   />
                 </PaginationItem>
                 <PaginationItem>
-                  <span className="px-2 text-sm text-muted-foreground">Page {page} of {totalPages}</span>
+                  <span className="px-2 text-sm text-muted-foreground">
+                    {t('adminInvitations', 'paginationLabel')
+                      .replace('{current}', String(page))
+                      .replace('{total}', String(totalPages))}
+                  </span>
                 </PaginationItem>
                 <PaginationItem>
                   <PaginationNext

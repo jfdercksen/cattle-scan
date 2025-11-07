@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronRight, Shield } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
-import { useLanguage } from "@/contexts/languageContext";
+import { useTranslation } from "@/i18n/useTranslation";
 import {
   Dialog,
   DialogTrigger,
@@ -19,21 +19,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
-interface ContentStructure {
-  hero: {
-    title: string;
-    cta: string;
-  };
-  footer: {
-    company: string;
-    privacy: string;
-    terms: string;
-    contact: string;
-  };
-}
-
 const Index = () => {
-  const { language } = useLanguage();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const [contactOpen, setContactOpen] = useState(false);
@@ -41,53 +28,24 @@ const Index = () => {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
 
-  const content: Record<'en' | 'af', ContentStructure> = {
-    en: {
-      hero: {
-        title: "Cattle Scan, Biosecurity Tracking and Traceability",
-        cta: "Sign In",
-      },
-      footer: {
-        company: "Powered By Workbalance",
-        privacy: "Privacy Policy",
-        terms: "Terms of Service",
-        contact: "Register",
-      },
-    },
-    af: {
-      hero: {
-        title: "Cattle Scan, Biosecurity Tracking and Traceability",
-        cta: "Teken In",
-      },
-      footer: {
-        company: "Powered By Workbalance",
-        privacy: "Privaatheid Beleid",
-        terms: "Terme van Diens",
-        contact: "Register",
-      },
-    },
-  };
-
-  const t = content[language];
-  const titleParts = t.hero.title.split("&");
-  const titleTop = (titleParts[0] || "").trim() || t.hero.title;
+  const heroTitle = t("index", "heroTitle");
+  const titleParts = heroTitle.split("&");
+  const titleTop = (titleParts[0] || "").trim() || heroTitle;
   const titleBottom = (titleParts[1] || "").trim();
 
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim() || !message.trim()) {
       toast({
-        title: "Missing information",
-        description: "Please fill in your name, email, and message.",
+        title: t("index", "missingInfoTitle"),
+        description: t("index", "missingInfoDescription"),
       });
       return;
     }
 
-    // In a future iteration, send this to a backend or email service.
-    // For now, show a success toast and close the dialog.
     toast({
-      title: "Message sent",
-      description: "Thanks for reaching out. We'll get back to you soon.",
+      title: t("index", "messageSentTitle"),
+      description: t("index", "messageSentDescription"),
     });
     setContactOpen(false);
     setName("");
@@ -114,41 +72,47 @@ const Index = () => {
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <Link to="/auth">
                 <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg">
-                  {t.hero.cta}
+                  {t("index", "signInCta")}
                   <ChevronRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
               <Dialog open={contactOpen} onOpenChange={setContactOpen}>
                 <DialogTrigger asChild>
                   <Button size="lg" variant="outline" className="px-8 py-3 text-lg">
-                    Register
+                    {t("index", "registerCta")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Register</DialogTitle>
+                    <DialogTitle>{t("index", "contactDialogTitle")}</DialogTitle>
                     <DialogDescription>
-                      We'd love to hear from you. Please fill in the form below and we'll get back to you.
+                      {t("index", "contactDialogDescription")}
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleContactSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="contact-name">Name</Label>
-                      <Input id="contact-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+                      <Label htmlFor="contact-name">{t("index", "contactNameLabel")}</Label>
+                      <Input id="contact-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("index", "contactNameLabel")} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="contact-email">Email</Label>
+                      <Label htmlFor="contact-email">{t("index", "contactEmailLabel")}</Label>
                       <Input id="contact-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="contact-message">Message</Label>
-                      <Textarea id="contact-message" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="How can we help?" rows={5} />
+                      <Label htmlFor="contact-message">{t("index", "contactMessageLabel")}</Label>
+                      <Textarea
+                        id="contact-message"
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        placeholder={t("index", "contactMessagePlaceholder")}
+                        rows={5}
+                      />
                     </div>
                     <DialogFooter>
                       <DialogClose asChild>
-                        <Button type="button" variant="outline">Cancel</Button>
+                        <Button type="button" variant="outline">{t("common", "cancel")}</Button>
                       </DialogClose>
-                      <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">Submit</Button>
+                      <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">{t("common", "submit")}</Button>
                     </DialogFooter>
                   </form>
                 </DialogContent>
@@ -174,11 +138,11 @@ const Index = () => {
               rel="noopener noreferrer"
               className="text-slate-400 hover:text-white transition-colors text-center md:text-left mb-4 md:mb-0 block"
             >
-              {t.footer.company}
+              {t("index", "footerCompany")}
             </a>
             <div className="flex space-x-6 text-sm">
-              <a href="#" className="text-slate-400 hover:text-white transition-colors">{t.footer.privacy}</a>
-              <a href="#" className="text-slate-400 hover:text-white transition-colors">{t.footer.terms}</a>
+              <a href="#" className="text-slate-400 hover:text-white transition-colors">{t("index", "footerPrivacy")}</a>
+              <a href="#" className="text-slate-400 hover:text-white transition-colors">{t("index", "footerTerms")}</a>
             </div>
           </div>
         </div>
