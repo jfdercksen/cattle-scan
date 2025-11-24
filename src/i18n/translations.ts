@@ -809,7 +809,7 @@ const translationsData = {
     },
     statusPending: {
       en: 'Pending',
-      af: 'Hangend',
+      af: 'Aanhangig',
     },
     statusAccepted: {
       en: 'Accepted',
@@ -903,7 +903,7 @@ const translationsData = {
     },
     statusPending: {
       en: 'Pending',
-      af: 'Hangend',
+      af: 'Aanhangig',
     },
     statusAccepted: {
       en: 'Accepted',
@@ -921,7 +921,7 @@ const translationsData = {
     },
     description: {
       en: 'Capture your main farm and additional grazing locations.',
-      af: 'Vang jou hoofplaas en addisionele weidingsplekke vas.',
+      af: 'Lê jou hoofplaas en addisionele weidingsplekke vas.',
     },
     farmNameLabel: {
       en: 'Farm Name',
@@ -1131,7 +1131,7 @@ const translationsData = {
     },
     statusPending: {
       en: 'Pending',
-      af: 'Hangend',
+      af: 'Aanhangig',
     },
     statusApproved: {
       en: 'Approved',
@@ -1301,7 +1301,7 @@ const translationsData = {
     },
     statusLabelPending: {
       en: 'Pending',
-      af: 'Hangend',
+      af: 'Aanhangig',
     },
     statusLabelApproved: {
       en: 'Approved',
@@ -1985,7 +1985,7 @@ const translationsData = {
     },
     glnSwitchLabel: {
       en: 'If the {entity} selling the livestock has a GLN Number, it could mean an additional R 25 per head payment. Apply?',
-      af: 'Indien die {entity} wat die vee verkoop ’n GLN-nommer het, kan dit ’n bykomende R 25 per kop betaling beteken. Pas toe?',
+      af: 'Indien die {entity} wat die vee verkoop ’n GLN-nommer het, kan dit ’n bykomende R 25 per kop betaling beteken. Aanvaar U dit so?',
     },
     glnInfo: {
       en: 'To qualify for the additional payment, a GLN number is required. Please upload the GLN registration document.',
@@ -2009,7 +2009,7 @@ const translationsData = {
     },
     turnoverSwitchLabel: {
       en: 'If the {entity} selling the livestock has a turnover of less than R 10 million, it could mean an additional R 25 per calf payment. Apply?',
-      af: 'Indien die {entity} wat die vee verkoop ’n omset van minder as R 10 miljoen het, kan dit ’n bykomende R 25 per kalf betaling beteken. Pas toe?',
+      af: 'Indien die {entity} wat die vee verkoop ’n omset van minder as R 10 miljoen het, kan dit ’n bykomende R 25 per kalf betaling beteken. Aanvaar U dit so?',
     },
     affidavitInfo: {
       en: 'To qualify for the additional payment, a sworn affidavit must be completed and submitted.',
@@ -2117,7 +2117,7 @@ const translationsData = {
     },
     switchTrueLabel: {
       en: 'Correct',
-      af: 'Korrekt',
+      af: 'Korrek',
     },
     switchFalseLabel: {
       en: 'Wrong',
@@ -2137,7 +2137,7 @@ const translationsData = {
     },
     declarationNoAnimalOriginFeed: {
       en: 'No feed of animal origin (for instance chicken litter, bone meal, carcass meal, blood meal, etc.) has ever been fed to the livestock sold to {company}.',
-      af: 'Geen voer van dierlike oorsprong (byvoorbeeld hoenderskuur, beendermeel, karkasmeel, bloedmeel, ens.) is ooit aan die vee wat aan {company} verkoop word gevoer nie.',
+      af: 'Geen voer van dierlike oorsprong (byvoorbeeld hoenderskuur, beenmeel, karkasmeel, bloedmeel, ens.) is ooit aan die vee wat aan {company} verkoop word gevoer nie.',
     },
     declarationVeterinaryProductsRegistered: {
       en: 'All veterinary products used on the farm are registered for use in South Africa and are used according to label directions',
@@ -2443,7 +2443,7 @@ const translationsData = {
     },
     statusPending: {
       en: 'Pending',
-      af: 'Hangend',
+      af: 'Aanhangig',
     },
     statusSuspended: {
       en: 'Suspended',
@@ -2561,7 +2561,7 @@ const translationsData = {
     },
     pendingLabel: {
       en: 'Pending',
-      af: 'Hangend',
+      af: 'Aanhangig',
     },
     cardDescription: {
       en: 'Manage users and their roles within your company',
@@ -2755,7 +2755,7 @@ const translationsData = {
     },
     statusPending: {
       en: 'Pending',
-      af: 'Hangend',
+      af: 'Aanhangig',
     },
     statusAccepted: {
       en: 'Accepted',
@@ -3241,7 +3241,7 @@ const translationsData = {
     },
     statusPending: {
       en: 'Pending',
-      af: 'Hangend',
+      af: 'Aanhangig',
     },
     statusApproved: {
       en: 'Approved',
@@ -3279,7 +3279,7 @@ const translationsData = {
     },
     statusPending: {
       en: 'Pending',
-      af: 'Hangend',
+      af: 'Aanhangig',
     },
     statusAccepted: {
       en: 'Accepted',
@@ -4043,7 +4043,7 @@ const translationsData = {
     },
     statusPending: {
       en: 'Pending',
-      af: 'Hangend',
+      af: 'Aanhangig',
     },
     statusInactive: {
       en: 'Inactive',
@@ -4621,7 +4621,7 @@ const translationsData = {
     },
     statusPending: {
       en: 'Pending',
-      af: 'Hangend',
+      af: 'Aanhangig',
     },
     statusAccepted: {
       en: 'Accepted',

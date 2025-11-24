@@ -112,9 +112,9 @@ const SellerDashboard = () => {
 
         <Tabs defaultValue="dashboard" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="farms">Farms</TabsTrigger>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="dashboard">{t('sellerDashboard', 'tabDashboard')}</TabsTrigger>
+            <TabsTrigger value="farms">{t('sellerDashboard', 'tabFarms')}</TabsTrigger>
+            <TabsTrigger value="profile">{t('sellerDashboard', 'tabProfile')}</TabsTrigger>
           </TabsList>
           
           <TabsContent value="dashboard">
