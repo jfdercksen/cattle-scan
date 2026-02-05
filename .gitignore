@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Supabase local artifacts
+supabase/.temp/
+supabase/backups/
+supabase/migrations_legacy_*/

@@ -123,6 +123,11 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
   const draftKey = `livestock_listing_draft:${invitationId}`;
   const { t } = useTranslation();
 
+  const getProfileOwnerName = (currentProfile: Database['public']['Tables']['profiles']['Row'] | null) => {
+    if (!currentProfile) return '';
+    return currentProfile.company_name || `${currentProfile.first_name || ''} ${currentProfile.last_name || ''}`.trim();
+  };
+
   const form = useForm<LivestockListingFormData>({
     resolver: zodResolver(livestockListingSchema),
     defaultValues: {
@@ -228,6 +233,16 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading]);
+
+  useEffect(() => {
+    if (!profile) return;
+    const ownerName = getProfileOwnerName(profile);
+    if (!ownerName) return;
+    const currentOwnerName = (getValues('owner_name') || '').trim();
+    if (currentOwnerName !== ownerName) {
+      setValue('owner_name', ownerName, { shouldDirty: false, shouldValidate: true });
+    }
+  }, [profile, getValues, setValue]);
 
   const formSections = [
     // { title: "Livestock Details", component: <LivestockDetailsSection /> },
