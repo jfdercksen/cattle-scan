@@ -25,6 +25,33 @@ export const SellerInvitationsTable = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
+  const ensureHasFarms = async () => {
+    if (!user) return false;
+    const { count, error } = await supabase
+      .from('farms')
+      .select('*', { count: 'exact', head: true })
+      .eq('owner_id', user.id);
+    if (error) {
+      console.error('Error checking farms:', error);
+      toast({
+        title: t('common', 'errorTitle'),
+        description: t('sellerDashboard', 'toastDashboardError'),
+        variant: "destructive",
+      });
+      return false;
+    }
+    const hasFarms = (count ?? 0) > 0;
+    if (!hasFarms) {
+      toast({
+        title: t('sellerDashboard', 'farmRequiredTitle'),
+        description: t('sellerDashboard', 'pleaseCreateFarmFirst'),
+        variant: "destructive",
+      });
+      navigate('/seller-dashboard?tab=farms&showFarmPrompt=true');
+    }
+    return hasFarms;
+  };
+
   const formatInvitationStatus = (status: string | null | undefined) => {
     if (!status) return '';
     const normalized = status.toLowerCase();
@@ -106,6 +133,8 @@ export const SellerInvitationsTable = () => {
   }, [user]);
 
   const handleAcceptInvitation = async (invitation: ListingInvitation) => {
+    const hasFarms = await ensureHasFarms();
+    if (!hasFarms) return;
     try {
       const { error } = await supabase
         .from('listing_invitations')
@@ -193,7 +222,12 @@ export const SellerInvitationsTable = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/seller/listing/${listing?.id}`)}
+                        onClick={async () => {
+                          const hasFarms = await ensureHasFarms();
+                          if (hasFarms) {
+                            navigate(`/seller/listing/${listing?.id}`);
+                          }
+                        }}
                       >
                         {t('sellerInvitations', 'viewListing')}
                       </Button>
@@ -201,7 +235,12 @@ export const SellerInvitationsTable = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/seller/create-listing/${invitation.id}`)}
+                        onClick={async () => {
+                          const hasFarms = await ensureHasFarms();
+                          if (hasFarms) {
+                            navigate(`/seller/create-listing/${invitation.id}`);
+                          }
+                        }}
                       >
                         {t('sellerInvitations', 'editListing')}
                       </Button>

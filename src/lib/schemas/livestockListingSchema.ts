@@ -92,6 +92,10 @@ export const livestockListingSchema = z.object({
 
   // Enhanced Loading Points with three addresses
   loading_points: z.array(z.object({
+    selected_farm_id: z.string().uuid().optional().nullable(),
+    selected_farm_has_gln: z.boolean().optional().default(false),
+    selected_farm_gln_number: z.string().optional().nullable(),
+    selected_farm_gln_document_url: z.string().url('GLN document must be a valid URL').optional().nullable(),
     birth_address: z.object({
       farm_name: z.string().min(1, 'Farm name is required'),
       district: z.string().min(1, 'District is required'),
@@ -130,21 +134,21 @@ export const livestockListingSchema = z.object({
       breeder_name: z.string().optional(),
       livestock_moved_out_of_boundaries: z.boolean().default(false),
       livestock_moved_location: z.object({
-        farm_name: z.string(),
-        district: z.string(),
-        province: z.string(),
+        farm_name: z.string().optional(),
+        district: z.string().optional(),
+        province: z.string().optional(),
         country: z.string().optional(),
-      }).optional(),
+      }).optional().nullable(),
       livestock_moved_location_to: z.object({
-        farm_name: z.string(),
-        district: z.string(),
-        province: z.string(),
+        farm_name: z.string().optional(),
+        district: z.string().optional(),
+        province: z.string().optional(),
         country: z.string().optional(),
-      }).optional(),
+      }).optional().nullable(),
       livestock_moved_how: z.enum(['Transport Contractor', 'Own Truck', 'On Foot']).optional(),
       livestock_moved_year: z.coerce.number().optional(),
       livestock_moved_month: z.coerce.number().optional(),
-    }).optional(),
+    }).optional().nullable(),
   })).min(1, "At least one loading point is required"),
 
   // Vet selection
@@ -197,6 +201,7 @@ export const livestockListingSchema = z.object({
   // Enhanced loading points validation
   data.loading_points?.forEach((loadingPoint, index) => {
     const herdDetails = loadingPoint.details;
+    const biosecurity = loadingPoint.biosecurity;
 
     // Validate current address if not same as birth
     if (!loadingPoint.is_current_same_as_birth) {
@@ -255,6 +260,69 @@ export const livestockListingSchema = z.object({
           message: 'Declaration from previous owner is required when livestock is bought in.',
           code: z.ZodIssueCode.custom,
         });
+      }
+    }
+
+    if (biosecurity?.livestock_moved_out_of_boundaries) {
+      const fromLocation = biosecurity.livestock_moved_location;
+      const toLocation = biosecurity.livestock_moved_location_to;
+      const hasAnyFrom =
+        fromLocation?.farm_name ||
+        fromLocation?.district ||
+        fromLocation?.province ||
+        fromLocation?.country;
+      const hasAnyTo =
+        toLocation?.farm_name ||
+        toLocation?.district ||
+        toLocation?.province ||
+        toLocation?.country;
+
+      if (hasAnyFrom) {
+        if (!fromLocation?.farm_name) {
+          ctx.addIssue({
+            path: [`loading_points.${index}.biosecurity.livestock_moved_location.farm_name`],
+            message: 'Farm name is required for moved from location',
+            code: z.ZodIssueCode.custom,
+          });
+        }
+        if (!fromLocation?.district) {
+          ctx.addIssue({
+            path: [`loading_points.${index}.biosecurity.livestock_moved_location.district`],
+            message: 'District is required for moved from location',
+            code: z.ZodIssueCode.custom,
+          });
+        }
+        if (!fromLocation?.province) {
+          ctx.addIssue({
+            path: [`loading_points.${index}.biosecurity.livestock_moved_location.province`],
+            message: 'Province is required for moved from location',
+            code: z.ZodIssueCode.custom,
+          });
+        }
+      }
+
+      if (hasAnyTo) {
+        if (!toLocation?.farm_name) {
+          ctx.addIssue({
+            path: [`loading_points.${index}.biosecurity.livestock_moved_location_to.farm_name`],
+            message: 'Farm name is required for moved to location',
+            code: z.ZodIssueCode.custom,
+          });
+        }
+        if (!toLocation?.district) {
+          ctx.addIssue({
+            path: [`loading_points.${index}.biosecurity.livestock_moved_location_to.district`],
+            message: 'District is required for moved to location',
+            code: z.ZodIssueCode.custom,
+          });
+        }
+        if (!toLocation?.province) {
+          ctx.addIssue({
+            path: [`loading_points.${index}.biosecurity.livestock_moved_location_to.province`],
+            message: 'Province is required for moved to location',
+            code: z.ZodIssueCode.custom,
+          });
+        }
       }
     }
   });

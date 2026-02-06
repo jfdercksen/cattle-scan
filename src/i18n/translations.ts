@@ -1015,6 +1015,10 @@ const translationsData = {
       en: 'Actions',
       af: 'Aksies',
     },
+    editActionLabel: {
+      en: 'Edit farm',
+      af: 'Wysig plaas',
+    },
     deleteActionLabel: {
       en: 'Delete farm',
       af: 'Skrap plaas',
@@ -1034,6 +1038,22 @@ const translationsData = {
     toastMissingAddressDescription: {
       en: 'Please fill all address fields.',
       af: 'Vul asseblief al die adresvelde in.',
+    },
+    toastMissingGlnNumberDescription: {
+      en: 'Please provide a GLN number.',
+      af: 'Verskaf asseblief ’n GLN-nommer.',
+    },
+    toastMissingGlnDocumentDescription: {
+      en: 'Please upload the GLN registration document.',
+      af: 'Laai asseblief die GLN-registrasiedokument op.',
+    },
+    toastInvalidGlnFileType: {
+      en: 'Invalid file type. Please upload JPG, PNG, WEBP, or PDF.',
+      af: 'Ongeldige lêertipe. Laai asseblief JPG, PNG, WEBP of PDF op.',
+    },
+    toastInvalidGlnFileSize: {
+      en: 'File is too large. Max size is 10MB.',
+      af: 'Lêer is te groot. Maksimum grootte is 10MB.',
     },
     toastSaveSuccessTitle: {
       en: 'Saved',
@@ -1062,6 +1082,58 @@ const translationsData = {
     toastDeleteErrorDescription: {
       en: 'Failed to delete farm.',
       af: 'Kon nie plaas verwyder nie.',
+    },
+    glnSectionTitle: {
+      en: 'GLN Information',
+      af: 'GLN-inligting',
+    },
+    glnSectionDescription: {
+      en: 'Does this farm have a GLN Number? Having a GLN could qualify for an additional R25 per head payment.',
+      af: 'Het hierdie plaas ’n GLN-nommer? ’n GLN kan kwalifiseer vir ’n addisionele R25 per kop.',
+    },
+    glnYes: {
+      en: 'Yes',
+      af: 'Ja',
+    },
+    glnNo: {
+      en: 'No',
+      af: 'Nee',
+    },
+    glnNumberLabel: {
+      en: 'GLN Number',
+      af: 'GLN-nommer',
+    },
+    glnNumberPlaceholder: {
+      en: 'Enter GLN number',
+      af: 'Voer GLN-nommer in',
+    },
+    glnDocumentLabel: {
+      en: 'GLN Registration Document',
+      af: 'GLN-registrasiedokument',
+    },
+    glnChooseFile: {
+      en: 'Choose File',
+      af: 'Kies lêer',
+    },
+    glnTakePhoto: {
+      en: 'Take Photo',
+      af: 'Neem foto',
+    },
+    glnViewDocument: {
+      en: 'View current document',
+      af: 'Sien huidige dokument',
+    },
+    glnReplaceDocument: {
+      en: 'Replace',
+      af: 'Vervang',
+    },
+    updateFarm: {
+      en: 'Update Farm',
+      af: 'Werk plaas by',
+    },
+    cancelEdit: {
+      en: 'Cancel',
+      af: 'Kanselleer',
     },
   },
   adminListings: {
@@ -2006,6 +2078,38 @@ const translationsData = {
     glnUploadLabel: {
       en: 'Upload GLN Registration',
       af: 'Laai GLN-registrasie op',
+    },
+    glnPremiumTitle: {
+      en: 'Additional R25 Per Head Payment',
+      af: 'Bykomende R25 per kop betaling',
+    },
+    glnQualified: {
+      en: "You qualify for an additional R25 per head payment based on your farm's GLN registration.",
+      af: "Jy kwalifiseer vir 'n bykomende R25 per kop betaling gebaseer op jou plaas se GLN-registrasie.",
+    },
+    glnNotRegistered: {
+      en: 'None of your selected farms have a GLN Number registered.',
+      af: 'Geen van jou gekose plase het ’n GLN-nommer geregistreer nie.',
+    },
+    glnFromFarmNote: {
+      en: 'This information is from your registered farm. To update, edit your farm details.',
+      af: 'Hierdie inligting is van jou geregistreerde plaas. Om dit op te dateer, wysig jou plaasbesonderhede.',
+    },
+    addGlnToFarm: {
+      en: 'If your farm has a GLN Number, you can add it in your',
+      af: 'As jou plaas ’n GLN-nommer het, kan jy dit by jou',
+    },
+    viewDocument: {
+      en: 'View Document',
+      af: 'Sien dokument',
+    },
+    glnNumber: {
+      en: 'GLN Number',
+      af: 'GLN-nommer',
+    },
+    glnDocument: {
+      en: 'GLN Registration Document',
+      af: 'GLN-registrasiedokument',
     },
     turnoverSwitchLabel: {
       en: 'If the {entity} selling the livestock has a turnover of less than R 10 million, it could mean an additional R 25 per calf payment. Apply?',
@@ -3624,6 +3728,26 @@ const translationsData = {
     toastDashboardError: {
       en: 'Failed to load dashboard data',
       af: 'Kon nie paneelborddata laai nie',
+    },
+    farmRequiredTitle: {
+      en: 'Farm Required',
+      af: 'Plaas Vereis',
+    },
+    farmRequiredDescription: {
+      en: 'Welcome! Please create your first farm before you can create livestock listings.',
+      af: 'Welkom! Skep asseblief jou eerste plaas voordat jy veelysings kan skep.',
+    },
+    farmCreatedSuccess: {
+      en: 'Farm created successfully! You can now create livestock listings.',
+      af: 'Plaas suksesvol geskep! Jy kan nou veelysings skep.',
+    },
+    farmAddedSuccess: {
+      en: 'Farm added successfully!',
+      af: 'Plaas suksesvol bygevoeg!',
+    },
+    pleaseCreateFarmFirst: {
+      en: 'Please create a farm first before accessing other sections.',
+      af: 'Skep asseblief eers ’n plaas voordat jy ander afdelings oopmaak.',
     },
   },
   adminViewListing: {

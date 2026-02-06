@@ -171,18 +171,19 @@ export const AdminViewListingPage = () => {
 
       setListing(listingData);
 
-      // Fetch veterinary declaration using the listing's reference_id, not the UUID
+      // Fetch latest veterinary declaration using the listing's reference_id, not the UUID
       if (listingData.reference_id) {
         const { data: declarationData, error: declarationError } = await supabase
           .from('veterinary_declarations')
           .select('*')
           .eq('reference_id', listingData.reference_id)
-          .single();
+          .order('created_at', { ascending: false })
+          .limit(1);
 
-        if (declarationError && declarationError.code !== 'PGRST116') { // Ignore 'single row not found' error
+        if (declarationError) {
           console.error('Error fetching declaration:', declarationError);
-        } else {
-          setDeclaration(declarationData);
+        } else if (declarationData && declarationData.length > 0) {
+          setDeclaration(declarationData[0]);
         }
       }
     } catch (err) {

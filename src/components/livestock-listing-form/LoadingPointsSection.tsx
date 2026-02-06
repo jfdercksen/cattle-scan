@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { YesNoSwitch } from '@/components/ui/YesNoSwitch';
+import { Badge } from '@/components/ui/badge';
 import { useLivestockLocationManager } from './LivestockLocationManager';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -55,7 +56,7 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
         setLoadingFarms(true);
         const { data, error } = await supabase
           .from('farms')
-          .select('*')
+          .select('id, name, address, city, province, has_gln, gln_number, gln_document_url')
           .eq('owner_id', user.id)
           .order('created_at', { ascending: false });
         if (error) throw error;
@@ -90,14 +91,24 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
     const farm = farms.find(f => f.id === farmId);
     if (!farm) return;
     const parsed = parseFarmAddress(farm.address);
+    const glnNumber = farm.gln_number?.trim() || null;
+    const glnDocumentUrl = farm.gln_document_url?.trim() || null;
     form.setValue(`loading_points.${herdIndex}.${section}.farm_name`, parsed.farm_name || farm.name);
     form.setValue(`loading_points.${herdIndex}.${section}.district`, parsed.district);
     form.setValue(`loading_points.${herdIndex}.${section}.province`, parsed.province);
     form.setValue(`loading_points.${herdIndex}.${section}.country`, parsed.country);
+    form.setValue(`loading_points.${herdIndex}.selected_farm_id`, farmId);
+    form.setValue(`loading_points.${herdIndex}.selected_farm_has_gln`, Boolean(farm.has_gln));
+    form.setValue(`loading_points.${herdIndex}.selected_farm_gln_number`, glnNumber);
+    form.setValue(`loading_points.${herdIndex}.selected_farm_gln_document_url`, glnDocumentUrl);
   };
 
   const addLoadingPoint = () => {
     append({
+      selected_farm_id: null,
+      selected_farm_has_gln: false,
+      selected_farm_gln_number: null,
+      selected_farm_gln_document_url: null,
       birth_address: {
         farm_name: '',
         district: '',
@@ -155,6 +166,17 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
   const copyCurrentToLoading = (herdIndex: number) => {
     locationManager.copyLocationData(herdIndex, 'current_to_loading');
   };
+
+  const renderFarmOption = (farm: Farm) => (
+    <span className="flex items-center gap-2">
+      {farm.name} — {formatFarmAddress(farm.address)}
+      {farm.has_gln && (
+        <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-800">
+          ✓ GLN
+        </Badge>
+      )}
+    </span>
+  );
 
   return (
     <div>
@@ -399,7 +421,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                         </SelectTrigger>
                         <SelectContent>
                           {farms.map((f) => (
-                            <SelectItem key={f.id} value={f.id}>{f.name} — {formatFarmAddress(f.address)}</SelectItem>
+                            <SelectItem key={f.id} value={f.id}>
+                              {renderFarmOption(f)}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -506,7 +530,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                             </SelectTrigger>
                             <SelectContent>
                               {farms.map((f) => (
-                                <SelectItem key={f.id} value={f.id}>{f.name} — {formatFarmAddress(f.address)}</SelectItem>
+                                <SelectItem key={f.id} value={f.id}>
+                                  {renderFarmOption(f)}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -613,7 +639,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                             </SelectTrigger>
                             <SelectContent>
                               {farms.map((f) => (
-                                <SelectItem key={f.id} value={f.id}>{f.name} — {formatFarmAddress(f.address)}</SelectItem>
+                                <SelectItem key={f.id} value={f.id}>
+                                  {renderFarmOption(f)}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -723,7 +751,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                             </SelectTrigger>
                             <SelectContent>
                               {farms.map((f) => (
-                                <SelectItem key={f.id} value={f.id}>{f.name} — {formatFarmAddress(f.address)}</SelectItem>
+                                <SelectItem key={f.id} value={f.id}>
+                                  {renderFarmOption(f)}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -808,7 +838,9 @@ export const LoadingPointsSection = ({ fields, append, remove }: LoadingPointsSe
                               </SelectTrigger>
                               <SelectContent>
                                 {farms.map((f) => (
-                                  <SelectItem key={f.id} value={f.id}>{f.name} — {formatFarmAddress(f.address)}</SelectItem>
+                                  <SelectItem key={f.id} value={f.id}>
+                                    {renderFarmOption(f)}
+                                  </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>

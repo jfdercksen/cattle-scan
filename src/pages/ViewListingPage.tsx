@@ -9,10 +9,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { LivestockCalculations } from '@/lib/calculationEngine';
 import { useTranslation } from '@/i18n/useTranslation';
 
+type VetProfile = Pick<Tables<'profiles'>, 'id' | 'first_name' | 'last_name' | 'email' | 'registration_number'>;
 type LivestockListing = Tables<'livestock_listings'> & {
   companies?: {
     name: string;
   } | null;
+  assigned_vet?: VetProfile | null;
 };
 
 interface Address {
@@ -165,8 +167,21 @@ export const ViewListingPage = () => {
 
         if (listingError) throw listingError;
 
-        // Data is already combined from the JOIN query
-        const combinedData = listingData;
+        let combinedData: LivestockListing = listingData;
+        if (listingData.assigned_vet_id) {
+          const { data: vetData, error: vetError } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, email, registration_number')
+            .eq('id', listingData.assigned_vet_id)
+            .maybeSingle();
+
+          if (!vetError && vetData) {
+            combinedData = {
+              ...listingData,
+              assigned_vet: vetData,
+            };
+          }
+        }
 
         setListing(combinedData);
       } catch (err) {
@@ -275,6 +290,14 @@ export const ViewListingPage = () => {
         : t('livestockDetailsSection', 'livestockTypeOptionCattleAndSheep')
     : t('adminViewListing', 'noLivestockLabel');
 
+  const vetProfile = listing.assigned_vet;
+  const vetName = [vetProfile?.first_name, vetProfile?.last_name].filter(Boolean).join(' ');
+  const vetStatus = listing.assigned_vet_id
+    ? t('common', 'yes')
+    : listing.invited_vet_email
+      ? t('adminListings', 'statusPending')
+      : t('common', 'no');
+
   return (
     <div className="container mx-auto p-4">
       <Card>
@@ -316,6 +339,27 @@ export const ViewListingPage = () => {
                 <DetailItem label={t('adminViewListing', 'bredOrBoughtLabel')} value={derivedBredOrBought} />
                 <DetailItem label={t('adminViewListing', 'breederNameLabel')} value={derivedBreederName} />
                 <DetailItem label={t('adminViewListing', 'breederSellerLabel')} value={derivedIsBreederSeller} />
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-vet">
+              <AccordionTrigger>Veterinarian Information</AccordionTrigger>
+              <AccordionContent>
+                {listing.assigned_vet_id ? (
+                  <>
+                    <DetailItem label="Status" value="Assigned" />
+                    <DetailItem label="Vet Name" value={vetName || t('common', 'notAvailable')} />
+                    <DetailItem label="Vet Email" value={vetProfile?.email ?? t('common', 'notAvailable')} />
+                    <DetailItem label="Registration Number" value={vetProfile?.registration_number ?? t('common', 'notAvailable')} />
+                  </>
+                ) : listing.invited_vet_email ? (
+                  <>
+                    <DetailItem label="Status" value="Invited" />
+                    <DetailItem label="Invited Vet Email" value={listing.invited_vet_email} />
+                  </>
+                ) : (
+                  <DetailItem label="Status" value="No vet assigned" />
+                )}
               </AccordionContent>
             </AccordionItem>
 

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth";
 import { useCompany } from '@/contexts/companyContext';
@@ -13,6 +13,7 @@ import { CompanySelector } from '@/components/CompanySelector';
 import { MultiTenantDashboardController } from '@/services/multiTenantDashboardController';
 import { supabase } from '@/integrations/supabase/client';
 import SellerFarms from '@/components/SellerFarms';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useTranslation } from '@/i18n/useTranslation';
 
 type Profile = Tables<'profiles'>;
@@ -27,7 +28,34 @@ const SellerDashboard = () => {
   const { currentCompany, userCompanies } = useCompany();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [loadingFarms, setLoadingFarms] = useState(true);
+  const [hasFarms, setHasFarms] = useState(true);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [searchParams] = useSearchParams();
   const { t } = useTranslation();
+
+  const refreshFarmCount = useCallback(async () => {
+    if (!user) return;
+    try {
+      setLoadingFarms(true);
+      const { count, error } = await supabase
+        .from('farms')
+        .select('*', { count: 'exact', head: true })
+        .eq('owner_id', user.id);
+      if (error) throw error;
+      setHasFarms((count ?? 0) > 0);
+    } catch (error) {
+      console.error('Error checking farms:', error);
+      toast({
+        title: t('common', 'errorTitle'),
+        description: t('sellerDashboard', 'toastDashboardError'),
+        variant: "destructive",
+      });
+      setHasFarms(false);
+    } finally {
+      setLoadingFarms(false);
+    }
+  }, [user, toast, t]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -56,6 +84,60 @@ const SellerDashboard = () => {
   }, [user, profile, currentCompany, authLoading]);
 
   useEffect(() => {
+    if (!user || authLoading) return;
+    refreshFarmCount();
+  }, [user, authLoading, refreshFarmCount]);
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    const showFarmPrompt = searchParams.get('showFarmPrompt');
+    if (tabParam) {
+      setActiveTab(tabParam);
+    }
+    if (showFarmPrompt) {
+      toast({
+        title: t('sellerDashboard', 'farmRequiredTitle'),
+        description: t('sellerDashboard', 'farmRequiredDescription'),
+        variant: "destructive",
+      });
+    }
+  }, [searchParams, toast, t]);
+
+  useEffect(() => {
+    if (!loadingFarms && !hasFarms) {
+      setActiveTab('farms');
+    }
+  }, [loadingFarms, hasFarms]);
+
+  const handleTabChange = (value: string) => {
+    if (!hasFarms && value !== 'farms') {
+      toast({
+        title: t('sellerDashboard', 'farmRequiredTitle'),
+        description: t('sellerDashboard', 'pleaseCreateFarmFirst'),
+        variant: "destructive",
+      });
+      return;
+    }
+    setActiveTab(value);
+  };
+
+  const handleFarmCreated = async () => {
+    const hadFarmsBefore = hasFarms;
+    await refreshFarmCount();
+    if (!hadFarmsBefore) {
+      toast({
+        title: t('sellerDashboard', 'farmCreatedSuccess'),
+        description: t('sellerDashboard', 'farmRequiredDescription'),
+      });
+      setActiveTab('dashboard');
+    } else {
+      toast({
+        title: t('sellerDashboard', 'farmAddedSuccess'),
+      });
+    }
+  };
+
+  useEffect(() => {
     if (authLoading || !initialized) return;
 
     if (!user) {
@@ -67,7 +149,7 @@ const SellerDashboard = () => {
 
 
 
-  if (authLoading || !initialized || loading) {
+  if (authLoading || !initialized || loading || loadingFarms) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">{t('common', 'loading')}</div>
@@ -110,7 +192,16 @@ const SellerDashboard = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="dashboard" className="w-full">
+        {!hasFarms && (
+          <Alert variant="warning" className="mb-4">
+            <AlertTitle>{t('sellerDashboard', 'farmRequiredTitle')}</AlertTitle>
+            <AlertDescription>
+              {t('sellerDashboard', 'farmRequiredDescription')}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="dashboard">{t('sellerDashboard', 'tabDashboard')}</TabsTrigger>
             <TabsTrigger value="farms">{t('sellerDashboard', 'tabFarms')}</TabsTrigger>
@@ -174,13 +265,17 @@ const SellerDashboard = () => {
             </div> */}
 
             {/* Main Content */}
-            <div className="space-y-6">
-              <SellerInvitationsTable />
-            </div>
+            {hasFarms ? (
+              <div className="space-y-6">
+                <SellerInvitationsTable />
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">{t('sellerDashboard', 'farmRequiredDescription')}</div>
+            )}
           </TabsContent>
           
           <TabsContent value="farms">
-            <SellerFarms />
+            <SellerFarms onFarmCreated={handleFarmCreated} />
           </TabsContent>
           
           <TabsContent value="profile">

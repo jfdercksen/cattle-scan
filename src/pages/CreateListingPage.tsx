@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { LivestockListingForm } from '@/components/LivestockListingForm';
 import { useAuth } from '@/contexts/auth';
+import { useToast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
 import { useTranslation } from '@/i18n/useTranslation';
 
@@ -10,6 +11,7 @@ const CreateListingPage = () => {
   const { invitationId } = useParams<{ invitationId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [invitation, setInvitation] = useState<Tables<'listing_invitations'> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +25,21 @@ const CreateListingPage = () => {
       }
 
       try {
+        const { count, error: farmError } = await supabase
+          .from('farms')
+          .select('*', { count: 'exact', head: true })
+          .eq('owner_id', user.id);
+        if (farmError) throw farmError;
+        if ((count ?? 0) === 0) {
+          toast({
+            title: t('sellerDashboard', 'farmRequiredTitle'),
+            description: t('sellerDashboard', 'farmRequiredDescription'),
+            variant: "destructive",
+          });
+          navigate('/seller-dashboard?tab=farms&showFarmPrompt=true');
+          return;
+        }
+
         const { data, error } = await supabase
           .from('listing_invitations')
           .select('*')
@@ -47,7 +64,7 @@ const CreateListingPage = () => {
 
     fetchInvitation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invitationId, user]);
+  }, [invitationId, user, navigate, toast, t]);
 
   const handleSuccess = () => {
     navigate('/seller-dashboard');

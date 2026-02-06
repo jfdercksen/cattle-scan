@@ -128,6 +128,16 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
     return currentProfile.company_name || `${currentProfile.first_name || ''} ${currentProfile.last_name || ''}`.trim();
   };
 
+  const serializeError = (value: unknown) => {
+    if (value instanceof Error) return value.message;
+    if (typeof value === 'string') return value;
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  };
+
   const form = useForm<LivestockListingFormData>({
     resolver: zodResolver(livestockListingSchema),
     defaultValues: {
@@ -825,7 +835,7 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
         navigate('/seller-dashboard');
       }
     } catch (error) {
-      console.error('Submission error:', error);
+      console.error('Submission error:', serializeError(error));
       toast({
         title: t('common', 'errorTitle'),
         description: t('livestockListingForm', 'toastSubmissionErrorDescription'),
