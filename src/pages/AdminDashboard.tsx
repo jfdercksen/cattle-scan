@@ -19,6 +19,7 @@ import { LivestockListingDetailsDialog } from "@/components/LivestockListingDeta
 import { CompanySelector } from "@/components/CompanySelector";
 import { CompanyManagement } from "@/components/CompanyManagement";
 import { CompanyRegistrationForm } from '@/components/CompanyRegistrationForm';
+import { CompanySettingsForm } from '@/components/admin/CompanySettingsForm';
 import { useTranslation } from "@/i18n/useTranslation";
 import type { ListingInvitation as ListingInvitationWithRelations } from '@/components/ListingInvitationsTable';
 
@@ -151,6 +152,7 @@ const AdminDashboard = () => {
 
 
 
+
   const handleViewListing = (listing: LivestockListing) => {
     setSelectedListing(listing);
     setListingDialogOpen(true);
@@ -279,7 +281,7 @@ const AdminDashboard = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-3' : 'grid-cols-3'}`}>
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">{t("adminDashboard", "overviewTab")}</TabsTrigger>
             {isSuperAdmin && <TabsTrigger value="companies" onClick={() => setShowCompanyManagement(true)}>{t("adminDashboard", "companiesTab")}</TabsTrigger>}
             {/* <TabsTrigger value="livestock">Livestock</TabsTrigger>
@@ -287,6 +289,7 @@ const AdminDashboard = () => {
             <TabsTrigger value="sellers">Sellers</TabsTrigger> */}
             {!isSuperAdmin && <TabsTrigger value="invitations">{t("adminDashboard", "invitationsTab")}</TabsTrigger>}
             {/* <TabsTrigger value="activity">Activity</TabsTrigger> */}
+            <TabsTrigger value="company-settings">{t("companySettings", "title")}</TabsTrigger>
             <TabsTrigger value="profile">{t("adminDashboard", "profileTab")}</TabsTrigger>
             
           </TabsList>
@@ -508,6 +511,19 @@ const AdminDashboard = () => {
 
           <TabsContent value="profile">
             <ProfileSection />
+          </TabsContent>
+
+          <TabsContent value="company-settings">
+            {currentCompany ? (
+              <CompanySettingsForm companyId={currentCompany.companyId} />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t('companySettings', 'title')}</CardTitle>
+                  <CardDescription>{t('companySettings', 'loadError')}</CardDescription>
+                </CardHeader>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>

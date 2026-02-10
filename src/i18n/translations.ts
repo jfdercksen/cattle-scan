@@ -2136,6 +2136,190 @@ const translationsData = {
       af: 'Hierdie aanbod is onderhewig aan biosekuriteitsbepalings en evaluering van biosekuriteit- en naspeurbaarheidsassesserings sowel as die veearts se verklaring. As {company} onder kwarantyn geplaas word voordat die vee afgelaai word, word die aanbod teruggetrek.',
     },
   },
+  companySettings: {
+    title: {
+      en: 'Company Settings',
+      af: 'Maatskappy Instellings',
+    },
+    subtitle: {
+      en: 'Manage your company information and PDF branding',
+      af: 'Bestuur jou maatskappy inligting en PDF handelsmerk',
+    },
+    brandingSection: {
+      en: 'Company Branding',
+      af: 'Maatskappy Handelsmerk',
+    },
+    businessSection: {
+      en: 'Business Information',
+      af: 'Besigheidsinligting',
+    },
+    contactSection: {
+      en: 'Contact Details',
+      af: 'Kontakbesonderhede',
+    },
+    disclaimerSection: {
+      en: 'PDF Disclaimer',
+      af: 'PDF Vrywaring',
+    },
+    logoLabel: {
+      en: 'Company Logo',
+      af: 'Maatskappy Logo',
+    },
+    logoHint: {
+      en: 'Recommended: 200x80px, PNG or JPG. Max 2MB.',
+      af: 'Aanbeveel: 200x80px, PNG of JPG. Maks 2MB.',
+    },
+    uploadLogo: {
+      en: 'Upload Logo',
+      af: 'Laai Logo Op',
+    },
+    removeLogo: {
+      en: 'Remove',
+      af: 'Verwyder',
+    },
+    registeredName: {
+      en: 'Registered Company Name',
+      af: 'Geregistreerde Maatskappynaam',
+    },
+    registrationNumber: {
+      en: 'Registration Number',
+      af: 'Registrasienommer',
+    },
+    vatNumber: {
+      en: 'VAT Number',
+      af: 'BTW Nommer',
+    },
+    contactPerson: {
+      en: 'Contact Person',
+      af: 'Kontakpersoon',
+    },
+    address: {
+      en: 'Address',
+      af: 'Adres',
+    },
+    city: {
+      en: 'City',
+      af: 'Stad',
+    },
+    province: {
+      en: 'Province',
+      af: 'Provinsie',
+    },
+    postalCode: {
+      en: 'Postal Code',
+      af: 'Poskode',
+    },
+    country: {
+      en: 'Country',
+      af: 'Land',
+    },
+    email: {
+      en: 'Email Address',
+      af: 'E-posadres',
+    },
+    phone: {
+      en: 'Phone Number',
+      af: 'Telefoonnommer',
+    },
+    disclaimerText: {
+      en: 'Disclaimer Text (English)',
+      af: 'Vrywaring Teks (Engels)',
+    },
+    disclaimerTextAf: {
+      en: 'Disclaimer Text (Afrikaans)',
+      af: 'Vrywaring Teks (Afrikaans)',
+    },
+    disclaimerHint: {
+      en: 'This text will appear in the footer of generated PDF certificates.',
+      af: 'Hierdie teks sal in die voetskrif van gegenereerde PDF-sertifikate verskyn.',
+    },
+    saveButton: {
+      en: 'Save Settings',
+      af: 'Stoor Instellings',
+    },
+    saving: {
+      en: 'Saving...',
+      af: 'Stoor...',
+    },
+    saveSuccess: {
+      en: 'Company settings saved successfully!',
+      af: 'Maatskappy instellings suksesvol gestoor!',
+    },
+    saveError: {
+      en: 'Failed to save company settings',
+      af: 'Kon nie maatskappy instellings stoor nie',
+    },
+    loadError: {
+      en: 'Failed to load company settings',
+      af: 'Kon nie maatskappy instellings laai nie',
+    },
+    logoUploadError: {
+      en: 'Failed to upload logo',
+      af: 'Kon nie logo oplaai nie',
+    },
+    logoSizeError: {
+      en: 'Logo must be less than 2MB',
+      af: 'Logo moet kleiner as 2MB wees',
+    },
+    logoTypeError: {
+      en: 'Logo must be PNG, JPG, or SVG',
+      af: 'Logo moet PNG, JPG of SVG wees',
+    },
+  },
+  pdfExport: {
+    title: {
+      en: 'Export Document',
+      af: 'Uitvoer Dokument',
+    },
+    description: {
+      en: 'Generate an official PDF certificate for this listing.',
+      af: "Genereer 'n amptelike PDF-sertifikaat vir hierdie lys.",
+    },
+    generateButton: {
+      en: 'Generate PDF',
+      af: 'Genereer PDF',
+    },
+    downloadButton: {
+      en: 'Download PDF',
+      af: 'Laai PDF Af',
+    },
+    regenerateButton: {
+      en: 'Regenerate',
+      af: 'Hergenereer',
+    },
+    generating: {
+      en: 'Generating...',
+      af: 'Genereer...',
+    },
+    regenerating: {
+      en: 'Regenerating...',
+      af: 'Hergenereer...',
+    },
+    generatedOn: {
+      en: 'PDF generated on:',
+      af: 'PDF gegenereer op:',
+    },
+    noPdfYet: {
+      en: 'No PDF has been generated for this listing yet.',
+      af: 'Geen PDF is nog vir hierdie lys gegenereer nie.',
+    },
+    generateSuccess: {
+      en: 'PDF Generated Successfully',
+      af: 'PDF Suksesvol Gegenereer',
+    },
+    generateSuccessDescription: {
+      en: 'The PDF certificate has been created and is ready for download.',
+      af: 'Die PDF-sertifikaat is geskep en is gereed om af te laai.',
+    },
+    generateError: {
+      en: 'PDF Generation Failed',
+      af: 'PDF Generering Misluk',
+    },
+    generateErrorDescription: {
+      en: 'There was an error generating the PDF. Please try again.',
+      af: "Daar was 'n fout met die generering van die PDF. Probeer asseblief weer.",
+    },
+  },
   biosecuritySection: {
     heading: {
       en: 'Supplier Identity & Location',

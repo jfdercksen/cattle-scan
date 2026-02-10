@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useAuth } from './auth';
 import { MultiTenantDashboardController, type CompanyContext } from '@/services/multiTenantDashboardController';
 import { CompanyService, type Company } from '@/services/companyService';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CompanyContextType {
   // Current company context
@@ -81,12 +82,18 @@ export const CompanyProvider: React.FC<CompanyProviderProps> = ({ children }) =>
       const { data: allCompanies, error: companiesError } = await CompanyService.getCompanies();
       if (companiesError) throw companiesError;
 
-      setCompanies(allCompanies || []);
+      const companyIds = (allCompanies || []).map(company => company.id);
+      const settingsMap = await fetchCompanySettingsMap(companyIds);
+      const companiesWithSettings = (allCompanies || []).map(company => ({
+        ...company,
+        name: settingsMap.get(company.id) ?? company.name,
+      }));
+      setCompanies(companiesWithSettings);
 
       // Create contexts for all companies (super admin has access to all)
       const contexts: CompanyContext[] = (allCompanies || []).map(company => ({
         companyId: company.id,
-        companyName: company.name,
+        companyName: settingsMap.get(company.id) ?? company.name,
         userRole: 'super_admin'
       }));
 
@@ -109,14 +116,23 @@ export const CompanyProvider: React.FC<CompanyProviderProps> = ({ children }) =>
       const { data: contexts, error: contextsError } = await MultiTenantDashboardController.getUserCompanyContexts(user.id);
       if (contextsError) throw contextsError;
 
-      setUserCompanies(contexts || []);
+      const companyIds = contexts?.map(c => c.companyId) || [];
+      const settingsMap = await fetchCompanySettingsMap(companyIds);
+      const contextsWithSettings = (contexts || []).map(ctx => ({
+        ...ctx,
+        companyName: settingsMap.get(ctx.companyId) ?? ctx.companyName
+      }));
+      setUserCompanies(contextsWithSettings);
 
       // Get company details
-      const companyIds = contexts?.map(c => c.companyId) || [];
       if (companyIds.length > 0) {
         const { data: userCompaniesData, error: companiesError } = await CompanyService.getUserCompanies(user.id);
         if (companiesError) throw companiesError;
-        setCompanies(userCompaniesData || []);
+        const companiesWithSettings = (userCompaniesData || []).map(company => ({
+          ...company,
+          name: settingsMap.get(company.id) ?? company.name,
+        }));
+        setCompanies(companiesWithSettings);
       }
 
       // Set first company as current if none selected
@@ -130,6 +146,27 @@ export const CompanyProvider: React.FC<CompanyProviderProps> = ({ children }) =>
 
   const refreshCompanies = async () => {
     await initializeCompanyContext();
+  };
+
+  const fetchCompanySettingsMap = async (companyIds: string[]) => {
+    if (!companyIds.length) return new Map<string, string>();
+    const { data, error } = await supabase
+      .from('company_settings')
+      .select('company_id, registered_name')
+      .in('company_id', companyIds);
+
+    if (error) {
+      console.error('Error fetching company settings names:', error);
+      return new Map<string, string>();
+    }
+
+    const map = new Map<string, string>();
+    (data || []).forEach((row: { company_id: string; registered_name: string | null }) => {
+      if (row.registered_name) {
+        map.set(row.company_id, row.registered_name);
+      }
+    });
+    return map;
   };
 
   const switchCompany = (companyId: string) => {

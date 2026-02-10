@@ -818,6 +818,26 @@ export const LivestockListingForm = ({ invitationId, referenceId, onSuccess }: L
 
       if (result.error) throw result.error;
 
+      const invitationToUpdate = data.invitation_id || invitationId;
+      const invitationFilters: string[] = [];
+      if (invitationToUpdate) invitationFilters.push(`id.eq.${invitationToUpdate}`);
+      if (data.reference_id) invitationFilters.push(`reference_id.eq.${data.reference_id}`);
+      if (existingListingId) invitationFilters.push(`listing_id.eq.${existingListingId}`);
+
+      if (invitationFilters.length > 0) {
+        const { error: invitationError } = await supabase
+          .from('listing_invitations')
+          .update({
+            status: 'accepted',
+            updated_at: new Date().toISOString(),
+          })
+          .or(invitationFilters.join(','));
+
+        if (invitationError) {
+          console.error('Failed to update invitation status:', invitationError);
+        }
+      }
+
       toast({
         title: t('common', 'successTitle'),
         description: existingListingId

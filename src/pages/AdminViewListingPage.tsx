@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { LivestockCalculations } from '@/lib/calculationEngine';
 import { LoadMasterAssignment } from '@/components/admin/LoadMasterAssignment';
+import { ListingPDFExport } from '@/components/admin/ListingPDFExport';
 import { useTranslation } from '@/i18n/useTranslation';
 
 type LivestockListing = Tables<'livestock_listings'> & {
@@ -93,6 +94,17 @@ export const AdminViewListingPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { t } = useTranslation();
+  const handlePdfGenerated = useCallback((url: string) => {
+    setListing((prev) =>
+      prev
+        ? {
+            ...prev,
+            pdf_url: url,
+            pdf_generated_at: new Date().toISOString(),
+          }
+        : prev
+    );
+  }, []);
 
   const formatStatus = (status: string | null | undefined): string => {
     if (!status) return t('common', 'notAvailable');
@@ -292,6 +304,18 @@ export const AdminViewListingPage = () => {
         <ArrowLeft className="mr-2 h-4 w-4" />
         {t('adminViewListing', 'backButtonLabel')}
       </Button>
+
+      {listing && (
+        <div className="mb-6">
+          <ListingPDFExport
+            listingId={listing.id}
+            referenceId={listing.reference_id ?? ''}
+            pdfUrl={listing.pdf_url ?? null}
+            pdfGeneratedAt={listing.pdf_generated_at ?? null}
+            onPdfGenerated={handlePdfGenerated}
+          />
+        </div>
+      )}
 
       <Card>
         <CardHeader>
