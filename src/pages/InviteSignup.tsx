@@ -41,6 +41,13 @@ const InviteSignup = () => {
 
   // Only allow special buyer flow via explicit link param
   const isBuyerSignup = searchParams.get('buyer') === 'true';
+  const emailParam = searchParams.get('email') || '';
+
+  useEffect(() => {
+    if (emailParam && !email) {
+      setEmail(emailParam);
+    }
+  }, [emailParam, email]);
 
   // Redirect if already authenticated
   useEffect(() => {

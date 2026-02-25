@@ -10,7 +10,7 @@ export interface InvitationData {
   company_id: string;
   invited_by: string;
   reference_id: string;
-  listing_id: string; // Reference to the livestock listing
+  listing_id?: string | null; // Reference to the livestock listing
 }
 
 export interface UserExistenceCheck {
@@ -21,6 +21,11 @@ export interface UserExistenceCheck {
 }
 
 export class InvitationManager {
+  private static getSiteUrl(): string | undefined {
+    if (typeof window === 'undefined') return undefined;
+    return window.location.origin;
+  }
+
   /**
    * Check if user exists and determine invitation type needed
    */
@@ -106,7 +111,7 @@ export class InvitationManager {
           company_id: data.company_id,
           created_by: data.invited_by,
           reference_id: data.reference_id,
-          listing_id: data.listing_id, // Link to the livestock listing
+          listing_id: data.listing_id ?? null, // Link to the livestock listing
           status: 'pending'
         })
         .select()
@@ -142,7 +147,10 @@ export class InvitationManager {
       const emailData = {
         to: invitation.seller_email,
         company_name: company.name,
-        reference_id: invitation.reference_id
+        reference_id: invitation.reference_id,
+        invitation_id: invitation.id,
+        site_url: this.getSiteUrl(),
+        listing_id: invitation.listing_id
       };
 
       if (userCheck.needsRegistration) {
@@ -165,13 +173,16 @@ export class InvitationManager {
     // This would integrate with your email service (e.g., Supabase Edge Functions, SendGrid, etc.)
     console.log('Sending new user invitation email:', emailData);
     
-    // Example implementation - replace with actual email service
-    // await supabase.functions.invoke('send-invitation-email', {
-    //   body: {
-    //     type: 'new_user_invitation',
-    //     ...emailData
-    //   }
-    // });
+    const { error } = await supabase.functions.invoke('send-invitation-email', {
+      body: {
+        type: 'new_user_invitation',
+        ...emailData
+      }
+    });
+
+    if (error) {
+      console.error('Failed to send new user invitation email:', error);
+    }
   }
 
   /**
@@ -183,13 +194,16 @@ export class InvitationManager {
   ): Promise<void> {
     console.log('Sending existing user notification email:', emailData);
     
-    // Example implementation - replace with actual email service
-    // await supabase.functions.invoke('send-invitation-email', {
-    //   body: {
-    //     type: needsCompanyRelationship ? 'new_company_relationship' : 'existing_company_invitation',
-    //     ...emailData
-    //   }
-    // });
+    const { error } = await supabase.functions.invoke('send-invitation-email', {
+      body: {
+        type: needsCompanyRelationship ? 'new_company_relationship' : 'existing_company_invitation',
+        ...emailData
+      }
+    });
+
+    if (error) {
+      console.error('Failed to send existing user invitation email:', error);
+    }
   }
 
   /**

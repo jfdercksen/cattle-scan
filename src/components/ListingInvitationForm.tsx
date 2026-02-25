@@ -8,11 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth';
 import { useCompany } from '@/contexts/companyContext';
 import { CompanyService } from '@/services/companyService';
+import { InvitationManager } from '@/services/invitationManager';
 import { nanoid } from 'nanoid';
 import type { Tables } from '@/integrations/supabase/types';
 import { useTranslation } from '@/i18n/useTranslation';
@@ -149,16 +149,27 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('listing_invitations')
-        .insert({
-          seller_id: data.seller_id || null,
-          seller_email: data.seller_email || null,
-          reference_id: referenceId,
-          created_by: user.id,
-          company_id: currentCompany.companyId, // Required for RLS policies
-          status: 'pending',
+      const selectedSellerEmail =
+        data.seller_email?.trim() ||
+        sellers.find((seller) => seller.profiles.id === data.seller_id)?.profiles.email ||
+        '';
+
+      if (!selectedSellerEmail) {
+        toast({
+          title: t('common', 'errorTitle'),
+          description: t('adminInvitations', 'validationEmail'),
+          variant: 'destructive',
         });
+        return;
+      }
+
+      const { error } = await InvitationManager.createInvitation({
+        seller_email: selectedSellerEmail,
+        company_id: currentCompany.companyId,
+        invited_by: user.id,
+        reference_id: referenceId,
+        listing_id: null,
+      });
 
       if (error) throw error;
 
