@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import type { Tables } from '@/integrations/supabase/types';
 import { ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useToast } from '@/hooks/use-toast';
 
 export type ListingInvitation = Tables<'listing_invitations'> & {
   livestock_listings: Pick<Tables<'livestock_listings'>, 'id' | 'status'>[] | null;
@@ -29,6 +30,8 @@ interface ListingInvitationsTableProps {
 export const ListingInvitationsTable = ({ invitations, loading, refetch }: ListingInvitationsTableProps) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { toast } = useToast();
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   const formatStatusFallback = (status: string | null | undefined): string => {
     if (!status) return t('common', 'notAvailable');
@@ -221,6 +224,79 @@ export const ListingInvitationsTable = ({ invitations, loading, refetch }: Listi
     return <p>{t('adminInvitations', 'loading')}</p>;
   }
 
+  const handleResend = async (invitation: ListingInvitation) => {
+    const recipient = invitation.seller_email || invitation.seller_profile_email;
+    if (!recipient) {
+      toast({
+        title: t('common', 'errorTitle'),
+        description: t('adminInvitations', 'resendMissingEmail'),
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setActionLoadingId(invitation.id);
+    try {
+      const { error } = await supabase.functions.invoke('send-invitation-email', {
+        body: {
+          type: invitation.seller_id ? 'existing_company_invitation' : 'new_user_invitation',
+          to: recipient,
+          company_name: invitation.company_name,
+          reference_id: invitation.reference_id,
+          invitation_id: invitation.id,
+          listing_id: invitation.listing_id,
+          site_url: window.location.origin,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: t('common', 'successTitle'),
+        description: t('adminInvitations', 'resendSuccess'),
+      });
+    } catch (error) {
+      console.error('Failed to resend invitation:', error);
+      toast({
+        title: t('common', 'errorTitle'),
+        description: t('adminInvitations', 'resendError'),
+        variant: 'destructive',
+      });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleRemove = async (invitation: ListingInvitation) => {
+    setActionLoadingId(invitation.id);
+    try {
+      const { error } = await supabase
+        .from('listing_invitations')
+        .update({
+          status: 'cancelled',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', invitation.id);
+
+      if (error) throw error;
+
+      toast({
+        title: t('common', 'successTitle'),
+        description: t('adminInvitations', 'removeSuccess'),
+      });
+      refetch();
+    } catch (error) {
+      console.error('Failed to remove invitation:', error);
+      toast({
+        title: t('common', 'errorTitle'),
+        description: t('adminInvitations', 'removeError'),
+        variant: 'destructive',
+      });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -392,18 +468,37 @@ export const ListingInvitationsTable = ({ invitations, loading, refetch }: Listi
                     </Badge>
                   </TableCell>
                   <TableCell>{format(new Date(invitation.created_at), 'PPP')}</TableCell>
-                   <TableCell>
-                    {invitation.livestock_listings && invitation.livestock_listings.length > 0 ? (
+                  <TableCell>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {invitation.livestock_listings && invitation.livestock_listings.length > 0 ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/admin/listing/${invitation.livestock_listings?.[0]?.id}`)}
+                        >
+                          {t('adminInvitations', 'editListing')}
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-gray-500">{t('adminInvitations', 'noListing')}</span>
+                      )}
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        onClick={() => navigate(`/admin/listing/${invitation.livestock_listings?.[0]?.id}`)}
+                        onClick={() => handleResend(invitation)}
+                        disabled={actionLoadingId === invitation.id}
                       >
-                        {t('adminInvitations', 'viewListing')}
+                        {t('adminInvitations', 'resendButton')}
                       </Button>
-                    ) : (
-                      <span className="text-xs text-gray-500">{t('adminInvitations', 'noListing')}</span>
-                    )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemove(invitation)}
+                        disabled={actionLoadingId === invitation.id}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        {t('adminInvitations', 'removeButton')}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

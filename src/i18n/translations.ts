@@ -3041,6 +3041,38 @@ const translationsData = {
       en: 'View',
       af: 'Bekyk',
     },
+    editListing: {
+      en: 'Edit',
+      af: 'Wysig',
+    },
+    resendButton: {
+      en: 'Resend',
+      af: 'Stuur weer',
+    },
+    removeButton: {
+      en: 'Remove',
+      af: 'Verwyder',
+    },
+    resendMissingEmail: {
+      en: 'No email address is available for this invitation.',
+      af: 'Geen e-posadres is beskikbaar vir hierdie uitnodiging nie.',
+    },
+    resendSuccess: {
+      en: 'Invitation email sent.',
+      af: 'Uitnodigingse-pos gestuur.',
+    },
+    resendError: {
+      en: 'Failed to resend the invitation email.',
+      af: 'Kon nie die uitnodigingse-pos weer stuur nie.',
+    },
+    removeSuccess: {
+      en: 'Invitation removed.',
+      af: 'Uitnodiging verwyder.',
+    },
+    removeError: {
+      en: 'Failed to remove the invitation.',
+      af: 'Kon nie die uitnodiging verwyder nie.',
+    },
     statusPending: {
       en: 'Pending',
       af: 'Aanhangig',
