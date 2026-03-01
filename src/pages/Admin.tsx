@@ -274,11 +274,18 @@ const Admin = () => {
     if (!currentCompany) return;
     
     try {
+      console.log('Attempting to remove user relationship:', relationshipId);
       const { error } = await CompanyService.removeUserFromCompany(
         relationshipId
       );
       
       if (error) {
+        console.error('Remove user error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        });
         throw error;
       }
       

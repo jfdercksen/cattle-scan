@@ -354,12 +354,23 @@ export class CompanyService {
    */
   static async removeUserFromCompany(relationshipId: string): Promise<{ data: any; error: any }> {
     try {
+      console.log('Attempting to delete company relationship:', relationshipId);
       const { data, error } = await supabase
         .from('company_user_relationships')
         .delete()
         .eq('id', relationshipId)
-        .select()
-        .single();
+        .select();
+
+      if (error) {
+        console.error('Delete error details (company_user_relationships):', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        });
+      } else {
+        console.log('Delete successful (company_user_relationships):', data);
+      }
 
       return { data, error };
     } catch (error) {
