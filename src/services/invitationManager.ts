@@ -7,6 +7,7 @@ export type Profile = Tables<'profiles'>;
 
 export interface InvitationData {
   seller_email: string;
+  seller_id?: string | null;
   company_id: string;
   invited_by: string;
   reference_id: string;
@@ -78,12 +79,21 @@ export class InvitationManager {
    */
   static async createInvitation(data: InvitationData): Promise<{ data: ListingInvitation | null; error: any }> {
     try {
-      // Check user existence and company relationship
-      const userCheck = await this.checkUserExists(data.seller_email, data.company_id);
+      // If seller_id is provided, treat as existing user.
+      const userCheck = data.seller_id
+        ? {
+            exists: true,
+            user: { id: data.seller_id } as Profile,
+            needsRegistration: false,
+            needsCompanyRelationship: false,
+          }
+        : await this.checkUserExists(data.seller_email, data.company_id);
 
       let sellerId: string | null = null;
 
-      if (userCheck.exists && userCheck.user) {
+      if (data.seller_id) {
+        sellerId = data.seller_id;
+      } else if (userCheck.exists && userCheck.user) {
         sellerId = userCheck.user.id;
 
         // If user exists but needs company relationship, create it

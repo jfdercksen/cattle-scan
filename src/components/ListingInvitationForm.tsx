@@ -165,6 +165,7 @@ export const ListingInvitationForm = ({ onSuccess }: ListingInvitationFormProps)
 
       const { error } = await InvitationManager.createInvitation({
         seller_email: selectedSellerEmail,
+        seller_id: data.seller_id || null,
         company_id: currentCompany.companyId,
         invited_by: user.id,
         reference_id: referenceId,

@@ -17,6 +17,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const profileRef = useRef<Profile | null>(null);
   const isLoadingProfileRef = useRef<boolean>(false);
   const lastSignInTimeRef = useRef<number>(0);
+  const resolveSiteUrl = () => {
+    const envUrl = import.meta.env.VITE_SITE_URL as string | undefined;
+    const baseUrl = (envUrl || window.location.origin).replace(/\/$/, '');
+    return baseUrl;
+  };
 
   const updateProfileState = (value: Profile | null) => {
     profileRef.current = value;
@@ -212,11 +217,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string, metadata: Record<string, string>) => {
+    const siteUrl = resolveSiteUrl();
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `${siteUrl}/`,
         data: metadata,
       },
     });
