@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Shield, ArrowLeft, Mail } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -21,6 +22,7 @@ const InviteSignup = () => {
   const { t, language } = useTranslation();
 
   const [loading, setLoading] = useState(false);
+  const [showVerifyNotice, setShowVerifyNotice] = useState(false);
 
   // Form state
   const [email, setEmail] = useState('');
@@ -147,6 +149,7 @@ const InviteSignup = () => {
       if (error) {
         toast({ title: 'Error', description: error.message, variant: 'destructive' });
       } else {
+        setShowVerifyNotice(true);
         // Link listing invitations if applicable
         try {
           const { data: { user: newUser } } = await supabase.auth.getUser();
@@ -191,6 +194,13 @@ const InviteSignup = () => {
           </div>
         </CardHeader>
         <CardContent>
+          {showVerifyNotice && (
+            <Alert className="mb-4">
+              <Mail className="h-4 w-4" />
+              <AlertTitle>{t("inviteSignup", "verifyEmailTitle")}</AlertTitle>
+              <AlertDescription>{t("inviteSignup", "verifyEmailDescription")}</AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={handleSignUp} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>

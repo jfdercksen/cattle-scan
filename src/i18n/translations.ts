@@ -663,6 +663,14 @@ const translationsData = {
       en: 'Account created successfully! Please wait for approval.',
       af: 'Rekening suksesvol geskep! Wag asseblief vir goedkeuring.',
     },
+    verifyEmailTitle: {
+      en: 'Verify your email',
+      af: 'Bevestig jou e-pos',
+    },
+    verifyEmailDescription: {
+      en: 'Check your inbox and confirm your email address before signing in.',
+      af: 'Gaan jou inkassie na en bevestig jou e-posadres voordat jy inteken.',
+    },
     invalidEmail: {
       en: 'Please enter a valid email address',
       af: 'Voer asseblief ’n geldige e-pos adres in',
