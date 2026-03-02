@@ -660,8 +660,8 @@ const translationsData = {
       af: 'Rekening suksesvol geskep! Jy is nou die super administrateur.',
     },
     successDefault: {
-      en: 'Account created successfully! Please wait for approval.',
-      af: 'Rekening suksesvol geskep! Wag asseblief vir goedkeuring.',
+      en: 'Account created! Please check your email and verify your account before signing in.',
+      af: 'Rekening geskep! Gaan jou e-pos na en bevestig jou rekening voordat jy inteken.',
     },
     verifyEmailTitle: {
       en: 'Verify your email',
