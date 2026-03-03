@@ -25,6 +25,17 @@ const CreateListingPage = () => {
       }
 
       try {
+        if (user.email) {
+          try {
+            await supabase.rpc('link_listing_invitations_for_user' as any, {
+              user_id: user.id,
+              user_email: user.email,
+            });
+          } catch (linkError) {
+            console.warn('Failed to link invitations by email:', linkError);
+          }
+        }
+
         const { count, error: farmError } = await supabase
           .from('farms')
           .select('*', { count: 'exact', head: true })
