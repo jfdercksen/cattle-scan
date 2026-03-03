@@ -149,11 +149,34 @@ export const AdminViewListingPage = () => {
   const AddressDisplay = ({ address }: { address: Json | null | undefined }) => {
     if (address && typeof address === 'object' && !Array.isArray(address)) {
       const { farm_name, district, province } = address as Record<string, unknown>;
-      if (typeof farm_name === 'string' && typeof district === 'string' && typeof province === 'string') {
-        return <>{`${farm_name}, ${district}, ${province}`}</>;
+      const parts = [farm_name, district, province].filter((value) => typeof value === 'string' && value);
+      if (parts.length) {
+        return <>{parts.join(', ')}</>;
       }
     }
     return <>{t('common', 'notAvailable')}</>;
+  };
+
+  const getMovementFromLoadingPoints = (loadingPointsRaw: unknown) => {
+    try {
+      const points = Array.isArray(loadingPointsRaw)
+        ? loadingPointsRaw
+        : typeof loadingPointsRaw === 'string'
+          ? JSON.parse(loadingPointsRaw)
+          : [];
+      const firstPoint = Array.isArray(points) ? points[0] : undefined;
+      const bio = firstPoint?.biosecurity || {};
+      return {
+        movedOut: bio.livestock_moved_out_of_boundaries as boolean | undefined,
+        movedFrom: bio.livestock_moved_location as Json | undefined,
+        movedTo: bio.livestock_moved_location_to as Json | undefined,
+        movedYear: bio.livestock_moved_year as number | undefined,
+        movedMonth: bio.livestock_moved_month as number | undefined,
+        movedHow: bio.livestock_moved_how as string | undefined,
+      };
+    } catch {
+      return {};
+    }
   };
 
   const YesNoDisplay = ({ label, value }: { label: ReactNode; value: boolean | null | undefined }) => (
@@ -367,14 +390,34 @@ export const AdminViewListingPage = () => {
                 <div className="space-y-4">
                   {/* Basic Location Information */}
                   <div className="space-y-2">
-                    <DetailItem label={t('adminViewListing', 'locationLabel')} value={listing.location ?? t('common', 'notAvailable')} />
-                    <DetailItem label={t('adminViewListing', 'movedOutOfBoundariesLabel')} value={<BooleanDisplay value={listing.livestock_moved_out_of_boundaries} />} />
-                    {listing.livestock_moved_out_of_boundaries && 
+                    {(() => {
+                      const movement = getMovementFromLoadingPoints(listing.loading_points);
+                      const movedOut = movement.movedOut ?? listing.livestock_moved_out_of_boundaries;
+                      const movedFrom = movement.movedFrom ?? listing.livestock_moved_location;
+                      const movedTo = movement.movedTo ?? listing.livestock_moved_location_to;
+                      const movedYear = movement.movedYear ?? listing.livestock_moved_year;
+                      const movedMonth = movement.movedMonth ?? listing.livestock_moved_month;
+                      const movedHow = movement.movedHow ?? (listing as { livestock_moved_how?: string }).livestock_moved_how;
+                      const movedWhen =
+                        movedYear || movedMonth
+                          ? `${movedMonth ?? ''}${movedMonth ? '/' : ''}${movedYear ?? ''}`
+                          : t('common', 'notAvailable');
+
+                      return (
                         <>
-                            <DetailItem label={t('adminViewListing', 'movedFromLabel')} value={<AddressDisplay address={listing.livestock_moved_location} />} /> 
-                            <DetailItem label={t('adminViewListing', 'movedToLabel')} value={<AddressDisplay address={listing.livestock_moved_location_to} />} />
+                          <DetailItem label={t('adminViewListing', 'locationLabel')} value={listing.location ?? t('common', 'notAvailable')} />
+                          <DetailItem label={t('adminViewListing', 'movedOutOfBoundariesLabel')} value={<BooleanDisplay value={movedOut} />} />
+                          {movedOut && (
+                            <>
+                              <DetailItem label={t('adminViewListing', 'movedFromLabel')} value={<AddressDisplay address={movedFrom} />} />
+                              <DetailItem label={t('adminViewListing', 'movedToLabel')} value={<AddressDisplay address={movedTo} />} />
+                              <DetailItem label={t('adminViewListing', 'movedWhenLabel')} value={movedWhen} />
+                              <DetailItem label={t('adminViewListing', 'movedHowLabel')} value={movedHow || t('common', 'notAvailable')} />
+                            </>
+                          )}
                         </>
-                    }
+                      );
+                    })()}
                   </div>
 
                   {/* Loading Summary */}

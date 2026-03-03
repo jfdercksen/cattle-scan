@@ -4139,6 +4139,14 @@ const translationsData = {
       en: 'Moved Location To',
       af: 'Verskuif na ligging',
     },
+    movedWhenLabel: {
+      en: 'When was the livestock moved there?',
+      af: 'Wanneer is die vee daarheen verskuif?',
+    },
+    movedHowLabel: {
+      en: 'How were they moved?',
+      af: 'Hoe is hulle verskuif?',
+    },
     loadingSummaryHeading: {
       en: 'Livestock Loading Summary',
       af: 'Opsomming van veelaai',
