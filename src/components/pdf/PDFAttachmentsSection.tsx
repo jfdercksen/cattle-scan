@@ -5,6 +5,7 @@ import { styles, labels } from './PDFStyles';
 interface PDFAttachmentsSectionProps {
   glnDocumentUrl?: string | null;
   affidavitUrl?: string | null;
+  previousOwnerDeclarationUrls?: string[];
 }
 
 const isImageUrl = (url: string) => /\.(png|jpe?g|gif|webp)$/i.test(url);
@@ -12,7 +13,9 @@ const isImageUrl = (url: string) => /\.(png|jpe?g|gif|webp)$/i.test(url);
 export const PDFAttachmentsSection: React.FC<PDFAttachmentsSectionProps> = ({
   glnDocumentUrl,
   affidavitUrl,
+  previousOwnerDeclarationUrls = [],
 }) => {
+  const normalizedPreviousOwnerUrls = previousOwnerDeclarationUrls.filter(Boolean);
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>
@@ -42,6 +45,17 @@ export const PDFAttachmentsSection: React.FC<PDFAttachmentsSectionProps> = ({
           )}
         </View>
       )}
+
+      {normalizedPreviousOwnerUrls.map((url, index) => (
+        <View key={`${url}-${index}`} style={styles.attachmentContainer}>
+          <Text style={styles.attachmentLabel}>{labels.en.previousOwnerDeclaration}</Text>
+          {isImageUrl(url) ? (
+            <Image src={url} style={styles.attachmentImage} />
+          ) : (
+            <Text style={styles.tableValue}>{url}</Text>
+          )}
+        </View>
+      ))}
     </View>
   );
 };

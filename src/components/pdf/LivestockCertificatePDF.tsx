@@ -162,6 +162,20 @@ export const LivestockCertificatePDF: React.FC<LivestockCertificatePDFProps> = (
           <PDFHeader company={data.company} referenceId={data.listing.reference_id} compact />
           <PDFAttachmentsSection
             glnDocumentUrl={data.farm?.gln_document_url || data.listing.gln_document_url}
+            previousOwnerDeclarationUrls={(() => {
+              if (Array.isArray(data.listing.previous_owner_declaration_url)) {
+                return data.listing.previous_owner_declaration_url as string[];
+              }
+              if (typeof data.listing.previous_owner_declaration_url === 'string') {
+                try {
+                  const parsed = JSON.parse(data.listing.previous_owner_declaration_url);
+                  return Array.isArray(parsed) ? (parsed as string[]) : [];
+                } catch {
+                  return [];
+                }
+              }
+              return [];
+            })()}
           />
           <PDFFooter company={data.company} pageNumber={5} totalPages={totalPages} />
         </Page>
@@ -171,7 +185,14 @@ export const LivestockCertificatePDF: React.FC<LivestockCertificatePDFProps> = (
 };
 
 const hasAttachments = (data: PDFData) =>
-  Boolean(data.farm?.gln_document_url || data.listing.gln_document_url);
+  Boolean(
+    data.farm?.gln_document_url ||
+      data.listing.gln_document_url ||
+      (data.listing.previous_owner_declaration_url &&
+        (Array.isArray(data.listing.previous_owner_declaration_url)
+          ? data.listing.previous_owner_declaration_url.length > 0
+          : String(data.listing.previous_owner_declaration_url).length > 0))
+  );
 
 const calculateTotalPages = (data: PDFData) => {
   let pages = 4;
