@@ -5,6 +5,8 @@ import { styles, labels } from './PDFStyles';
 interface PDFAttachmentsSectionProps {
   glnDocumentUrl?: string | null;
   affidavitUrl?: string | null;
+  sellerIdUrl?: string | null;
+  sellerBrandMarkUrl?: string | null;
   previousOwnerDeclarationUrls?: string[];
 }
 
@@ -13,6 +15,8 @@ const isImageUrl = (url: string) => /\.(png|jpe?g|gif|webp)$/i.test(url);
 export const PDFAttachmentsSection: React.FC<PDFAttachmentsSectionProps> = ({
   glnDocumentUrl,
   affidavitUrl,
+  sellerIdUrl,
+  sellerBrandMarkUrl,
   previousOwnerDeclarationUrls = [],
 }) => {
   const normalizedPreviousOwnerUrls = previousOwnerDeclarationUrls.filter(Boolean);
@@ -31,6 +35,28 @@ export const PDFAttachmentsSection: React.FC<PDFAttachmentsSectionProps> = ({
             <Image src={glnDocumentUrl} style={styles.attachmentImage} />
           ) : (
             <Text style={styles.tableValue}>{glnDocumentUrl}</Text>
+          )}
+        </View>
+      )}
+
+      {sellerIdUrl && (
+        <View style={styles.attachmentContainer}>
+          <Text style={styles.attachmentLabel}>{labels.en.sellerIdDocument}</Text>
+          {isImageUrl(sellerIdUrl) ? (
+            <Image src={sellerIdUrl} style={styles.attachmentImage} />
+          ) : (
+            <Text style={styles.tableValue}>{sellerIdUrl}</Text>
+          )}
+        </View>
+      )}
+
+      {sellerBrandMarkUrl && (
+        <View style={styles.attachmentContainer}>
+          <Text style={styles.attachmentLabel}>{labels.en.sellerBrandMark}</Text>
+          {isImageUrl(sellerBrandMarkUrl) ? (
+            <Image src={sellerBrandMarkUrl} style={styles.attachmentImage} />
+          ) : (
+            <Text style={styles.tableValue}>{sellerBrandMarkUrl}</Text>
           )}
         </View>
       )}

@@ -162,6 +162,8 @@ export const LivestockCertificatePDF: React.FC<LivestockCertificatePDFProps> = (
           <PDFHeader company={data.company} referenceId={data.listing.reference_id} compact />
           <PDFAttachmentsSection
             glnDocumentUrl={data.farm?.gln_document_url || data.listing.gln_document_url}
+            sellerIdUrl={data.seller?.id_document_url || null}
+            sellerBrandMarkUrl={data.seller?.brand_mark_url || null}
             previousOwnerDeclarationUrls={(() => {
               if (Array.isArray(data.listing.previous_owner_declaration_url)) {
                 return data.listing.previous_owner_declaration_url as string[];
@@ -188,6 +190,8 @@ const hasAttachments = (data: PDFData) =>
   Boolean(
     data.farm?.gln_document_url ||
       data.listing.gln_document_url ||
+      data.seller?.id_document_url ||
+      data.seller?.brand_mark_url ||
       (data.listing.previous_owner_declaration_url &&
         (Array.isArray(data.listing.previous_owner_declaration_url)
           ? data.listing.previous_owner_declaration_url.length > 0
